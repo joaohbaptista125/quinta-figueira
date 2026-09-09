@@ -192,10 +192,11 @@ o número de idas e voltas é o que se sente ao clicar.
   pedido de rede ao servidor de autenticação, não uma leitura do cookie, e o
   layout e a página precisam ambos da sessão — sem a cache seriam três pedidos
   por clique em vez de um.
-- `vercel.json` fixa a região das funções em `fra1`. **Tem de corresponder à
-  região do projecto Supabase**: por omissão a Vercel corre em Washington, e com
-  o Supabase na Europa cada ida e volta custava ~180 ms. Se mudares o Supabase
-  de região, muda aqui também (Londres `lhr1`, Irlanda `dub1`, Paris `cdg1`).
+- `vercel.json` fixa a região das funções em `dub1` (Dublin), porque o projecto
+  Supabase está em West EU (Ireland), `eu-west-1`. **As duas têm de
+  corresponder**: por omissão a Vercel corre em Washington, e com o Supabase na
+  Europa cada ida e volta custava ~180 ms. Se mudares a região do Supabase, muda
+  aqui também — Frankfurt `fra1`, Londres `lhr1`, Paris `cdg1`, Estocolmo `arn1`.
 - `app/(painel)/loading.tsx` é o que o Next mostra enquanto gera a página, e
   também o que pré-carrega ao passar por cima das ligações. Sem ele o clique
   parece não ter sido registado.
