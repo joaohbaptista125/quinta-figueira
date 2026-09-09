@@ -181,6 +181,25 @@ scripts/
   gerar-icones.mjs     gera os ícones da PWA
 ```
 
+### Latência
+
+Cada navegação é uma renderização no servidor que fala com o Supabase, por isso
+o número de idas e voltas é o que se sente ao clicar.
+
+- `obterUtilizador()` e `obterPessoaSessao()` em `lib/sessao.ts` estão
+  embrulhados em `cache()` do React. **Usa-os sempre**; não chames
+  `supabase.auth.getUser()` directamente num Server Component. `getUser()` é um
+  pedido de rede ao servidor de autenticação, não uma leitura do cookie, e o
+  layout e a página precisam ambos da sessão — sem a cache seriam três pedidos
+  por clique em vez de um.
+- `vercel.json` fixa a região das funções em `fra1`. **Tem de corresponder à
+  região do projecto Supabase**: por omissão a Vercel corre em Washington, e com
+  o Supabase na Europa cada ida e volta custava ~180 ms. Se mudares o Supabase
+  de região, muda aqui também (Londres `lhr1`, Irlanda `dub1`, Paris `cdg1`).
+- `app/(painel)/loading.tsx` é o que o Next mostra enquanto gera a página, e
+  também o que pré-carrega ao passar por cima das ligações. Sem ele o clique
+  parece não ter sido registado.
+
 ### Convenções
 
 - Formulários usam `<FormularioEntidade>` com Server Actions e `useActionState`.

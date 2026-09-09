@@ -2,8 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseConfigurado } from '@/lib/supabase/configuracao'
 import { ConfiguracaoEmFalta } from '@/components/configuracao-em-falta'
-import { obterPessoaSessao } from '@/lib/sessao'
-import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { obterPessoaSessao, obterUtilizador } from '@/lib/sessao'
 import { NavegacaoCompacta, NavegacaoLateral } from '@/components/navegacao'
 import { MenuUtilizador } from '@/components/menu-utilizador'
 import { IndicadorLigacao } from '@/components/indicador-ligacao'
@@ -27,10 +26,7 @@ export default async function LayoutPainel({
   const pessoa = await obterPessoaSessao()
 
   if (!pessoa) {
-    const supabase = await criarClienteServidor()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const user = await obterUtilizador()
     redirect(user ? '/sem-acesso' : '/entrar')
   }
 
