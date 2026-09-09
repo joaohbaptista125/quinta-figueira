@@ -3,20 +3,22 @@ import path from 'node:path'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
-const FICHEIRO_LOGOTIPO = 'marca/logotipo.png'
-
 /*
- * Basta pôr o ficheiro em public/marca/logotipo.png e ele passa a aparecer em
- * todo o lado — não é preciso mexer em código. Enquanto não existir, fica a
- * ferradura desenhada aqui, com a mesma forma e o mesmo tamanho, para o
- * arranjo da página não dar um salto quando o logótipo entrar.
+ * Basta pôr o logótipo em public/marca/ com o nome `logotipo` e uma destas
+ * extensões, e ele passa a aparecer em todo o lado — não é preciso mexer em
+ * código. Enquanto não existir, fica a ferradura desenhada aqui, com a mesma
+ * forma e o mesmo tamanho, para o arranjo da página não dar um salto quando o
+ * logótipo entrar.
  *
- * A verificação corre uma vez por processo: os ficheiros de public/ não mudam
+ * A procura corre uma vez por processo: os ficheiros de public/ não mudam
  * entre pedidos, mudam entre deployments.
  */
-const TEM_LOGOTIPO = fs.existsSync(
-  path.join(process.cwd(), 'public', FICHEIRO_LOGOTIPO),
-)
+const EXTENSOES = ['png', 'jpg', 'jpeg', 'webp', 'svg'] as const
+
+const FICHEIRO_LOGOTIPO =
+  EXTENSOES.map((extensao) => `marca/logotipo.${extensao}`).find((relativo) =>
+    fs.existsSync(path.join(process.cwd(), 'public', relativo)),
+  ) ?? null
 
 const TAMANHOS = {
   compacto: { lado: 36, texto: 'text-base', sobretitulo: 'text-[0.6rem]' },
@@ -66,7 +68,7 @@ export function Marca({
 }
 
 function Simbolo({ lado }: { lado: number }) {
-  if (TEM_LOGOTIPO) {
+  if (FICHEIRO_LOGOTIPO) {
     return (
       <Image
         src={`/${FICHEIRO_LOGOTIPO}`}
