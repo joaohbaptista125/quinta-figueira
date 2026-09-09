@@ -6,6 +6,7 @@ import { obterPessoaSessao, obterUtilizador } from '@/lib/sessao'
 import { NavegacaoCompacta, NavegacaoLateral } from '@/components/navegacao'
 import { MenuUtilizador } from '@/components/menu-utilizador'
 import { IndicadorLigacao } from '@/components/indicador-ligacao'
+import { Marca } from '@/components/marca'
 import { ROTULOS_PERFIL } from '@/lib/rotulos'
 
 export default async function LayoutPainel({
@@ -35,13 +36,11 @@ export default async function LayoutPainel({
       <IndicadorLigacao />
       <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
         <aside className="hidden border-r border-border bg-card lg:flex lg:h-dvh lg:flex-col lg:sticky lg:top-0">
-          <Link href="/" className="border-b border-border px-5 py-4">
-            <p className="text-[0.65rem] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Centro Hípico
-            </p>
-            <p className="text-lg font-semibold tracking-tight">
-              Quinta da Figueira
-            </p>
+  <Link
+            href="/"
+            className="border-b border-border px-4 py-4 transition-colors hover:bg-accent"
+          >
+            <Marca />
           </Link>
           <div className="flex-1 overflow-y-auto px-2 py-4">
             <NavegacaoLateral perfil={pessoa.perfil} />
@@ -57,8 +56,11 @@ export default async function LayoutPainel({
         <div className="flex min-w-0 flex-col">
           <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:hidden">
             <div className="flex items-center justify-between gap-3 px-3 py-2.5">
-              <Link href="/" className="font-semibold tracking-tight">
-                Quinta da Figueira
+              <Link href="/" className="flex items-center gap-2">
+                <Marca semTexto />
+                <span className="font-semibold tracking-tight">
+                  Quinta da Figueira
+                </span>
               </Link>
               <MenuUtilizador
                 nome={pessoa.nome}
