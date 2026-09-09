@@ -8,7 +8,15 @@ import { SelectorMes } from '@/components/selector-mes'
 import { Indicador } from '@/components/indicador'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 import { ROTULOS_METODO, ROTULOS_TIPO_RECEBIMENTO } from '@/lib/rotulos'
 import {
   deslocarMeses,
@@ -95,12 +103,7 @@ export default async function PaginaRecebimentos({
                   </Td>
                   <Td>
                     {podeEditar ? (
-                      <Link
-                        href={`/financeiro/recebimentos/${recebimento.id}`}
-                        className="font-medium underline-offset-2 hover:underline"
-                      >
-                        {recebimento.pessoas?.nome ?? '—'}
-                      </Link>
+                      <LigacaoFicha href={`/financeiro/recebimentos/${recebimento.id}`}>{recebimento.pessoas?.nome ?? '—'}</LigacaoFicha>
                     ) : (
                       <span className="font-medium">
                         {recebimento.pessoas?.nome ?? '—'}

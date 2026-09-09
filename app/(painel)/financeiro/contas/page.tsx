@@ -6,7 +6,15 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 import { ROTULOS_TIPO_CONTA } from '@/lib/rotulos'
 import { formatarEuros } from '@/lib/formatos'
 
@@ -63,12 +71,7 @@ export default async function PaginaContas() {
               {contas.map((conta) => (
                 <Linha key={conta.id}>
                   <Td>
-                    <Link
-                      href={`/financeiro/contas/${conta.id}`}
-                      className="font-medium underline-offset-2 hover:underline"
-                    >
-                      {conta.nome}
-                    </Link>
+                    <LigacaoFicha href={`/financeiro/contas/${conta.id}`}>{conta.nome}</LigacaoFicha>
                     <div className="text-xs text-muted-foreground">
                       {ROTULOS_TIPO_CONTA[conta.tipo]}
                       {conta.iban ? ` · ${conta.iban}` : ''}

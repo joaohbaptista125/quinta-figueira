@@ -7,7 +7,15 @@ import { SelectorMes } from '@/components/selector-mes'
 import { Indicador } from '@/components/indicador'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 import { BotaoMarcarPaga } from '@/components/botao-marcar-paga'
 import { ROTULOS_METODO } from '@/lib/rotulos'
 import {
@@ -125,12 +133,7 @@ export default async function PaginaDespesas({
                     {formatarData(despesa.data)}
                   </Td>
                   <Td>
-                    <Link
-                      href={`/financeiro/despesas/${despesa.id}`}
-                      className="font-medium underline-offset-2 hover:underline"
-                    >
-                      {despesa.descricao}
-                    </Link>
+                    <LigacaoFicha href={`/financeiro/despesas/${despesa.id}`}>{despesa.descricao}</LigacaoFicha>
                     <div className="text-xs text-muted-foreground">
                       {despesa.fornecedores?.nome ?? 'Sem fornecedor'}
                       {despesa.cavalos ? ` · ${despesa.cavalos.nome}` : ''}

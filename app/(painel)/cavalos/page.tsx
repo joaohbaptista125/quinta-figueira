@@ -7,7 +7,16 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Pesquisa } from '@/components/pesquisa'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  LigacaoInterna,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 import { ROTULOS_REGIME, ROTULOS_SEXO } from '@/lib/rotulos'
 import type { RegimeCavalo } from '@/lib/tipos-bd'
 import { idadeEmAnos } from '@/lib/formatos'
@@ -95,12 +104,7 @@ export default async function PaginaCavalos({
                 return (
                   <Linha key={cavalo.id}>
                     <Td>
-                      <Link
-                        href={`/cavalos/${cavalo.id}`}
-                        className="font-medium underline-offset-2 hover:underline"
-                      >
-                        {cavalo.nome}
-                      </Link>
+                      <LigacaoFicha href={`/cavalos/${cavalo.id}`}>{cavalo.nome}</LigacaoFicha>
                       {!cavalo.activo ? (
                         <Distintivo className="ml-2">Inactivo</Distintivo>
                       ) : null}
@@ -119,12 +123,7 @@ export default async function PaginaCavalos({
                     </Td>
                     <Td className="text-muted-foreground">
                       {cavalo.pessoas ? (
-                        <Link
-                          href={`/pessoas/${cavalo.pessoas.id}`}
-                          className="underline-offset-2 hover:underline"
-                        >
-                          {cavalo.pessoas.nome}
-                        </Link>
+                        <LigacaoInterna href={`/pessoas/${cavalo.pessoas.id}`}>{cavalo.pessoas.nome}</LigacaoInterna>
                       ) : (
                         '—'
                       )}

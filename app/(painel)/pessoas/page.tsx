@@ -7,7 +7,15 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Pesquisa } from '@/components/pesquisa'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 import { ROTULOS_PAPEL, ROTULOS_PERFIL } from '@/lib/rotulos'
 import type { PapelPessoa } from '@/lib/tipos-bd'
 
@@ -78,12 +86,7 @@ export default async function PaginaPessoas({
               {pessoas.map((pessoa) => (
                 <Linha key={pessoa.id}>
                   <Td>
-                    <Link
-                      href={`/pessoas/${pessoa.id}`}
-                      className="font-medium underline-offset-2 hover:underline"
-                    >
-                      {pessoa.nome}
-                    </Link>
+                    <LigacaoFicha href={`/pessoas/${pessoa.id}`}>{pessoa.nome}</LigacaoFicha>
                     {!pessoa.activo ? (
                       <Distintivo cor="neutro" className="ml-2">
                         Inactivo

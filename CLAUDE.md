@@ -222,6 +222,15 @@ o número de idas e voltas é o que se sente ao clicar.
   português.
 - Selectores são `<select>` nativos, para no telemóvel abrirem o selector do
   sistema.
+- Nas listagens, a ligação para a ficha é `<LigacaoFicha>` de
+  `components/ui/tabela.tsx`, **não** um `<Link>` cru. Ela estica-se por cima da
+  linha toda (`after:absolute after:inset-0` sobre o `<tr>`, que é `relative`),
+  o que torna a linha inteira clicável mantendo uma só ligação real — nome
+  acessível, foco pelo teclado e «abrir em nova janela» intactos. Ligações
+  secundárias na mesma linha usam `<LigacaoInterna>`, senão ficam por baixo.
+  Antes disto só o texto do nome respondia ao clique e só ganhava sublinhado ao
+  passar o rato: num telemóvel era indescobrível, e parecia que editar não
+  funcionava.
 
 ### `lib/tipos-bd.ts`
 

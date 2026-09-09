@@ -5,7 +5,15 @@ import { exigirGestao } from '@/lib/sessao'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 
 export const metadata: Metadata = { title: 'Categorias de despesa' }
 
@@ -47,12 +55,7 @@ export default async function PaginaCategorias() {
               {categorias.map((categoria) => (
                 <Linha key={categoria.id}>
                   <Td>
-                    <Link
-                      href={`/financeiro/categorias/${categoria.id}`}
-                      className="font-medium underline-offset-2 hover:underline"
-                    >
-                      {categoria.nome}
-                    </Link>
+                    <LigacaoFicha href={`/financeiro/categorias/${categoria.id}`}>{categoria.nome}</LigacaoFicha>
                   </Td>
                   <Td className="text-muted-foreground">{categoria.ordem}</Td>
                   <Td>

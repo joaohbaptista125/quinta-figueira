@@ -6,7 +6,15 @@ import { eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 import { formatarData, formatarEuros, hoje } from '@/lib/formatos'
 
 export const metadata: Metadata = { title: 'Contratos de penso' }
@@ -86,12 +94,7 @@ export default async function PaginaContratos({
                   <Linha key={contrato.id}>
                     <Td>
                       {podeEditar ? (
-                        <Link
-                          href={`/contratos/${contrato.id}`}
-                          className="font-medium underline-offset-2 hover:underline"
-                        >
-                          {contrato.cavalos?.nome ?? '—'}
-                        </Link>
+                        <LigacaoFicha href={`/contratos/${contrato.id}`}>{contrato.cavalos?.nome ?? '—'}</LigacaoFicha>
                       ) : (
                         <span className="font-medium">
                           {contrato.cavalos?.nome ?? '—'}

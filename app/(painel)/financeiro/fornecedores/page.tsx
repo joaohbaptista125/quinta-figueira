@@ -6,7 +6,15 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Pesquisa } from '@/components/pesquisa'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 
 export const metadata: Metadata = { title: 'Fornecedores' }
 
@@ -62,12 +70,7 @@ export default async function PaginaFornecedores({
               {fornecedores.map((fornecedor) => (
                 <Linha key={fornecedor.id}>
                   <Td>
-                    <Link
-                      href={`/financeiro/fornecedores/${fornecedor.id}`}
-                      className="font-medium underline-offset-2 hover:underline"
-                    >
-                      {fornecedor.nome}
-                    </Link>
+                    <LigacaoFicha href={`/financeiro/fornecedores/${fornecedor.id}`}>{fornecedor.nome}</LigacaoFicha>
                     {!fornecedor.activo ? (
                       <Distintivo className="ml-2">Inactivo</Distintivo>
                     ) : null}

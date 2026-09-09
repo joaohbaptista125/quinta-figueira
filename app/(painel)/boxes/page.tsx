@@ -7,7 +7,16 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  LigacaoInterna,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 
 export const metadata: Metadata = { title: 'Boxes' }
 
@@ -67,12 +76,7 @@ export default async function PaginaBoxes() {
                 <Linha key={box.id}>
                   <Td>
                     {podeEditar ? (
-                      <Link
-                        href={`/boxes/${box.id}`}
-                        className="font-medium underline-offset-2 hover:underline"
-                      >
-                        {box.identificacao}
-                      </Link>
+                      <LigacaoFicha href={`/boxes/${box.id}`}>{box.identificacao}</LigacaoFicha>
                     ) : (
                       <span className="font-medium">{box.identificacao}</span>
                     )}
@@ -80,12 +84,7 @@ export default async function PaginaBoxes() {
                   <Td className="text-muted-foreground">{box.zona ?? '—'}</Td>
                   <Td>
                     {box.cavalos ? (
-                      <Link
-                        href={`/cavalos/${box.cavalos.id}`}
-                        className="underline-offset-2 hover:underline"
-                      >
-                        {box.cavalos.nome}
-                      </Link>
+                      <LigacaoInterna href={`/cavalos/${box.cavalos.id}`}>{box.cavalos.nome}</LigacaoInterna>
                     ) : (
                       <span className="text-muted-foreground">— vazia —</span>
                     )}
