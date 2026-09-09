@@ -28,16 +28,22 @@ configuração em vez de rebentar.
 2. Copiar de **Project Settings → API** para `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-3. Aplicar as migrações de `supabase/migrations/` por ordem alfabética. Com o
-   [CLI do Supabase](https://supabase.com/docs/guides/cli):
+3. Aplicar as migrações de `supabase/migrations/` por ordem alfabética. O CLI
+   do Supabase já é uma dependência do projecto e `supabase/config.toml` está
+   no repositório:
 
    ```bash
+   npx supabase login
    npx supabase link --project-ref <ref>
    npx supabase db push
    ```
 
    Em alternativa, colar cada ficheiro no **SQL Editor** do painel, pela mesma
-   ordem. As categorias de despesa são criadas pelas migrações.
+   ordem. As categorias de despesa e os dois buckets de Storage são criados
+   pelas migrações — não é preciso criá-los à mão.
+
+   **Nunca correr `supabase/seed.sql` em produção**: são dados de
+   demonstração. O `db push` não lhe toca; só o `supabase db reset` local o usa.
 4. Em **Authentication → URL Configuration**, definir o *Site URL* e acrescentar
    `https://<dominio>/auth/callback` aos *Redirect URLs*.
 5. Abrir a aplicação, criar a conta pelo convite do Supabase
