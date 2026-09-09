@@ -8,7 +8,7 @@ const CAMINHOS_PUBLICOS = [
   '/recuperar-password',
   '/definir-password',
   '/auth/callback',
-  '/configurar',
+  '/offline.html',
 ]
 
 function ehPublico(caminho: string) {

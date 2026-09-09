@@ -24,11 +24,35 @@ const PRE_CARREGAR = [
   '/manifest.webmanifest',
 ]
 
+/*
+ * Guarda um recurso, tolerando falhas.
+ *
+ * Substitui cache.addAll(), que é tudo-ou-nada: bastava um pedido falhar na
+ * primeira visita — e na cavalariça a rede falha — para a instalação inteira
+ * do service worker ser rejeitada, deixando a aplicação sem qualquer
+ * funcionamento offline. Aqui cada recurso é tratado à parte.
+ *
+ * Descarta respostas encaminhadas: guardar o destino de um encaminhamento
+ * debaixo do endereço pedido poria, por exemplo, o ecrã de entrada no lugar
+ * da página de emergência.
+ */
+async function preCarregar(cache, caminho) {
+  try {
+    const resposta = await fetch(caminho, { cache: 'reload' })
+    if (!resposta.ok || resposta.redirected) return
+    await cache.put(caminho, resposta)
+  } catch {
+    // Sem rede na primeira visita: fica para a próxima activação.
+  }
+}
+
 self.addEventListener('install', (evento) => {
   evento.waitUntil(
     caches
       .open(CACHE_ESTATICO)
-      .then((cache) => cache.addAll(PRE_CARREGAR))
+      .then((cache) =>
+        Promise.all(PRE_CARREGAR.map((caminho) => preCarregar(cache, caminho))),
+      )
       .then(() => self.skipWaiting()),
   )
 })

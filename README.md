@@ -54,6 +54,10 @@ essas pessoas forem convidadas, a conta liga-se sozinha à ficha.
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Production, Preview e Development).
 3. Opcionalmente `NEXT_PUBLIC_SITE_URL` com o domínio final. Se ficar em branco,
    é deduzido dos cabeçalhos do pedido.
+4. **Voltar a fazer deploy.** As variáveis `NEXT_PUBLIC_*` são fixadas no
+   momento da compilação, incluindo no middleware — defini-las sem recompilar
+   não tem efeito nenhum, e a aplicação continua a mostrar a página de
+   instruções. Na Vercel: **Deployments → … → Redeploy**.
 
 ## Comandos
 

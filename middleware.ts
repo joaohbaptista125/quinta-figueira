@@ -13,9 +13,16 @@ export async function middleware(pedido: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Todos os caminhos excepto ficheiros estáticos, imagens, o service worker
-     * e o manifesto da PWA.
+     * Todos os caminhos excepto ficheiros estáticos, imagens, o service worker,
+     * o manifesto e a página de emergência da PWA.
+     *
+     * Os ficheiros de public/ já são servidos antes do middleware (verificado
+     * com `next start`), por isso estas exclusões são redundantes na prática.
+     * Ficam explícitas na mesma: o service worker vai buscar offline.html no
+     * arranque, normalmente a partir do ecrã de entrada e portanto sem sessão,
+     * e se algum dia o middleware lhe chegasse a encaminhá-la para /entrar a
+     * cache guardaria a página de login no lugar da página de emergência.
      */
-    '/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icones/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sw.js|offline.html|manifest.webmanifest|icones/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
