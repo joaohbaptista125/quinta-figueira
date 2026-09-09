@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-PT">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sem ligação · Quinta da Figueira</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fundo: #f7f5f0;
+        --texto: #2b2823;
+        --suave: #6b665d;
+        --verde: #2f5b45;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fundo: #1e1c19;
+          --texto: #eceae4;
+          --suave: #a8a49b;
+          --verde: #6d9e83;
+        }
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+        background: var(--fundo);
+        color: var(--texto);
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        text-align: center;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 1rem 0 0.5rem;
+      }
+      p {
+        color: var(--suave);
+        max-width: 28rem;
+        margin: 0 auto 1.5rem;
+      }
+      button {
+        border: 0;
+        border-radius: 0.5rem;
+        background: var(--verde);
+        color: #fff;
+        font: inherit;
+        font-weight: 500;
+        padding: 0.65rem 1.25rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img
+        src="/icones/icone-192.png"
+        alt=""
+        width="72"
+        height="72"
+        style="border-radius: 16px"
+      />
+      <h1>Sem ligação à internet</h1>
+      <p>
+        Esta página ainda não estava guardada no telemóvel. Assim que houver
+        rede, volte a tentar — nada do que já tinha gravado se perdeu.
+      </p>
+      <button onclick="location.reload()">Tentar de novo</button>
+    </main>
+  </body>
+</html>
