@@ -208,6 +208,15 @@ o número de idas e voltas é o que se sente ao clicar.
   também o que pré-carrega ao passar por cima das ligações. Sem ele o clique
   parece não ter sido registado.
 
+### Ficheiros em `public/`
+
+Nunca leias `public/` com `fs` em código que corre no servidor. **Na Vercel
+esses ficheiros não entram no pacote da função** — vão para o CDN à parte — e
+qualquer `existsSync` sobre eles dá falso em produção enquanto funciona em
+local, que é o pior dos dois mundos. Imagens usam `import` estático
+(`import logo from '@/public/marca/logotipo.jpg'`), que as resolve na
+compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
+
 ### Convenções
 
 - Formulários usam `<FormularioEntidade>` com Server Actions e `useActionState`.

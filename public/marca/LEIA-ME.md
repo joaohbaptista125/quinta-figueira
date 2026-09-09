@@ -1,15 +1,19 @@
 # Logótipo
 
-Põe aqui o logótipo do clube com o nome **`logotipo`** e uma destas extensões:
-`.png`, `.jpg`, `.jpeg`, `.webp` ou `.svg`.
+O logótipo do clube vive aqui, como **`logotipo.jpg`**. Quadrado, de
+preferência 512×512 ou maior.
 
-```
-public/marca/logotipo.jpg
-```
+Para o substituir, mantém o mesmo nome. Se mudares a extensão, muda também a
+linha do `import` no topo de `components/marca.tsx` — os ficheiros são
+importados, não procurados no disco.
 
-Quadrado, de preferência 512×512 ou maior.
+> A versão anterior procurava os ficheiros com `fs.existsSync()`. Funcionava em
+> local e falhava sempre em produção: na Vercel os ficheiros de `public/` não
+> entram no pacote da função, vão para o CDN à parte, e a verificação dava
+> falso. Importar resolve-os na compilação e falha o build se faltarem, em vez
+> de a marca desaparecer sem se perceber porquê.
 
-A maneira mais simples de o pôr é pelo próprio GitHub, sem terminal nenhum:
+A maneira mais simples de trocar o ficheiro é pelo próprio GitHub, sem terminal:
 **Add file → Upload files**, com a pasta `public/marca` já aberta. Assim que o ficheiro existir,
 `components/marca.tsx` passa a usá-lo na barra lateral, no cabeçalho do
 telemóvel e no ecrã de entrada — não é preciso mexer em código nenhum.
