@@ -20,3 +20,19 @@ logótipo entrar.
 
 Depois de o pores, vale a pena regenerar também os ícones da aplicação
 instalável — ver `scripts/gerar-icones.mjs`.
+
+## Símbolo
+
+`simbolo.png` é só a cabeça de cavalo, quadrada, e é usado onde a marca aparece
+pequena — barra lateral, cabeçalho do telemóvel, ícone da aplicação instalada.
+O lockup completo fica reservado para o ecrã de entrada, onde o lettering se lê.
+
+Gera-se a partir do logótipo:
+
+```bash
+node scripts/extrair-simbolo.mjs
+node scripts/gerar-icones.mjs
+```
+
+Se trocares o logótipo, corre os dois — as coordenadas do recorte em
+`extrair-simbolo.mjs` são as deste desenho e podem precisar de revisão.

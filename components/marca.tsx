@@ -4,25 +4,38 @@ import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 /*
- * Basta pôr o logótipo em public/marca/ com o nome `logotipo` e uma destas
- * extensões, e ele passa a aparecer em todo o lado — não é preciso mexer em
- * código. Enquanto não existir, fica a ferradura desenhada aqui, com a mesma
- * forma e o mesmo tamanho, para o arranjo da página não dar um salto quando o
- * logótipo entrar.
+ * A marca do clube tem duas peças, e servem para coisas diferentes:
+ *
+ *   public/marca/logotipo.*  — o lockup completo, símbolo mais o nome. Usado
+ *                              em grande, onde o lettering se lê.
+ *   public/marca/simbolo.*   — só a cabeça de cavalo, quadrada. Usado em
+ *                              pequeno, onde o lockup vira mancha e repetiria
+ *                              o nome que já está escrito ao lado.
+ *
+ * Basta pôr os ficheiros lá e passam a aparecer — não é preciso mexer em
+ * código. Sem eles fica uma ferradura desenhada aqui, com a mesma forma e
+ * tamanho, para o arranjo não dar um salto quando entrarem.
+ * `scripts/extrair-simbolo.mjs` gera o símbolo a partir do logótipo.
  *
  * A procura corre uma vez por processo: os ficheiros de public/ não mudam
  * entre pedidos, mudam entre deployments.
  */
 const EXTENSOES = ['png', 'jpg', 'jpeg', 'webp', 'svg'] as const
 
-const FICHEIRO_LOGOTIPO =
-  EXTENSOES.map((extensao) => `marca/logotipo.${extensao}`).find((relativo) =>
-    fs.existsSync(path.join(process.cwd(), 'public', relativo)),
-  ) ?? null
+function procurar(base: string) {
+  return (
+    EXTENSOES.map((extensao) => `marca/${base}.${extensao}`).find((relativo) =>
+      fs.existsSync(path.join(process.cwd(), 'public', relativo)),
+    ) ?? null
+  )
+}
+
+const LOCKUP = procurar('logotipo')
+const SIMBOLO = procurar('simbolo') ?? LOCKUP
 
 const TAMANHOS = {
-  compacto: { lado: 36, texto: 'text-base', sobretitulo: 'text-[0.6rem]' },
-  grande: { lado: 84, texto: 'text-2xl', sobretitulo: 'text-xs' },
+  compacto: { lado: 34, texto: 'text-base', sobretitulo: 'text-[0.6rem]' },
+  grande: { lado: 132, texto: 'text-2xl', sobretitulo: 'text-xs' },
 } as const
 
 export function Marca({
@@ -36,42 +49,71 @@ export function Marca({
   className?: string
 }) {
   const { lado, texto, sobretitulo } = TAMANHOS[tamanho]
-  const vertical = tamanho === 'grande'
+  const grande = tamanho === 'grande'
+
+  // Em grande, o lockup já traz o nome — escrevê-lo outra vez por baixo seria
+  // dizer a mesma coisa duas vezes.
+  const nomeNaImagem = grande && LOCKUP !== null
+  const mostrarNome = !semTexto && !nomeNaImagem
 
   return (
     <span
       className={cn(
         'flex items-center gap-3',
-        vertical && 'flex-col gap-2 text-center',
+        grande && 'flex-col gap-3 text-center',
         className,
       )}
     >
-      <Simbolo lado={lado} />
+      {!semTexto && grande ? (
+        <span
+          className={cn(
+            'block font-medium uppercase tracking-[0.2em] text-muted-foreground',
+            sobretitulo,
+          )}
+        >
+          Centro Hípico
+        </span>
+      ) : null}
 
-      {semTexto ? null : (
-        <span className={cn(vertical && 'flex flex-col items-center')}>
-          <span
-            className={cn(
-              'block font-medium uppercase tracking-[0.2em] text-muted-foreground',
-              sobretitulo,
-            )}
-          >
-            Centro Hípico
-          </span>
+      {nomeNaImagem ? (
+        <Image
+          src={`/${LOCKUP}`}
+          alt="Quinta da Figueira"
+          width={lado}
+          height={lado}
+          className="shrink-0 rounded-xl"
+          priority
+        />
+      ) : (
+        <Simbolo lado={lado} />
+      )}
+
+      {mostrarNome ? (
+        <span className={cn(grande && 'flex flex-col items-center')}>
+          {!grande ? (
+            <span
+              className={cn(
+                'block font-medium uppercase tracking-[0.2em] text-muted-foreground',
+                sobretitulo,
+              )}
+            >
+              Centro Hípico
+            </span>
+          ) : null}
           <span className={cn('block font-semibold tracking-tight', texto)}>
             Quinta da Figueira
           </span>
         </span>
-      )}
+      ) : null}
     </span>
   )
 }
 
 function Simbolo({ lado }: { lado: number }) {
-  if (FICHEIRO_LOGOTIPO) {
+  if (SIMBOLO) {
     return (
       <Image
-        src={`/${FICHEIRO_LOGOTIPO}`}
+        src={`/${SIMBOLO}`}
         alt="Quinta da Figueira"
         width={lado}
         height={lado}
@@ -81,7 +123,7 @@ function Simbolo({ lado }: { lado: number }) {
     )
   }
 
-  // Reserva com a forma do logótipo: quadrado verde, desenho a creme.
+  // Reserva com a forma do símbolo: quadrado verde, desenho a creme.
   return (
     <span
       aria-hidden

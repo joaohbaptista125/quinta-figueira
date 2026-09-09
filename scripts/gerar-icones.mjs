@@ -1,16 +1,21 @@
 /**
- * Gera os ícones da PWA (public/icones/) sem depender de ferramentas de imagem.
+ * Gera os ícones da PWA em public/icones/.
  *
  *   node scripts/gerar-icones.mjs
  *
- * O desenho é uma ferradura clara sobre o verde da marca, rasterizada com
- * sobreamostragem 4x. Escreve PNG RGBA à mão: um IHDR, um IDAT comprimido com
- * zlib e um IEND.
+ * Se existir o logótipo do clube em public/marca/, é ele que é usado. Se não
+ * existir, desenha-se uma ferradura clara sobre o verde da marca — assim o
+ * script funciona num repositório acabado de clonar, sem o logótipo.
+ *
+ * A versão "maskable" encolhe o logótipo para caber na zona segura de 80% que
+ * os sistemas operativos recortam, preenchendo à volta com a cor de fundo do
+ * próprio logótipo, para o recorte não deixar bordas.
  */
 import { deflateSync } from 'node:zlib'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import sharp from 'sharp'
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DESTINO = join(RAIZ, 'public', 'icones')
@@ -144,14 +149,64 @@ function desenhar(tamanho, escalaGlifo) {
   return codificarPng(tamanho, tamanho, rgba)
 }
 
-mkdirSync(DESTINO, { recursive: true })
+// --- A partir do logótipo, quando existe ------------------------------------
 
-for (const tamanho of [192, 512]) {
-  writeFileSync(join(DESTINO, `icone-${tamanho}.png`), desenhar(tamanho, 1))
+const EXTENSOES = ['png', 'jpg', 'jpeg', 'webp', 'svg']
+
+function procurar(base) {
+  return EXTENSOES.map((e) => join(RAIZ, 'public', 'marca', `${base}.${e}`)).find(
+    (caminho) => existsSync(caminho),
+  )
 }
 
-// Versão "maskable": o glifo encolhe para caber na zona segura de 80% que os
-// sistemas operativos recortam.
-writeFileSync(join(DESTINO, 'icone-maskable-512.png'), desenhar(512, 0.72))
+// O símbolo é preferido ao lockup: um ícone de aplicação é visto a 48px, e aí
+// o nome dentro da imagem seria uma mancha ilegível.
+const logotipo = procurar('simbolo') ?? procurar('logotipo')
 
-console.log('Ícones gerados em public/icones/')
+async function apartirDoLogotipo(caminho) {
+  for (const tamanho of [192, 512]) {
+    await sharp(caminho)
+      .resize(tamanho, tamanho, { fit: 'cover' })
+      .png()
+      .toFile(join(DESTINO, `icone-${tamanho}.png`))
+  }
+
+  // A cor de fundo sai do próprio logótipo: um pixel do canto, que nestas
+  // marcas é sempre fundo liso.
+  const { data } = await sharp(caminho)
+    .extract({ left: 0, top: 0, width: 1, height: 1 })
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const fundo = { r: data[0], g: data[1], b: data[2], alpha: 1 }
+
+  const lado = 512
+  const interior = Math.round(lado * 0.78)
+  const margem = Math.round((lado - interior) / 2)
+
+  const encolhido = await sharp(caminho)
+    .resize(interior, interior, { fit: 'contain', background: fundo })
+    .toBuffer()
+
+  await sharp({
+    create: { width: lado, height: lado, channels: 4, background: fundo },
+  })
+    .composite([{ input: encolhido, top: margem, left: margem }])
+    .png()
+    .toFile(join(DESTINO, 'icone-maskable-512.png'))
+
+  console.log(`Ícones gerados a partir de ${caminho.replace(RAIZ + '/', '')}`)
+}
+
+// --- Execução ---------------------------------------------------------------
+
+mkdirSync(DESTINO, { recursive: true })
+
+if (logotipo) {
+  await apartirDoLogotipo(logotipo)
+} else {
+  for (const tamanho of [192, 512]) {
+    writeFileSync(join(DESTINO, `icone-${tamanho}.png`), desenhar(tamanho, 1))
+  }
+  writeFileSync(join(DESTINO, 'icone-maskable-512.png'), desenhar(512, 0.72))
+  console.log('Sem logótipo em public/marca/ — gerada a ferradura de reserva.')
+}
