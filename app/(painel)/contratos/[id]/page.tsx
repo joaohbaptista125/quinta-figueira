@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposContrato } from '@/components/formularios/campos-contrato'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -32,12 +33,13 @@ export default async function PaginaContrato({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const { data: contrato } = await supabase
+  const { data: contrato, error } = await supabase
     .from('contratos_penso')
     .select('*, cavalos(nome), pessoas(nome)')
     .eq('id', id)
     .maybeSingle()
 
+  if (error) return <ErroConsulta erro={error} contexto="o contrato de penso" />
   if (!contrato) notFound()
 
   const [cavalos, clientes, mensalidades] = await Promise.all([

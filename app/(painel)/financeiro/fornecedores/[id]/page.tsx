@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposFornecedor } from '@/components/formularios/campos-simples'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -39,6 +40,8 @@ export default async function PaginaFornecedor({
       .limit(10),
   ])
 
+  if (fornecedor.error)
+    return <ErroConsulta erro={fornecedor.error} contexto="o fornecedor" />
   if (!fornecedor.data) notFound()
 
   return (

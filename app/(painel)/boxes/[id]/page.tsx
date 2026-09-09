@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposBox } from '@/components/formularios/campos-box'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -21,12 +22,13 @@ export default async function PaginaBox({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const { data: box } = await supabase
+  const { data: box, error } = await supabase
     .from('boxes')
     .select('*')
     .eq('id', id)
     .maybeSingle()
 
+  if (error) return <ErroConsulta erro={error} contexto="a box" />
   if (!box) notFound()
 
   const disponiveis = await cavalosSemBox(supabase, box.cavalo_id)

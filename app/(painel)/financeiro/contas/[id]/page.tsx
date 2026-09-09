@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposConta } from '@/components/formularios/campos-simples'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -26,6 +27,7 @@ export default async function PaginaConta({
     supabase.from('v_saldos_contas').select('saldo_actual').eq('id', id).maybeSingle(),
   ])
 
+  if (conta.error) return <ErroConsulta erro={conta.error} contexto="a conta" />
   if (!conta.data) notFound()
 
   return (

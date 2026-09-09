@@ -5,6 +5,7 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
 import { eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposPessoa } from '@/components/formularios/campos-pessoa'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -39,12 +40,13 @@ export default async function PaginaPessoa({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const { data: pessoa } = await supabase
+  const { data: pessoa, error } = await supabase
     .from('pessoas')
     .select('*, pessoa_papeis(papel)')
     .eq('id', id)
     .maybeSingle()
 
+  if (error) return <ErroConsulta erro={error} contexto="a ficha da pessoa" />
   if (!pessoa) notFound()
 
   const papeis = ((pessoa.pessoa_papeis ?? []) as { papel: PapelPessoa }[]).map(

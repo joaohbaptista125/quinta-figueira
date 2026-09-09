@@ -5,6 +5,7 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
 import { eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposCavalo } from '@/components/formularios/campos-cavalo'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -35,12 +36,13 @@ export default async function PaginaCavalo({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const { data: cavalo } = await supabase
+  const { data: cavalo, error } = await supabase
     .from('cavalos')
     .select('*, pessoas(id, nome)')
     .eq('id', id)
     .maybeSingle()
 
+  if (error) return <ErroConsulta erro={error} contexto="a ficha do cavalo" />
   if (!cavalo) notFound()
 
   const podeEditar = eGestao(sessao.perfil)

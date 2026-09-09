@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposCategoria } from '@/components/formularios/campos-simples'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -20,12 +21,13 @@ export default async function PaginaCategoria({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const { data: categoria } = await supabase
+  const { data: categoria, error } = await supabase
     .from('categorias_despesa')
     .select('*')
     .eq('id', id)
     .maybeSingle()
 
+  if (error) return <ErroConsulta erro={error} contexto="a categoria de despesa" />
   if (!categoria) notFound()
 
   return (

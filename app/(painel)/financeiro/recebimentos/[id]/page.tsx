@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposRecebimento } from '@/components/formularios/campos-recebimento'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -23,12 +24,13 @@ export default async function PaginaRecebimento({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const { data: recebimento } = await supabase
+  const { data: recebimento, error } = await supabase
     .from('recebimentos')
     .select('*, pessoas(nome)')
     .eq('id', id)
     .maybeSingle()
 
+  if (error) return <ErroConsulta erro={error} contexto="o recebimento" />
   if (!recebimento) notFound()
 
   const [pessoas, contas, mensalidades] = await Promise.all([

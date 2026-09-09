@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposDespesa } from '@/components/formularios/campos-despesa'
 import { BotaoApagar } from '@/components/botao-apagar'
@@ -28,12 +29,13 @@ export default async function PaginaDespesa({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const { data: despesa } = await supabase
+  const { data: despesa, error } = await supabase
     .from('despesas')
     .select('*')
     .eq('id', id)
     .maybeSingle()
 
+  if (error) return <ErroConsulta erro={error} contexto="a despesa" />
   if (!despesa) notFound()
 
   const [categorias, fornecedores, contas, cavalos] = await Promise.all([
