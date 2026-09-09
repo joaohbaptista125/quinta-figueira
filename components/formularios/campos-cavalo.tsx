@@ -7,6 +7,7 @@ import {
   Selector,
 } from '@/components/ui/campos'
 import { GrelhaCampos } from '@/components/formulario-entidade'
+import { CampoFicheiro } from '@/components/campo-ficheiro'
 import { ROTULOS_REGIME, ROTULOS_SEXO, paraOpcoes } from '@/lib/rotulos'
 import type { Cavalo } from '@/lib/tipos-bd'
 
@@ -127,14 +128,14 @@ export function CamposCavalo({
         <Campo
           etiqueta="Foto"
           htmlFor="foto"
-          ajuda="JPEG, PNG ou WebP, até 10 MB."
+          ajuda="JPEG, PNG ou WebP, até 10 MB. Vai directa para o Storage assim que a escolher."
         >
-          <Entrada
-            id="foto"
-            name="foto"
-            type="file"
+          <CampoFicheiro
+            name="foto_path"
+            bucket="cavalos"
             accept="image/jpeg,image/png,image/webp,image/heic"
-            className="h-auto py-1.5 file:mr-3 file:rounded file:border-0 file:bg-secondary file:px-2 file:py-1 file:text-xs"
+            valorInicial={cavalo?.foto_path}
+            tamanhoMaximoMB={10}
           />
         </Campo>
 

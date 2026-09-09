@@ -1,5 +1,6 @@
 import { AreaTexto, Caixa, Campo, Entrada, Etiqueta, Selector } from '@/components/ui/campos'
 import { GrelhaCampos } from '@/components/formulario-entidade'
+import { CampoFicheiro } from '@/components/campo-ficheiro'
 import { ROTULOS_METODO, TAXAS_IVA, paraOpcoes } from '@/lib/rotulos'
 import { hoje } from '@/lib/formatos'
 import type { Despesa } from '@/lib/tipos-bd'
@@ -162,14 +163,15 @@ export function CamposDespesa({
         <Campo
           etiqueta="Fatura digitalizada"
           htmlFor="anexo"
-          ajuda="PDF ou fotografia, até 20 MB."
+          ajuda="PDF ou fotografia, até 20 MB. Vai directa para o Storage assim que a escolher."
         >
-          <Entrada
-            id="anexo"
-            name="anexo"
-            type="file"
+          <CampoFicheiro
+            name="anexo_path"
+            bucket="documentos"
+            prefixo={`despesas/${new Date().getFullYear()}/`}
             accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
-            className="h-auto py-1.5 file:mr-3 file:rounded file:border-0 file:bg-secondary file:px-2 file:py-1 file:text-xs"
+            valorInicial={despesa?.anexo_path}
+            tamanhoMaximoMB={20}
           />
         </Campo>
 

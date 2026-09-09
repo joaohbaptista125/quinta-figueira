@@ -45,8 +45,9 @@ export async function guardarDespesa(
     return { ok: false, mensagem: 'Escolha o método de pagamento.' }
   }
 
-  const anexo = await guardarAnexo(dados)
-  if (anexo.erro) return { ok: false, mensagem: anexo.erro }
+  // Tal como as fotos, a fatura já subiu do browser directamente para o
+  // Storage; aqui chega só o caminho.
+  const anexoPath = textoOuNulo(dados, 'anexo_path')
 
   const supabase = await criarClienteServidor()
   const {
@@ -68,7 +69,7 @@ export async function guardarDespesa(
       paga: booleano(dados, 'paga'),
       cavalo_id: textoOuNulo(dados, 'cavalo_id'),
       notas: textoOuNulo(dados, 'notas'),
-      ...(anexo.caminho ? { anexo_path: anexo.caminho } : {}),
+      ...(anexoPath ? { anexo_path: anexoPath } : {}),
       ...(id ? {} : { criado_por: user?.id ?? null }),
     },
     revalidar: ['/financeiro/despesas', '/financeiro/contas', '/'],
@@ -78,30 +79,6 @@ export async function guardarDespesa(
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
   redirect('/financeiro/despesas')
-}
-
-/** Carrega a fatura digitalizada para o bucket privado 'documentos'. */
-async function guardarAnexo(dados: FormData) {
-  const ficheiro = dados.get('anexo')
-  if (!(ficheiro instanceof File) || ficheiro.size === 0) {
-    return { caminho: null as string | null, erro: null as string | null }
-  }
-  if (ficheiro.size > 20 * 1024 * 1024) {
-    return { caminho: null, erro: 'O anexo não pode exceder 20 MB.' }
-  }
-
-  const supabase = await criarClienteServidor()
-  const extensao = ficheiro.name.split('.').pop()?.toLowerCase() ?? 'pdf'
-  const caminho = `despesas/${new Date().getFullYear()}/${crypto.randomUUID()}.${extensao}`
-
-  const { error } = await supabase.storage
-    .from('documentos')
-    .upload(caminho, ficheiro, { contentType: ficheiro.type, upsert: false })
-
-  if (error) {
-    return { caminho: null, erro: `Não foi possível anexar o ficheiro: ${error.message}` }
-  }
-  return { caminho, erro: null }
 }
 
 export async function apagarDespesa(

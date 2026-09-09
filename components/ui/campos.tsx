@@ -11,14 +11,14 @@ const BASE_CAMPO = cn(
 export function Entrada({
   className,
   ...props
-}: React.InputHTMLAttributes<HTMLInputElement>) {
+}: React.ComponentProps<'input'>) {
   return <input className={cn(BASE_CAMPO, 'h-10', className)} {...props} />
 }
 
 export function AreaTexto({
   className,
   ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+}: React.ComponentProps<'textarea'>) {
   return <textarea className={cn(BASE_CAMPO, 'min-h-20', className)} {...props} />
 }
 
@@ -29,7 +29,7 @@ export function AreaTexto({
 export function Selector({
   className,
   ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+}: React.ComponentProps<'select'>) {
   return (
     <select
       className={cn(BASE_CAMPO, 'h-10 appearance-none bg-no-repeat pr-8', className)}
@@ -98,7 +98,7 @@ export function Caixa({
   className,
   etiqueta,
   ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { etiqueta: string }) {
+}: React.ComponentProps<'input'> & { etiqueta: string }) {
   const id = props.id ?? props.name
   return (
     <div className="flex items-center gap-2">

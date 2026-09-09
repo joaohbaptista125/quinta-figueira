@@ -150,6 +150,13 @@ autenticado) e `documentos` (faturas digitalizadas, só gestão). Os ficheiros s
 servidos por URL assinado gerado no servidor — ver `components/foto-cavalo.tsx`
 e `components/ligacao-anexo.tsx`.
 
+**Os ficheiros sobem do browser, nunca pelo Server Action.**
+`components/campo-ficheiro.tsx` carrega directamente para o Storage e mete o
+caminho num campo escondido; a acção só recebe texto. Não voltes a pôr um
+`<input type="file">` num formulário de Server Action: o Next aceita 1 MB de
+corpo por omissão e a Vercel corta aos 4,5 MB, e uma fotografia de telemóvel
+não cabe em nenhum dos dois — falhava com um erro que não explicava nada.
+
 ---
 
 ## 5. Organização do código

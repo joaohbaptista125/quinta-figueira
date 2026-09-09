@@ -45,8 +45,9 @@ export async function guardarCavalo(
     ? (sexoBruto as SexoCavalo)
     : null
 
-  const fotoPath = await guardarFoto(dados, id)
-  if (fotoPath.erro) return { ok: false, mensagem: fotoPath.erro }
+  // O ficheiro já foi para o Storage a partir do browser; aqui só chega o
+  // caminho. Ver components/campo-ficheiro.tsx.
+  const fotoPath = textoOuNulo(dados, 'foto_path')
 
   const resultado = await gravar({
     tabela: 'cavalos',
@@ -65,7 +66,7 @@ export async function guardarCavalo(
       proprietario_id: regime === 'penso' ? proprietarioId : null,
       activo: booleano(dados, 'activo'),
       notas: textoOuNulo(dados, 'notas'),
-      ...(fotoPath.caminho ? { foto_path: fotoPath.caminho } : {}),
+      ...(fotoPath ? { foto_path: fotoPath } : {}),
     },
     revalidar: ['/cavalos'],
     mensagemCriado: `${nome} foi criado. Pode continuar a introduzir cavalos.`,
@@ -78,29 +79,6 @@ export async function guardarCavalo(
 
   if (querContinuar(dados)) return resultado
   redirect(`/cavalos/${resultado.id}`)
-}
-
-/** Carrega a foto para o bucket 'cavalos' e devolve o caminho guardado. */
-async function guardarFoto(dados: FormData, id: string | null) {
-  const ficheiro = dados.get('foto')
-  if (!(ficheiro instanceof File) || ficheiro.size === 0) {
-    return { caminho: null as string | null, erro: null as string | null }
-  }
-
-  if (ficheiro.size > 10 * 1024 * 1024) {
-    return { caminho: null, erro: 'A foto não pode exceder 10 MB.' }
-  }
-
-  const supabase = await criarClienteServidor()
-  const extensao = ficheiro.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-  const caminho = `${id ?? crypto.randomUUID()}/${Date.now()}.${extensao}`
-
-  const { error } = await supabase.storage
-    .from('cavalos')
-    .upload(caminho, ficheiro, { contentType: ficheiro.type, upsert: true })
-
-  if (error) return { caminho: null, erro: `Não foi possível carregar a foto: ${error.message}` }
-  return { caminho, erro: null }
 }
 
 export async function apagarCavalo(
