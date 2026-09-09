@@ -1,6 +1,9 @@
 import { AreaTexto, Caixa, Campo, Entrada, Etiqueta, Selector } from '@/components/ui/campos'
 import { GrelhaCampos } from '@/components/formulario-entidade'
-import { CampoFicheiro } from '@/components/campo-ficheiro'
+import {
+  CampoFatura,
+  type FornecedorConhecido,
+} from '@/components/formularios/campo-fatura'
 import { ROTULOS_METODO, TAXAS_IVA, paraOpcoes } from '@/lib/rotulos'
 import { hoje } from '@/lib/formatos'
 import type { Despesa } from '@/lib/tipos-bd'
@@ -14,7 +17,7 @@ export function CamposDespesa({
 }: {
   despesa?: Despesa | null
   categorias: { id: string; nome: string }[]
-  fornecedores: { id: string; nome: string }[]
+  fornecedores: FornecedorConhecido[]
   contas: { id: string; nome: string }[]
   cavalos: { id: string; nome: string }[]
 }) {
@@ -163,15 +166,12 @@ export function CamposDespesa({
         <Campo
           etiqueta="Fatura digitalizada"
           htmlFor="anexo"
-          ajuda="PDF ou fotografia, até 20 MB. Vai directa para o Storage assim que a escolher."
+          ajuda="Fotografe a fatura e eu leio o QR code: total, data, IVA e fornecedor vêm exactos. PDF também é guardado, mas aí os valores são à mão."
+          className="sm:col-span-2"
         >
-          <CampoFicheiro
-            name="anexo_path"
-            bucket="documentos"
-            prefixo={`despesas/${new Date().getFullYear()}/`}
-            accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+          <CampoFatura
+            fornecedores={fornecedores}
             valorInicial={despesa?.anexo_path}
-            tamanhoMaximoMB={20}
           />
         </Campo>
 

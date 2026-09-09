@@ -33,6 +33,7 @@ export function CampoFicheiro({
   accept,
   valorInicial,
   tamanhoMaximoMB,
+  aoEscolher: avisarEscolha,
 }: {
   /** Nome do campo escondido que leva o caminho para o Server Action. */
   name: string
@@ -42,6 +43,8 @@ export function CampoFicheiro({
   accept: string
   valorInicial?: string | null
   tamanhoMaximoMB: number
+  /** Avisado com o ficheiro escolhido, antes do carregamento. */
+  aoEscolher?: (ficheiro: File) => void
 }) {
   const [estado, setEstado] = useState<Estado>({ fase: 'vazio' })
   const [caminho, setCaminho] = useState(valorInicial ?? '')
@@ -59,6 +62,7 @@ export function CampoFicheiro({
     }
 
     setEstado({ fase: 'a-enviar', nome: ficheiro.name })
+    avisarEscolha?.(ficheiro)
 
     const extensao = ficheiro.name.split('.').pop()?.toLowerCase() ?? 'bin'
     const destino = `${prefixo}${crypto.randomUUID()}.${extensao}`

@@ -40,7 +40,7 @@ export default async function PaginaDespesa({
 
   const [categorias, fornecedores, contas, cavalos] = await Promise.all([
     supabase.from('categorias_despesa').select('id, nome').order('ordem').order('nome'),
-    supabase.from('fornecedores').select('id, nome').order('nome'),
+    supabase.from('fornecedores').select('id, nome, nif').order('nome'),
     contasActivas(supabase),
     cavalosActivos(supabase),
   ])

@@ -25,7 +25,7 @@ export default async function PaginaNovaDespesa() {
       .order('nome'),
     supabase
       .from('fornecedores')
-      .select('id, nome')
+      .select('id, nome, nif')
       .eq('activo', true)
       .order('nome'),
     contasActivas(supabase),
