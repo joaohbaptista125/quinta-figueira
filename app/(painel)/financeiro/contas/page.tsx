@@ -80,16 +80,16 @@ export default async function PaginaContas() {
                       <Distintivo className="mt-1">Inactiva</Distintivo>
                     ) : null}
                   </Td>
-                  <Td numerico className="text-muted-foreground">
+                  <Td rotulo="Saldo inicial" numerico className="text-muted-foreground">
                     {formatarEuros(conta.saldo_inicial)}
                   </Td>
-                  <Td numerico className="text-success">
+                  <Td rotulo="Recebido" numerico className="text-success">
                     {formatarEuros(conta.total_recebido)}
                   </Td>
-                  <Td numerico className="text-destructive">
+                  <Td rotulo="Despesas pagas" numerico className="text-destructive">
                     {formatarEuros(conta.total_despesas_pagas)}
                   </Td>
-                  <Td numerico className="font-medium">
+                  <Td rotulo="Saldo actual" numerico className="font-medium">
                     {formatarEuros(conta.saldo_actual)}
                   </Td>
                 </Linha>

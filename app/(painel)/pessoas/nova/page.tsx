@@ -14,6 +14,7 @@ export default async function PaginaNovaPessoa() {
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/pessoas', rotulo: 'Pessoas' }}
         titulo="Nova pessoa"
         descricao="Use «Guardar e criar outro» para introduzir várias de seguida."
       />

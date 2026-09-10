@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import {
   apagar,
+  comConfirmacao,
   booleano,
   gravar,
   inteiroOuNulo,
@@ -41,7 +42,7 @@ export async function guardarBox(
 
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
-  redirect('/boxes')
+  redirect(comConfirmacao('/boxes', id ? 'guardado' : 'criado'))
 }
 
 export async function apagarBox(
@@ -52,7 +53,7 @@ export async function apagarBox(
   if (!id) return { ok: false, mensagem: 'Registo inválido.' }
   const resultado = await apagar({ tabela: 'boxes', id, revalidar: ['/boxes'] })
   if (!resultado.ok) return resultado
-  redirect('/boxes')
+  redirect(comConfirmacao('/boxes', 'apagado'))
 }
 
 // --- Contratos de penso -----------------------------------------------------
@@ -100,7 +101,7 @@ export async function guardarContrato(
 
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
-  redirect('/contratos')
+  redirect(comConfirmacao('/contratos', id ? 'guardado' : 'criado'))
 }
 
 export async function apagarContrato(
@@ -115,7 +116,7 @@ export async function apagarContrato(
     revalidar: ['/contratos', '/financeiro/pensos'],
   })
   if (!resultado.ok) return resultado
-  redirect('/contratos')
+  redirect(comConfirmacao('/contratos', 'apagado'))
 }
 
 // --- Contas -----------------------------------------------------------------
@@ -150,7 +151,7 @@ export async function guardarConta(
 
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
-  redirect('/financeiro/contas')
+  redirect(comConfirmacao('/financeiro/contas', id ? 'guardado' : 'criado'))
 }
 
 export async function apagarConta(
@@ -171,7 +172,7 @@ export async function apagarConta(
         'Não é possível apagar: a conta tem movimentos. Marque-a como inactiva.',
     }
   }
-  redirect('/financeiro/contas')
+  redirect(comConfirmacao('/financeiro/contas', 'apagado'))
 }
 
 // --- Fornecedores -----------------------------------------------------------
@@ -207,7 +208,7 @@ export async function guardarFornecedor(
 
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
-  redirect('/financeiro/fornecedores')
+  redirect(comConfirmacao('/financeiro/fornecedores', id ? 'guardado' : 'criado'))
 }
 
 export async function apagarFornecedor(
@@ -222,7 +223,7 @@ export async function apagarFornecedor(
     revalidar: ['/financeiro/fornecedores'],
   })
   if (!resultado.ok) return resultado
-  redirect('/financeiro/fornecedores')
+  redirect(comConfirmacao('/financeiro/fornecedores', 'apagado'))
 }
 
 // --- Categorias de despesa --------------------------------------------------
@@ -260,7 +261,7 @@ export async function guardarCategoria(
 
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
-  redirect('/financeiro/categorias')
+  redirect(comConfirmacao('/financeiro/categorias', id ? 'guardado' : 'criado'))
 }
 
 export async function apagarCategoria(
@@ -281,5 +282,5 @@ export async function apagarCategoria(
         'Não é possível apagar: há despesas nesta categoria. Marque-a como inactiva.',
     }
   }
-  redirect('/financeiro/categorias')
+  redirect(comConfirmacao('/financeiro/categorias', 'apagado'))
 }

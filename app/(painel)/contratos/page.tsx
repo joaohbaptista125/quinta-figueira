@@ -104,19 +104,19 @@ export default async function PaginaContratos({
                         <Distintivo className="ml-2">Terminado</Distintivo>
                       ) : null}
                     </Td>
-                    <Td className="text-muted-foreground">
+                    <Td rotulo="Cliente" className="text-muted-foreground">
                       {contrato.pessoas?.nome ?? '—'}
                     </Td>
-                    <Td className="whitespace-nowrap text-muted-foreground">
+                    <Td rotulo="Início" className="whitespace-nowrap text-muted-foreground">
                       {formatarData(contrato.data_inicio)}
                     </Td>
-                    <Td className="whitespace-nowrap text-muted-foreground">
+                    <Td rotulo="Fim" className="whitespace-nowrap text-muted-foreground">
                       {contrato.data_fim ? formatarData(contrato.data_fim) : '—'}
                     </Td>
-                    <Td className="text-muted-foreground">
+                    <Td rotulo="Vence dia" className="text-muted-foreground">
                       {contrato.dia_vencimento}
                     </Td>
-                    <Td numerico className="font-medium">
+                    <Td rotulo="Valor mensal" numerico className="font-medium">
                       {formatarEuros(contrato.valor_mensal)}
                     </Td>
                   </Linha>

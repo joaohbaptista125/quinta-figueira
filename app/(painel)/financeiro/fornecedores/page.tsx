@@ -75,8 +75,8 @@ export default async function PaginaFornecedores({
                       <Distintivo className="ml-2">Inactivo</Distintivo>
                     ) : null}
                   </Td>
-                  <Td className="text-muted-foreground">{fornecedor.nif ?? '—'}</Td>
-                  <Td className="text-muted-foreground">
+                  <Td rotulo="NIF" className="text-muted-foreground">{fornecedor.nif ?? '—'}</Td>
+                  <Td rotulo="Contactos" className="text-muted-foreground">
                     <div className="text-xs">
                       {fornecedor.telefone ?? ''}
                       {fornecedor.telefone && fornecedor.email ? <br /> : null}

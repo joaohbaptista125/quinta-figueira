@@ -65,10 +65,10 @@ export default async function PaginaEquipas() {
                       <Distintivo className="ml-2">Inactiva</Distintivo>
                     ) : null}
                   </Td>
-                  <Td className="text-muted-foreground">
+                  <Td rotulo="Escalão" className="text-muted-foreground">
                     {equipa.escalao ?? '—'}
                   </Td>
-                  <Td numerico>{(equipa.equipa_membros ?? []).length}</Td>
+                  <Td rotulo="Jogadores" numerico>{(equipa.equipa_membros ?? []).length}</Td>
                 </Linha>
               ))}
             </Corpo>

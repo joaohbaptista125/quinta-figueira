@@ -81,15 +81,15 @@ export default async function PaginaBoxes() {
                       <span className="font-medium">{box.identificacao}</span>
                     )}
                   </Td>
-                  <Td className="text-muted-foreground">{box.zona ?? '—'}</Td>
-                  <Td>
+                  <Td rotulo="Zona" className="text-muted-foreground">{box.zona ?? '—'}</Td>
+                  <Td rotulo="Cavalo">
                     {box.cavalos ? (
                       <LigacaoInterna href={`/cavalos/${box.cavalos.id}`}>{box.cavalos.nome}</LigacaoInterna>
                     ) : (
                       <span className="text-muted-foreground">— vazia —</span>
                     )}
                   </Td>
-                  <Td>
+                  <Td rotulo="Estado">
                     {!box.activa ? (
                       <Distintivo cor="aviso">Fora de serviço</Distintivo>
                     ) : box.cavalos ? (

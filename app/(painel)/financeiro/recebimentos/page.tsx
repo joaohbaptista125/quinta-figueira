@@ -98,7 +98,7 @@ export default async function PaginaRecebimentos({
             <Corpo>
               {recebimentos.map((recebimento) => (
                 <Linha key={recebimento.id}>
-                  <Td className="whitespace-nowrap text-muted-foreground">
+                  <Td rotulo="Data" className="whitespace-nowrap text-muted-foreground">
                     {formatarData(recebimento.data)}
                   </Td>
                   <Td>
@@ -115,7 +115,7 @@ export default async function PaginaRecebimentos({
                       </div>
                     ) : null}
                   </Td>
-                  <Td>
+                  <Td rotulo="Refere-se a">
                     <Distintivo
                       cor={recebimento.tipo === 'penso' ? 'primario' : 'neutro'}
                     >
@@ -127,14 +127,14 @@ export default async function PaginaRecebimentos({
                       </div>
                     ) : null}
                   </Td>
-                  <Td className="text-muted-foreground">
+                  <Td rotulo="Recebido em" className="text-muted-foreground">
                     <div className="text-xs">
                       {ROTULOS_METODO[recebimento.metodo_pagamento]}
                       <br />
                       {recebimento.contas?.nome ?? '—'}
                     </div>
                   </Td>
-                  <Td numerico className="font-medium">
+                  <Td rotulo="Valor" numerico className="font-medium">
                     {formatarEuros(recebimento.valor)}
                   </Td>
                 </Linha>

@@ -35,7 +35,11 @@ export default async function PaginaBox({
 
   return (
     <>
-      <CabecalhoPagina titulo={`Box ${box.identificacao}`} descricao={box.zona ?? undefined} />
+      <CabecalhoPagina
+        voltar={{ href: '/boxes', rotulo: 'Boxes' }}
+        titulo={`Box ${box.identificacao}`}
+        descricao={box.zona ?? undefined}
+      />
       <Cartao className="max-w-2xl">
         <ConteudoCartao className="pt-4 sm:pt-5">
           <FormularioEntidade

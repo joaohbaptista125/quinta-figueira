@@ -62,6 +62,7 @@ export default async function PaginaRecebimento({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/financeiro/recebimentos', rotulo: 'Recebimentos' }}
         titulo={recebimento.pessoas?.nome ?? 'Recebimento'}
         descricao={`${formatarData(recebimento.data)} · ${formatarEuros(recebimento.valor)}`}
       />

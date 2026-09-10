@@ -129,7 +129,7 @@ export default async function PaginaDespesas({
             <Corpo>
               {despesas.map((despesa) => (
                 <Linha key={despesa.id}>
-                  <Td className="whitespace-nowrap text-muted-foreground">
+                  <Td rotulo="Data" className="whitespace-nowrap text-muted-foreground">
                     {formatarData(despesa.data)}
                   </Td>
                   <Td>
@@ -140,17 +140,17 @@ export default async function PaginaDespesas({
                       {despesa.anexo_path ? ' · com fatura' : ''}
                     </div>
                   </Td>
-                  <Td className="text-muted-foreground">
+                  <Td rotulo="Categoria" className="text-muted-foreground">
                     {despesa.categorias_despesa?.nome ?? '—'}
                   </Td>
-                  <Td className="text-muted-foreground">
+                  <Td rotulo="Pagamento" className="text-muted-foreground">
                     <div className="text-xs">
                       {ROTULOS_METODO[despesa.metodo_pagamento]}
                       <br />
                       {despesa.contas?.nome ?? '—'}
                     </div>
                   </Td>
-                  <Td numerico className="font-medium">
+                  <Td rotulo="Valor" numerico className="font-medium">
                     {formatarEuros(despesa.valor_total)}
                     <div className="text-xs font-normal text-muted-foreground">
                       IVA {formatarEuros(despesa.valor_iva)}

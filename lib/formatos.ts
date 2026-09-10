@@ -139,6 +139,17 @@ export function formatarDiaPorExtenso(iso: string) {
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
+/** '2026-09-10' → 'Qui, 10/09' — para colunas estreitas. */
+export function formatarDiaCurto(iso: string) {
+  const dia = new Intl.DateTimeFormat('pt-PT', {
+    weekday: 'short',
+    timeZone: 'UTC',
+  }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`))
+  const [, mes, diaDoMes] = iso.slice(0, 10).split('-')
+  const abreviatura = dia.replace('.', '').slice(0, 3)
+  return `${abreviatura.charAt(0).toUpperCase()}${abreviatura.slice(1)}, ${diaDoMes}/${mes}`
+}
+
 /** Desloca uma data 'AAAA-MM-DD' em n dias. */
 export function deslocarDias(iso: string, n: number) {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`)

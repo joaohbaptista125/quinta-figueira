@@ -57,8 +57,8 @@ export default async function PaginaCategorias() {
                   <Td>
                     <LigacaoFicha href={`/financeiro/categorias/${categoria.id}`}>{categoria.nome}</LigacaoFicha>
                   </Td>
-                  <Td className="text-muted-foreground">{categoria.ordem}</Td>
-                  <Td>
+                  <Td rotulo="Ordem" className="text-muted-foreground">{categoria.ordem}</Td>
+                  <Td rotulo="Estado">
                     {categoria.activa ? (
                       <Distintivo cor="sucesso">Activa</Distintivo>
                     ) : (

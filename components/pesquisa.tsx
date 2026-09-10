@@ -37,7 +37,7 @@ export function Pesquisa({ placeholder = 'Pesquisar…' }: { placeholder?: strin
       onChange={(evento) => setValor(evento.target.value)}
       placeholder={placeholder}
       aria-label={placeholder}
-      className="max-w-xs"
+      className="w-full sm:max-w-xs"
     />
   )
 }

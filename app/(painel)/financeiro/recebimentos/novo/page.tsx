@@ -54,6 +54,7 @@ export default async function PaginaNovoRecebimento({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/financeiro/recebimentos', rotulo: 'Recebimentos' }}
         titulo="Registar recebimento"
         descricao="Use «Guardar e criar outro» para lançar vários de seguida."
       />

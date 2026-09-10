@@ -82,6 +82,7 @@ export default async function PaginaCavalo({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/cavalos', rotulo: 'Cavalos' }}
         titulo={cavalo.nome}
         descricao={
           <span className="flex flex-wrap items-center gap-1.5">
@@ -201,10 +202,10 @@ export default async function PaginaCavalo({
                                 <Distintivo className="ml-2">Terminado</Distintivo>
                               ) : null}
                             </Td>
-                            <Td className="whitespace-nowrap text-muted-foreground">
+                            <Td rotulo="Início" className="whitespace-nowrap text-muted-foreground">
                               {formatarData(contrato.data_inicio)}
                             </Td>
-                            <Td numerico>{formatarEuros(contrato.valor_mensal)}</Td>
+                            <Td rotulo="Mensal" numerico>{formatarEuros(contrato.valor_mensal)}</Td>
                           </Linha>
                         ))}
                       </Corpo>

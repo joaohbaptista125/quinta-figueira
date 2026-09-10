@@ -114,28 +114,28 @@ export default async function PaginaCavalos({
                         </span>
                       ) : null}
                     </Td>
-                    <Td>
+                    <Td rotulo="Regime">
                       <Distintivo
                         cor={cavalo.regime === 'penso' ? 'primario' : 'neutro'}
                       >
                         {ROTULOS_REGIME[cavalo.regime]}
                       </Distintivo>
                     </Td>
-                    <Td className="text-muted-foreground">
+                    <Td rotulo="Proprietário" className="text-muted-foreground">
                       {cavalo.pessoas ? (
                         <LigacaoInterna href={`/pessoas/${cavalo.pessoas.id}`}>{cavalo.pessoas.nome}</LigacaoInterna>
                       ) : (
                         '—'
                       )}
                     </Td>
-                    <Td className="text-muted-foreground">
+                    <Td rotulo="Raça / pelagem" className="text-muted-foreground">
                       {[cavalo.raca, cavalo.pelagem].filter(Boolean).join(' · ') ||
                         '—'}
                     </Td>
-                    <Td className="text-muted-foreground">
+                    <Td rotulo="Idade" className="text-muted-foreground">
                       {idade != null ? `${idade} anos` : '—'}
                     </Td>
-                    <Td className="text-muted-foreground">
+                    <Td rotulo="Box" className="text-muted-foreground">
                       {cavalo.boxes?.identificacao ?? '—'}
                     </Td>
                   </Linha>
@@ -175,8 +175,8 @@ function FiltroRegime({
       href={valor ? `/cavalos?regime=${valor}` : '/cavalos'}
       className={
         seleccionado
-          ? 'rounded-full bg-primary px-3 py-1 text-primary-foreground'
-          : 'rounded-full bg-muted px-3 py-1 text-muted-foreground'
+          ? 'rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground'
+          : 'rounded-full bg-muted px-3.5 py-1.5 text-muted-foreground hover:bg-accent'
       }
     >
       {rotulo}

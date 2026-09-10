@@ -12,7 +12,10 @@ export default async function PaginaNovaConta() {
   await exigirGestao()
   return (
     <>
-      <CabecalhoPagina titulo="Nova conta" />
+      <CabecalhoPagina
+        voltar={{ href: '/financeiro/contas', rotulo: 'Contas' }}
+        titulo="Nova conta"
+      />
       <Cartao className="max-w-2xl">
         <ConteudoCartao className="pt-4 sm:pt-5">
           <FormularioEntidade

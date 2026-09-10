@@ -2,6 +2,19 @@ import * as React from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
+/*
+ * Tabela que deixa de ser tabela no telemóvel.
+ *
+ * Acima de `sm` é uma tabela normal. Abaixo, cada linha vira um cartão com uma
+ * célula por linha, e o cabeçalho da coluna reaparece à esquerda de cada valor
+ * a partir do atributo `data-rotulo` — daí o `rotulo` do <Td>. Sem isto as
+ * listagens tinham cinco ou seis colunas e obrigavam a deslizar para o lado
+ * num ecrã de telemóvel, que é onde a equipa da cavalariça as consulta.
+ *
+ * A célula sem `rotulo` é o título do cartão: fica sozinha na primeira linha,
+ * um pouco maior, e é onde vai a <LigacaoFicha>.
+ */
+
 /** Tabela com scroll horizontal próprio — o corpo da página nunca desliza. */
 export function Tabela({
   className,
@@ -10,7 +23,7 @@ export function Tabela({
   return (
     <div className="w-full overflow-x-auto">
       <table
-        className={cn('w-full caption-bottom text-sm', className)}
+        className={cn('w-full caption-bottom text-sm max-sm:block', className)}
         {...props}
       />
     </div>
@@ -23,7 +36,10 @@ export function Cabecalho({
 }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={cn('border-b border-border bg-muted/60', className)}
+      className={cn(
+        'border-b border-border bg-muted/60 max-sm:hidden',
+        className,
+      )}
       {...props}
     />
   )
@@ -34,7 +50,10 @@ export function Corpo({
   ...props
 }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <tbody className={cn('[&_tr:last-child]:border-0', className)} {...props} />
+    <tbody
+      className={cn('max-sm:block [&_tr:last-child]:border-0', className)}
+      {...props}
+    />
   )
 }
 
@@ -49,6 +68,7 @@ export function Linha({
         // linha toda. Sem isto, só o texto do nome seria clicável.
         'relative border-b border-border transition-colors hover:bg-muted/50',
         'has-[a.ficha:focus-visible]:bg-muted/50',
+        'max-sm:flex max-sm:flex-col max-sm:gap-0.5 max-sm:px-3 max-sm:py-3',
         className,
       )}
       {...props}
@@ -76,13 +96,30 @@ export function Th({
 export function Td({
   className,
   numerico,
+  rotulo,
   ...props
-}: React.TdHTMLAttributes<HTMLTableCellElement> & { numerico?: boolean }) {
+}: React.TdHTMLAttributes<HTMLTableCellElement> & {
+  numerico?: boolean
+  /**
+   * Nome da coluna, repetido à frente do valor quando a linha vira cartão.
+   * Sem ele a célula é tratada como título do cartão.
+   */
+  rotulo?: string
+}) {
   return (
     <td
+      data-rotulo={rotulo}
       className={cn(
         'px-3 py-2.5 align-middle',
         numerico && 'tabular text-right',
+        'max-sm:flex max-sm:items-baseline max-sm:justify-between max-sm:gap-3 max-sm:px-0 max-sm:py-0.5 max-sm:text-left',
+        rotulo
+          ? [
+              'max-sm:before:shrink-0 max-sm:before:content-[attr(data-rotulo)]',
+              'max-sm:before:text-xs max-sm:before:font-medium max-sm:before:uppercase',
+              'max-sm:before:tracking-wide max-sm:before:text-muted-foreground',
+            ]
+          : 'max-sm:order-first max-sm:pb-1 max-sm:text-base',
         className,
       )}
       {...props}
@@ -146,14 +183,5 @@ export function LigacaoInterna({
     >
       {children}
     </Link>
-  )
-}
-
-/** Seta ao fim da linha, para se perceber que a linha abre alguma coisa. */
-export function SetaFicha() {
-  return (
-    <span aria-hidden className="block text-right text-muted-foreground/60">
-      ›
-    </span>
   )
 }

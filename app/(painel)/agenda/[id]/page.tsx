@@ -75,6 +75,7 @@ export default async function PaginaEvento({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/agenda', rotulo: 'Agenda' }}
         titulo={evento.titulo || ROTULOS_TIPO_EVENTO[evento.tipo]}
         descricao={
           <span className="flex flex-wrap items-center gap-1.5">

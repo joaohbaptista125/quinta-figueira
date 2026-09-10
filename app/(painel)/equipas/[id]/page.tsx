@@ -66,6 +66,7 @@ export default async function PaginaEquipa({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/equipas', rotulo: 'Equipas' }}
         titulo={equipa.nome}
         descricao={
           <span className="flex flex-wrap items-center gap-1.5">

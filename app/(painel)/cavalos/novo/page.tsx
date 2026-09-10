@@ -21,6 +21,7 @@ export default async function PaginaNovoCavalo() {
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/cavalos', rotulo: 'Cavalos' }}
         titulo="Novo cavalo"
         descricao="Use «Guardar e criar outro» para introduzir vários de seguida."
       />

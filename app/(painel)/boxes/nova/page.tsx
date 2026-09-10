@@ -18,6 +18,7 @@ export default async function PaginaNovaBox() {
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/boxes', rotulo: 'Boxes' }}
         titulo="Nova box"
         descricao="Use «Guardar e criar outro» para registar a cavalariça toda de seguida."
       />

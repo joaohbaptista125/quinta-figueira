@@ -93,14 +93,14 @@ export default async function PaginaPessoas({
                       </Distintivo>
                     ) : null}
                   </Td>
-                  <Td className="text-muted-foreground">
+                  <Td rotulo="Contactos" className="text-muted-foreground">
                     <div className="flex flex-col text-xs">
                       {pessoa.email ? <span>{pessoa.email}</span> : null}
                       {pessoa.telefone ? <span>{pessoa.telefone}</span> : null}
                       {!pessoa.email && !pessoa.telefone ? <span>—</span> : null}
                     </div>
                   </Td>
-                  <Td>
+                  <Td rotulo="Papéis">
                     <div className="flex flex-wrap gap-1">
                       {(pessoa.pessoa_papeis ?? []).map(
                         (relacao: { papel: PapelPessoa }) => (
@@ -114,7 +114,7 @@ export default async function PaginaPessoas({
                       ) : null}
                     </div>
                   </Td>
-                  <Td className="text-muted-foreground">
+                  <Td rotulo="Acesso" className="text-muted-foreground">
                     {pessoa.perfil ? ROTULOS_PERFIL[pessoa.perfil] : '—'}
                   </Td>
                 </Linha>

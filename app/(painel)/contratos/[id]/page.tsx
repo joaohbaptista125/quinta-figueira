@@ -56,6 +56,7 @@ export default async function PaginaContrato({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/contratos', rotulo: 'Contratos de penso' }}
         titulo={`${contrato.cavalos?.nome ?? 'Contrato'} · ${contrato.pessoas?.nome ?? ''}`}
         descricao={`${formatarEuros(contrato.valor_mensal)} por mês`}
       />
@@ -106,7 +107,7 @@ export default async function PaginaContrato({
                   {mensalidades.data.map((mensalidade) => (
                     <Linha key={mensalidade.id}>
                       <Td>{formatarMesCapitalizado(mensalidade.periodo)}</Td>
-                      <Td>
+                      <Td rotulo="Estado">
                         <Distintivo
                           cor={
                             mensalidade.estado === 'paga'
@@ -119,7 +120,7 @@ export default async function PaginaContrato({
                           {ROTULOS_ESTADO_MENSALIDADE[mensalidade.estado]}
                         </Distintivo>
                       </Td>
-                      <Td numerico>{formatarEuros(mensalidade.valor)}</Td>
+                      <Td rotulo="Valor" numerico>{formatarEuros(mensalidade.valor)}</Td>
                     </Linha>
                   ))}
                 </Corpo>

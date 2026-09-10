@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
+import { ProximasMarcacoes } from '@/components/resumo-do-dia'
 import {
   Cartao,
   CabecalhoCartao,
@@ -56,7 +57,9 @@ export async function PainelCliente({ nome }: { nome: string }) {
         descricao="Os seus cavalos e pagamentos na Quinta da Figueira"
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <ProximasMarcacoes />
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Indicador
           rotulo="Os seus cavalos"
           valor={String(cavalos.data?.length ?? 0)}
@@ -102,10 +105,10 @@ export async function PainelCliente({ nome }: { nome: string }) {
                           {cavalo.nome}
                         </Link>
                       </Td>
-                      <Td className="text-muted-foreground">
+                      <Td rotulo="Raça" className="text-muted-foreground">
                         {cavalo.raca ?? '—'}
                       </Td>
-                      <Td>
+                      <Td rotulo="Regime">
                         <Distintivo>{ROTULOS_REGIME[cavalo.regime]}</Distintivo>
                       </Td>
                     </Linha>
@@ -142,10 +145,10 @@ export async function PainelCliente({ nome }: { nome: string }) {
                   {pensos.data.map((linha) => (
                     <Linha key={linha.mensalidade_id}>
                       <Td>{formatarMesCapitalizado(linha.periodo)}</Td>
-                      <Td className="text-muted-foreground">
+                      <Td rotulo="Cavalo" className="text-muted-foreground">
                         {linha.cavalo_nome}
                       </Td>
-                      <Td numerico className="font-medium">
+                      <Td rotulo="Em falta" numerico className="font-medium">
                         {formatarEuros(linha.valor_em_falta)}
                       </Td>
                     </Linha>
@@ -180,7 +183,7 @@ export async function PainelCliente({ nome }: { nome: string }) {
                 <Corpo>
                   {recebimentos.data.map((recebimento) => (
                     <Linha key={recebimento.id}>
-                      <Td className="whitespace-nowrap">
+                      <Td rotulo="Data" className="whitespace-nowrap">
                         {formatarData(recebimento.data)}
                       </Td>
                       <Td>
@@ -189,10 +192,10 @@ export async function PainelCliente({ nome }: { nome: string }) {
                             ? formatarMesCapitalizado(recebimento.periodo)
                             : '—')}
                       </Td>
-                      <Td className="text-muted-foreground">
+                      <Td rotulo="Método" className="text-muted-foreground">
                         {ROTULOS_METODO[recebimento.metodo_pagamento]}
                       </Td>
-                      <Td numerico className="font-medium">
+                      <Td rotulo="Valor" numerico className="font-medium">
                         {formatarEuros(recebimento.valor)}
                       </Td>
                     </Linha>

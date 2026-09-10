@@ -7,6 +7,7 @@ import type { PapelPessoa, PerfilAcesso } from '@/lib/tipos-bd'
 import { ROTULOS_PAPEL, ROTULOS_PERFIL } from '@/lib/rotulos'
 import {
   apagar,
+  comConfirmacao,
   booleano,
   gravar,
   listaTexto,
@@ -70,7 +71,7 @@ export async function guardarPessoa(
   revalidatePath(`/pessoas/${resultado.id}`)
 
   if (querContinuar(dados)) return resultado
-  redirect(`/pessoas/${resultado.id}`)
+  redirect(comConfirmacao(`/pessoas/${resultado.id}`, id ? 'guardado' : 'criado'))
 }
 
 /** Substitui o conjunto de papéis da pessoa pelo indicado no formulário. */
@@ -121,5 +122,5 @@ export async function apagarPessoa(
     }
   }
 
-  redirect('/pessoas')
+  redirect(comConfirmacao('/pessoas', 'apagado'))
 }

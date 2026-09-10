@@ -125,19 +125,20 @@ export default async function PaginaPensos({
                         </div>
                       ) : null}
                     </Td>
-                    <Td className="text-muted-foreground">{linha.cavalo_nome}</Td>
-                    <Td>
+                    <Td rotulo="Cavalo" className="text-muted-foreground">{linha.cavalo_nome}</Td>
+                    <Td rotulo="Estado">
                       <Distintivo
                         cor={linha.estado === 'paga' ? 'sucesso' : 'aviso'}
                       >
                         {ROTULOS_ESTADO_MENSALIDADE[linha.estado]}
                       </Distintivo>
                     </Td>
-                    <Td numerico>{formatarEuros(linha.valor)}</Td>
-                    <Td numerico className="text-muted-foreground">
+                    <Td rotulo="Mensalidade" numerico>{formatarEuros(linha.valor)}</Td>
+                    <Td rotulo="Pago" numerico className="text-muted-foreground">
                       {formatarEuros(linha.valor_pago)}
                     </Td>
                     <Td
+                      rotulo="Em falta"
                       numerico
                       className={
                         Number(linha.valor_em_falta) > 0

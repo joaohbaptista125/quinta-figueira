@@ -33,6 +33,7 @@ export default async function PaginaConta({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/financeiro/contas', rotulo: 'Contas' }}
         titulo={conta.data.nome}
         descricao={
           saldo.data

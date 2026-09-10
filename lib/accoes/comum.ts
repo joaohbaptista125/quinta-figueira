@@ -124,3 +124,21 @@ export async function apagar({
   for (const caminho of revalidar) revalidatePath(caminho)
   return { ok: true }
 }
+
+// --- Confirmação depois de redireccionar ------------------------------------
+
+/**
+ * Marca que faz aparecer a confirmação na página de destino.
+ *
+ * Depois de gravar, a acção redirecciona — e o resultado devolvido por
+ * `useActionState` desaparece com a navegação. Numa edição o destino é a
+ * própria ficha onde se estava, por isso carregar em «Guardar» não mudava
+ * nada no ecrã e ficava a dúvida se tinha resultado. O parâmetro viaja no URL
+ * e `<Notificacao>` mostra-o e limpa-o a seguir; é uma chave fixa e não texto
+ * livre, para ninguém poder pôr uma mensagem à escolha no endereço.
+ */
+export type Confirmacao = 'criado' | 'guardado' | 'apagado'
+
+export function comConfirmacao(caminho: string, confirmacao: Confirmacao) {
+  return `${caminho}${caminho.includes('?') ? '&' : '?'}feito=${confirmacao}`
+}

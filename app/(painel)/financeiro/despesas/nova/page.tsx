@@ -54,6 +54,7 @@ export default async function PaginaNovaDespesa() {
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/financeiro/despesas', rotulo: 'Despesas' }}
         titulo="Lançar despesa"
         descricao="Use «Guardar e criar outro» para lançar várias de seguida."
       />

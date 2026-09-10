@@ -12,7 +12,10 @@ export default async function PaginaNovoFornecedor() {
   await exigirGestao()
   return (
     <>
-      <CabecalhoPagina titulo="Novo fornecedor" />
+      <CabecalhoPagina
+        voltar={{ href: '/financeiro/fornecedores', rotulo: 'Fornecedores' }}
+        titulo="Novo fornecedor"
+      />
       <Cartao className="max-w-2xl">
         <ConteudoCartao className="pt-4 sm:pt-5">
           <FormularioEntidade

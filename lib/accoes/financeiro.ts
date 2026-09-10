@@ -8,6 +8,7 @@ import { ROTULOS_METODO, ROTULOS_TIPO_RECEBIMENTO } from '@/lib/rotulos'
 import type { MetodoPagamento, TipoRecebimento } from '@/lib/tipos-bd'
 import {
   apagar,
+  comConfirmacao,
   booleano,
   gravar,
   querContinuar,
@@ -78,7 +79,7 @@ export async function guardarDespesa(
 
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
-  redirect('/financeiro/despesas')
+  redirect(comConfirmacao('/financeiro/despesas', id ? 'guardado' : 'criado'))
 }
 
 export async function apagarDespesa(
@@ -93,7 +94,7 @@ export async function apagarDespesa(
     revalidar: ['/financeiro/despesas', '/financeiro/contas', '/'],
   })
   if (!resultado.ok) return resultado
-  redirect('/financeiro/despesas')
+  redirect(comConfirmacao('/financeiro/despesas', 'apagado'))
 }
 
 /** Marca uma despesa por pagar como paga, a partir da listagem. */
@@ -185,7 +186,7 @@ export async function guardarRecebimento(
 
   if (!resultado.ok) return resultado
   if (querContinuar(dados)) return resultado
-  redirect('/financeiro/recebimentos')
+  redirect(comConfirmacao('/financeiro/recebimentos', id ? 'guardado' : 'criado'))
 }
 
 export async function apagarRecebimento(
@@ -205,7 +206,7 @@ export async function apagarRecebimento(
     ],
   })
   if (!resultado.ok) return resultado
-  redirect('/financeiro/recebimentos')
+  redirect(comConfirmacao('/financeiro/recebimentos', 'apagado'))
 }
 
 // --- Mensalidades de penso --------------------------------------------------

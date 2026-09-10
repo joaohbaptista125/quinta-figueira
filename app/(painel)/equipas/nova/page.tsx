@@ -21,7 +21,10 @@ export default async function PaginaNovaEquipa() {
 
   return (
     <>
-      <CabecalhoPagina titulo="Nova equipa" />
+      <CabecalhoPagina
+        voltar={{ href: '/equipas', rotulo: 'Equipas' }}
+        titulo="Nova equipa"
+      />
       <Cartao className="max-w-3xl">
         <ConteudoCartao className="pt-4 sm:pt-5">
           <FormularioEntidade

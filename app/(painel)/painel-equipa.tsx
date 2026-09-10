@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
+import { QuadroDoDia } from '@/components/resumo-do-dia'
 import {
   Cartao,
   CabecalhoCartao,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/superficie'
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
 import { ROTULOS_REGIME } from '@/lib/rotulos'
+import { formatarDiaPorExtenso, hoje } from '@/lib/formatos'
 
 /** Painel de instrutores e tratadores: cadastro, sem qualquer financeiro. */
 export async function PainelEquipa({ nome }: { nome: string }) {
@@ -39,10 +41,12 @@ export async function PainelEquipa({ nome }: { nome: string }) {
     <>
       <CabecalhoPagina
         titulo={`Olá, ${nome.split(' ')[0]}`}
-        descricao="Cadastro do centro"
+        descricao={formatarDiaPorExtenso(hoje())}
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <QuadroDoDia />
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Indicador
           rotulo="Cavalos activos"
           valor={String(cavalos.count ?? 0)}
@@ -79,8 +83,8 @@ export async function PainelEquipa({ nome }: { nome: string }) {
                         {cavalo.nome}
                       </Link>
                     </Td>
-                    <Td className="text-muted-foreground">{cavalo.raca ?? '—'}</Td>
-                    <Td>{ROTULOS_REGIME[cavalo.regime]}</Td>
+                    <Td rotulo="Raça" className="text-muted-foreground">{cavalo.raca ?? '—'}</Td>
+                    <Td rotulo="Regime">{ROTULOS_REGIME[cavalo.regime]}</Td>
                   </Linha>
                 ))}
               </Corpo>

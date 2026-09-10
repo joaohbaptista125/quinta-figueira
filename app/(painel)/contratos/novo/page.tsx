@@ -26,6 +26,7 @@ export default async function PaginaNovoContrato({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/contratos', rotulo: 'Contratos de penso' }}
         titulo="Novo contrato de penso"
         descricao="As mensalidades são geradas depois, em Pensos do mês."
       />

@@ -48,6 +48,7 @@ export default async function PaginaDespesa({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/financeiro/despesas', rotulo: 'Despesas' }}
         titulo={despesa.descricao}
         descricao={`${formatarData(despesa.data)} · ${formatarEuros(despesa.valor_total)}`}
       />

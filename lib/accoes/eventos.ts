@@ -7,6 +7,7 @@ import { ROTULOS_ESTADO_PARTICIPACAO, ROTULOS_TIPO_EVENTO } from '@/lib/rotulos'
 import type { EstadoParticipacao, TipoEvento } from '@/lib/tipos-bd'
 import {
   apagar,
+  comConfirmacao,
   booleano,
   gravar,
   listaTexto,
@@ -89,7 +90,7 @@ export async function guardarEvento(
 
   revalidatePath(`/agenda/${resultado.id}`)
   if (querContinuar(dados)) return resultado
-  redirect(`/agenda/${resultado.id}`)
+  redirect(comConfirmacao(`/agenda/${resultado.id}`, id ? 'guardado' : 'criado'))
 }
 
 /** Acrescenta ao evento quem ainda não estiver convocado. */
@@ -170,7 +171,7 @@ export async function apagarEvento(
   if (!id) return { ok: false, mensagem: 'Registo inválido.' }
   const resultado = await apagar({ tabela: 'eventos', id, revalidar: CAMINHOS })
   if (!resultado.ok) return resultado
-  redirect('/agenda')
+  redirect(comConfirmacao('/agenda', 'apagado'))
 }
 
 // --- Convocatória -----------------------------------------------------------
@@ -340,7 +341,7 @@ export async function guardarEquipa(
 
   revalidatePath(`/equipas/${resultado.id}`)
   if (querContinuar(dados)) return resultado
-  redirect(`/equipas/${resultado.id}`)
+  redirect(comConfirmacao(`/equipas/${resultado.id}`, id ? 'guardado' : 'criado'))
 }
 
 async function sincronizarMembros(equipaId: string, pessoas: string[]) {
@@ -377,5 +378,5 @@ export async function apagarEquipa(
     revalidar: ['/equipas'],
   })
   if (!resultado.ok) return resultado
-  redirect('/equipas')
+  redirect(comConfirmacao('/equipas', 'apagado'))
 }

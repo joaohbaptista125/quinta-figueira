@@ -32,7 +32,10 @@ export default async function PaginaCategoria({
 
   return (
     <>
-      <CabecalhoPagina titulo={categoria.nome} />
+      <CabecalhoPagina
+        voltar={{ href: '/financeiro/categorias', rotulo: 'Categorias' }}
+        titulo={categoria.nome}
+      />
       <Cartao className="max-w-2xl">
         <ConteudoCartao className="pt-4 sm:pt-5">
           <FormularioEntidade

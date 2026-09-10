@@ -46,7 +46,10 @@ export default async function PaginaFornecedor({
 
   return (
     <>
-      <CabecalhoPagina titulo={fornecedor.data.nome} />
+      <CabecalhoPagina
+        voltar={{ href: '/financeiro/fornecedores', rotulo: 'Fornecedores' }}
+        titulo={fornecedor.data.nome}
+      />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Cartao>

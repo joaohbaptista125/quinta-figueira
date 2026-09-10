@@ -131,3 +131,33 @@ export function GrelhaCampos({
         : 'grid-cols-1 sm:grid-cols-2'
   return <div className={`grid gap-4 ${classe}`}>{children}</div>
 }
+
+/**
+ * Secção de um formulário, com um título.
+ *
+ * Os formulários mais longos — pessoa e cavalo — eram uma parede de vinte
+ * campos sem nenhuma divisão, e quem os preenche sessenta vezes seguidas
+ * perde o fio. Dividi-los em blocos com nome dá pontos de referência e mostra
+ * de relance o que falta.
+ */
+export function SeccaoCampos({
+  titulo,
+  descricao,
+  children,
+}: {
+  titulo: string
+  descricao?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="border-b border-border pb-1.5">
+        <h2 className="text-sm font-semibold tracking-tight">{titulo}</h2>
+        {descricao ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">{descricao}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  )
+}

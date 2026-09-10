@@ -216,8 +216,11 @@ app/
   calendario/     ficheiro iCal por token, sem sessão
   manifest.ts     manifesto da PWA
 components/
-  ui/             kit de base (botao, campos, superficie, tabela)
+  ui/             kit de base (botao, campos, superficie, tabela, ferradura)
   formularios/    campos de cada entidade, partilhados entre criar e editar
+  navegacao.tsx   barra lateral, barra de separadores do telemóvel e «Mais»
+  resumo-do-dia.tsx  o que está marcado, no topo do painel
+  notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
   supabase/       clientes de browser, servidor e middleware
   accoes/         Server Actions, uma por área
@@ -288,6 +291,37 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   Antes disto só o texto do nome respondia ao clique e só ganhava sublinhado ao
   passar o rato: num telemóvel era indescobrível, e parecia que editar não
   funcionava.
+- Nas listagens, os `<Td>` levam `rotulo` — ver «Interface no telemóvel».
+- **Uma acção que redirecciona confirma-se com `comConfirmacao()`**, de
+  `lib/accoes/comum.ts`: acrescenta `?feito=criado|guardado|apagado` ao
+  destino e `<Notificacao>` (no layout do painel) mostra e limpa a marca. Sem
+  isto, guardar uma edição levava de volta à mesma ficha sem nada mudar no
+  ecrã. Viaja uma chave, nunca o texto da mensagem — senão qualquer pessoa
+  punha a frase que quisesse no endereço de outra.
+- Formulários longos dividem-se em `<SeccaoCampos>` com título. Os de pessoa e
+  de cavalo eram vinte campos seguidos sem divisão nenhuma.
+- Fichas e formulários levam `voltar={{ href, rotulo }}` no
+  `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
+  as secções principais, por isso não havia caminho de volta à listagem.
+
+### Interface no telemóvel
+
+A aplicação usa-se de telemóvel dentro da cavalariça e de computador no
+escritório. As duas coisas que mais custaram a acertar:
+
+- **A navegação de baixo.** `<BarraInferior>` mostra quatro secções mais
+  «Mais». As quatro saem dos itens de `SECCOES` marcados `principal: true`,
+  pela ordem em que lá estão e depois de filtrados pelo perfil — por isso o
+  cliente, que não vê «Pessoas», recebe «Recebimentos» nesse lugar. O que
+  existia antes era uma fila de doze pastilhas com deslize horizontal: viam-se
+  três, e não havia como adivinhar que existiam mais nove. O `<main>` leva
+  `pb-24` porque a barra é fixa.
+- **As tabelas deixam de ser tabelas abaixo de `sm`.** Cada linha passa a
+  cartão, com o nome da coluna à esquerda de cada valor. O nome da coluna vem
+  do `rotulo` do `<Td>`: **numa listagem nova, todos os `<Td>` levam `rotulo`
+  excepto um** — o que não leva é tratado como título do cartão, sobe para
+  cima de tudo (`order-first`) e é onde vai a `<LigacaoFicha>`. Sem isto as
+  listagens tinham seis colunas e obrigavam a deslizar para o lado.
 
 ### `lib/tipos-bd.ts`
 

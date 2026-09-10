@@ -3,6 +3,7 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { SelectorMes } from '@/components/selector-mes'
+import { QuadroDoDia } from '@/components/resumo-do-dia'
 import { classesBotao } from '@/components/ui/botao'
 import {
   Cartao,
@@ -80,7 +81,9 @@ export async function PainelGestao({
         accoes={<SelectorMes periodo={periodo} />}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <QuadroDoDia />
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador
           rotulo="Receitas do mês"
           valor={formatarEuros(receitas)}
@@ -145,10 +148,10 @@ export async function PainelGestao({
                           {linha.cliente_nome}
                         </Link>
                       </Td>
-                      <Td className="text-muted-foreground">
+                      <Td rotulo="Cavalo" className="text-muted-foreground">
                         {linha.cavalo_nome}
                       </Td>
-                      <Td numerico className="font-medium">
+                      <Td rotulo="Em falta" numerico className="font-medium">
                         {formatarEuros(linha.valor_em_falta)}
                       </Td>
                     </Linha>
@@ -190,6 +193,7 @@ export async function PainelGestao({
                         </Distintivo>
                       </Td>
                       <Td
+                        rotulo="Saldo"
                         numerico
                         className={
                           Number(conta.saldo_actual) < 0
@@ -291,7 +295,7 @@ export async function PainelGestao({
                 <Corpo>
                   {ultimasDespesas.data.map((despesa) => (
                     <Linha key={despesa.id}>
-                      <Td className="whitespace-nowrap text-muted-foreground">
+                      <Td rotulo="Data" className="whitespace-nowrap text-muted-foreground">
                         {formatarData(despesa.data)}
                       </Td>
                       <Td>
@@ -307,7 +311,7 @@ export async function PainelGestao({
                           </Distintivo>
                         ) : null}
                       </Td>
-                      <Td numerico>{formatarEuros(despesa.valor_total)}</Td>
+                      <Td rotulo="Valor" numerico>{formatarEuros(despesa.valor_total)}</Td>
                     </Linha>
                   ))}
                 </Corpo>

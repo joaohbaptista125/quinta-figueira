@@ -12,7 +12,10 @@ export default async function PaginaNovaCategoria() {
   await exigirGestao()
   return (
     <>
-      <CabecalhoPagina titulo="Nova categoria de despesa" />
+      <CabecalhoPagina
+        voltar={{ href: '/financeiro/categorias', rotulo: 'Categorias' }}
+        titulo="Nova categoria de despesa"
+      />
       <Cartao className="max-w-2xl">
         <ConteudoCartao className="pt-4 sm:pt-5">
           <FormularioEntidade

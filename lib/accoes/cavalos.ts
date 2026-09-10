@@ -7,6 +7,7 @@ import type { RegimeCavalo, SexoCavalo } from '@/lib/tipos-bd'
 import { ROTULOS_REGIME, ROTULOS_SEXO } from '@/lib/rotulos'
 import {
   apagar,
+  comConfirmacao,
   booleano,
   gravar,
   querContinuar,
@@ -78,7 +79,7 @@ export async function guardarCavalo(
   revalidatePath(`/cavalos/${resultado.id}`)
 
   if (querContinuar(dados)) return resultado
-  redirect(`/cavalos/${resultado.id}`)
+  redirect(comConfirmacao(`/cavalos/${resultado.id}`, id ? 'guardado' : 'criado'))
 }
 
 export async function apagarCavalo(
@@ -98,7 +99,7 @@ export async function apagarCavalo(
     }
   }
 
-  redirect('/cavalos')
+  redirect(comConfirmacao('/cavalos', 'apagado'))
 }
 
 /** Atribui (ou liberta) a box de um cavalo a partir da ficha do cavalo. */
