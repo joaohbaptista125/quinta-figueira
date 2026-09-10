@@ -149,3 +149,46 @@ values
   (current_date - 6, '22222222-0000-4000-8000-000000000004', 90.00, 'mbway',
    '11111111-0000-4000-8000-000000000002', 'aulas',
    date_trunc('month', current_date)::date, 'Pacote de 4 aulas');
+
+-- --- Fase 3: equipas, eventos e convocatórias -------------------------------
+insert into public.equipas (id, nome, escalao) values
+  ('66666666-0000-4000-8000-000000000001', 'Horseball Sub-16', 'Sub-16'),
+  ('66666666-0000-4000-8000-000000000002', 'Horseball Sénior', 'Sénior')
+on conflict (id) do nothing;
+
+insert into public.equipa_membros (equipa_id, pessoa_id) values
+  ('66666666-0000-4000-8000-000000000001', '22222222-0000-4000-8000-000000000004'),
+  ('66666666-0000-4000-8000-000000000002', '22222222-0000-4000-8000-000000000003')
+on conflict do nothing;
+
+insert into public.eventos
+  (id, tipo, titulo, data, hora_inicio, hora_fim, local, responsavel_id, equipa_id)
+values
+  ('77777777-0000-4000-8000-000000000001', 'aula', 'Iniciação',
+   current_date, '18:00', '19:00', 'Picadeiro coberto',
+   '22222222-0000-4000-8000-000000000002', null),
+  ('77777777-0000-4000-8000-000000000002', 'aula', 'Obstáculos',
+   current_date, '19:00', '20:00', 'Picadeiro coberto',
+   '22222222-0000-4000-8000-000000000002', null),
+  ('77777777-0000-4000-8000-000000000003', 'treino_horseball', null,
+   current_date + 1, '19:30', '21:00', 'Campo exterior',
+   '22222222-0000-4000-8000-000000000002',
+   '66666666-0000-4000-8000-000000000001')
+on conflict (id) do nothing;
+
+insert into public.evento_participantes (evento_id, pessoa_id, cavalo_id) values
+  ('77777777-0000-4000-8000-000000000001',
+   '22222222-0000-4000-8000-000000000003',
+   '33333333-0000-4000-8000-000000000004'),
+  ('77777777-0000-4000-8000-000000000002',
+   '22222222-0000-4000-8000-000000000004',
+   '33333333-0000-4000-8000-000000000004'),
+  ('77777777-0000-4000-8000-000000000003',
+   '22222222-0000-4000-8000-000000000004',
+   '33333333-0000-4000-8000-000000000005')
+on conflict do nothing;
+
+insert into public.avisos (evento_id, texto, autor_id) values
+  ('77777777-0000-4000-8000-000000000003',
+   'Trazer as camisolas azuis. Encontro 20 minutos antes.',
+   '22222222-0000-4000-8000-000000000002');

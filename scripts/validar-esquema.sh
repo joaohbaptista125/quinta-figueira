@@ -44,7 +44,11 @@ echo "==> Seed"
 psql_ -q -d qf_teste -f "$RAIZ/supabase/seed.sql"
 
 echo "==> Testes de RLS"
-psql_ -d qf_teste -f "$RAIZ/supabase/tests/01_rls.sql"
+for t in "$RAIZ"/supabase/tests/[0-9][0-9]_*.sql; do
+  [ "$(basename "$t")" = "00_shim_supabase.sql" ] && continue
+  echo "    $(basename "$t")"
+  psql_ -d qf_teste -f "$t"
+done
 
 echo
 echo "OK — esquema válido."
