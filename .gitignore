@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Ficheiros SQL reunidos, gerados por scripts/gerar-esquema-unico.sh
+/esquema-*.sql
+/esquema.sql

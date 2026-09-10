@@ -63,6 +63,11 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
 
+Para aplicar sem o CLI, `./scripts/gerar-esquema-unico.sh [prefixo]` reúne as
+migrações num ficheiro para colar no SQL Editor — dentro de uma transacção e
+já a registar-se na tabela de controlo do Supabase, para um `db push` futuro
+não as repetir. Sem prefixo faz todas; com `20260910` faz só as desse dia.
+
 ### Decisões que custam a reverter
 
 **Uma pessoa existe sem conta de acesso.** `pessoas.auth_user_id` é anulável e
@@ -226,7 +231,8 @@ supabase/
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS
 scripts/
-  validar-esquema.sh   aplica migrações e corre os testes
+  validar-esquema.sh      aplica migrações e corre os testes
+  gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
   gerar-icones.mjs     gera os ícones da PWA
 ```
 
