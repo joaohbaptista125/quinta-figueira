@@ -18,6 +18,11 @@ export function eEquipa(perfil: PerfilAcesso | null | undefined) {
   )
 }
 
+/** Quem planeia o dia: gestão e instrutores. Espelha e_instrutor_ou_gestao(). */
+export function eInstrutorOuGestao(perfil: PerfilAcesso | null | undefined) {
+  return perfil === 'admin' || perfil === 'gestor' || perfil === 'instrutor'
+}
+
 export function eAdmin(perfil: PerfilAcesso | null | undefined) {
   return perfil === 'admin'
 }

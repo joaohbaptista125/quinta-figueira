@@ -5,6 +5,8 @@
 
 import type {
   EstadoMensalidade,
+  EstadoParticipacao,
+  TipoEvento,
   MetodoPagamento,
   PapelPessoa,
   PerfilAcesso,
@@ -66,6 +68,26 @@ export const ROTULOS_ESTADO_MENSALIDADE: Record<EstadoMensalidade, string> = {
   pendente: 'Pendente',
   paga: 'Paga',
   anulada: 'Anulada',
+}
+
+export const ROTULOS_TIPO_EVENTO: Record<TipoEvento, string> = {
+  aula: 'Aula',
+  treino_horseball: 'Treino de Horseball',
+  competicao: 'Competição',
+}
+
+/** Versão curta, para caber nas pastilhas do quadro do dia. */
+export const ROTULOS_TIPO_EVENTO_CURTO: Record<TipoEvento, string> = {
+  aula: 'Aula',
+  treino_horseball: 'Horseball',
+  competicao: 'Competição',
+}
+
+export const ROTULOS_ESTADO_PARTICIPACAO: Record<EstadoParticipacao, string> = {
+  convocado: 'Convocado',
+  presente: 'Presente',
+  faltou: 'Faltou',
+  dispensado: 'Dispensado',
 }
 
 /** Taxas de IVA em vigor no continente. */

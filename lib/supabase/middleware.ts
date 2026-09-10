@@ -9,6 +9,9 @@ const CAMINHOS_PUBLICOS = [
   '/definir-password',
   '/auth/callback',
   '/offline.html',
+  // Subscrição de calendário: autentica-se pelo token no endereço, não por
+  // sessão — uma aplicação de calendário não sabe iniciar sessão.
+  '/calendario',
 ]
 
 function ehPublico(caminho: string) {

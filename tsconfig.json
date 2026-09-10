@@ -10,6 +10,9 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // Os testes correm com `node --experimental-strip-types`, que exige a
+    // extensão explícita no import. Com noEmit isto não tem outro efeito.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,

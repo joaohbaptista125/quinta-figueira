@@ -111,6 +111,41 @@ export function lerValorMonetario(texto: string | number | null | undefined) {
   return Number.isFinite(n) ? n : null
 }
 
+/** '18:00:00' → '18:00' */
+export function formatarHora(hora: string | null | undefined) {
+  if (!hora) return ''
+  return hora.slice(0, 5)
+}
+
+/** '18:00:00' + '19:30:00' → '18:00 – 19:30'; sem fim, só o início. */
+export function formatarIntervalo(
+  inicio: string | null | undefined,
+  fim: string | null | undefined,
+) {
+  const a = formatarHora(inicio)
+  const b = formatarHora(fim)
+  if (!a) return ''
+  return b ? `${a} – ${b}` : a
+}
+
+/** '2026-09-10' → 'quinta-feira, 10 de Setembro' */
+export function formatarDiaPorExtenso(iso: string) {
+  const texto = new Intl.DateTimeFormat('pt-PT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`))
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+/** Desloca uma data 'AAAA-MM-DD' em n dias. */
+export function deslocarDias(iso: string, n: number) {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
 /** Idade em anos a partir da data de nascimento. */
 export function idadeEmAnos(dataNascimento: string | null | undefined) {
   if (!dataNascimento) return null

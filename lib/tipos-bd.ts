@@ -28,6 +28,12 @@ export type MetodoPagamento =
 export type TipoConta = 'caixa' | 'banco'
 export type TipoRecebimento = 'penso' | 'aulas' | 'outro'
 export type EstadoMensalidade = 'pendente' | 'paga' | 'anulada'
+export type TipoEvento = 'aula' | 'treino_horseball' | 'competicao'
+export type EstadoParticipacao =
+  | 'convocado'
+  | 'presente'
+  | 'faltou'
+  | 'dispensado'
 
 type Carimbos = {
   criado_em: string
@@ -166,6 +172,82 @@ export type Recebimento = Carimbos & {
   documento_fiscal_url: string | null
   documento_fiscal_emitido_em: string | null
   criado_por: string | null
+}
+
+export type Equipa = Carimbos & {
+  id: string
+  nome: string
+  escalao: string | null
+  notas: string | null
+  activa: boolean
+}
+
+export type EquipaMembro = {
+  equipa_id: string
+  pessoa_id: string
+  criado_em: string
+}
+
+export type Evento = Carimbos & {
+  id: string
+  tipo: TipoEvento
+  titulo: string | null
+  data: string
+  /** 'HH:MM:SS' */
+  hora_inicio: string
+  hora_fim: string | null
+  local: string | null
+  responsavel_id: string | null
+  equipa_id: string | null
+  notas: string | null
+  cancelado: boolean
+  motivo_cancelamento: string | null
+  /** Gancho da Fase 4. */
+  recebimento_id: string | null
+  criado_por: string | null
+}
+
+export type EventoParticipante = Carimbos & {
+  id: string
+  evento_id: string
+  pessoa_id: string
+  cavalo_id: string | null
+  estado: EstadoParticipacao
+  notas: string | null
+  /** Mantido por trigger — nunca escrever. */
+  periodo: string | null
+}
+
+export type Aviso = Carimbos & {
+  id: string
+  evento_id: string | null
+  equipa_id: string | null
+  texto: string
+  autor_id: string | null
+  criado_por: string | null
+}
+
+export type Calendario = {
+  pessoa_id: string
+  token: string
+  criado_em: string
+}
+
+/** Uma linha da agenda_por_token(), para o ficheiro iCal. */
+export type LinhaAgenda = {
+  id: string
+  tipo: TipoEvento
+  titulo: string | null
+  data: string
+  hora_inicio: string
+  hora_fim: string | null
+  local: string | null
+  cancelado: boolean
+  responsavel: string | null
+  cavalo: string | null
+  notas: string | null
+  avisos: string | null
+  actualizado_em: string
 }
 
 export type SaldoConta = {
@@ -331,6 +413,54 @@ export type BaseDados = {
           Relacao<'mensalidade_id', 'mensalidades_penso'>,
         ]
       >
+      equipas: Tabela<
+        Equipa,
+        Partial<Omit<Equipa, SoLeitura>> & { nome: string }
+      >
+      equipa_membros: Tabela<
+        EquipaMembro,
+        { equipa_id: string; pessoa_id: string },
+        [Relacao<'equipa_id', 'equipas'>, Relacao<'pessoa_id', 'pessoas'>]
+      >
+      eventos: Tabela<
+        Evento,
+        Partial<Omit<Evento, SoLeitura>> & {
+          tipo: TipoEvento
+          data: string
+          hora_inicio: string
+        },
+        [
+          Relacao<'responsavel_id', 'pessoas'>,
+          Relacao<'equipa_id', 'equipas'>,
+          Relacao<'recebimento_id', 'recebimentos'>,
+        ]
+      >
+      evento_participantes: Tabela<
+        EventoParticipante,
+        Partial<Omit<EventoParticipante, SoLeitura | 'periodo'>> & {
+          evento_id: string
+          pessoa_id: string
+        },
+        [
+          Relacao<'evento_id', 'eventos'>,
+          Relacao<'pessoa_id', 'pessoas'>,
+          Relacao<'cavalo_id', 'cavalos'>,
+        ]
+      >
+      avisos: Tabela<
+        Aviso,
+        Partial<Omit<Aviso, SoLeitura>> & { texto: string },
+        [
+          Relacao<'evento_id', 'eventos'>,
+          Relacao<'equipa_id', 'equipas'>,
+          Relacao<'autor_id', 'pessoas'>,
+        ]
+      >
+      calendarios: Tabela<
+        Calendario,
+        { pessoa_id: string },
+        [Relacao<'pessoa_id', 'pessoas'>]
+      >
     }
     Views: {
       v_saldos_contas: Vista<SaldoConta>
@@ -347,6 +477,11 @@ export type BaseDados = {
       e_admin: { Args: Record<string, never>; Returns: boolean }
       perfil_actual: { Args: Record<string, never>; Returns: PerfilAcesso | null }
       pessoa_actual_id: { Args: Record<string, never>; Returns: string | null }
+      e_instrutor_ou_gestao: { Args: Record<string, never>; Returns: boolean }
+      participo_no_evento: { Args: { p_evento: string }; Returns: boolean }
+      sou_membro_da_equipa: { Args: { p_equipa: string }; Returns: boolean }
+      obter_token_calendario: { Args: { p_renovar?: boolean }; Returns: string }
+      agenda_por_token: { Args: { p_token: string }; Returns: LinhaAgenda[] }
     }
     Enums: {
       sexo_cavalo: SexoCavalo
@@ -357,6 +492,8 @@ export type BaseDados = {
       tipo_conta: TipoConta
       tipo_recebimento: TipoRecebimento
       estado_mensalidade: EstadoMensalidade
+      tipo_evento: TipoEvento
+      estado_participacao: EstadoParticipacao
     }
     CompositeTypes: Record<string, never>
   }

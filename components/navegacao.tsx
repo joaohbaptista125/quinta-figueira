@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import type { PerfilAcesso } from '@/lib/tipos-bd'
-import { eGestao, eEquipa } from '@/lib/permissoes'
+import { eGestao, eEquipa, eInstrutorOuGestao } from '@/lib/permissoes'
 
 type ItemNavegacao = {
   href: string
@@ -20,10 +20,16 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
     titulo: 'Centro',
     itens: [
       { href: '/', rotulo: 'Painel', visivel: SEMPRE },
+      { href: '/agenda', rotulo: 'Agenda', visivel: SEMPRE },
       { href: '/cavalos', rotulo: 'Cavalos', visivel: SEMPRE },
       { href: '/pessoas', rotulo: 'Pessoas', visivel: (p) => eEquipa(p) },
       { href: '/boxes', rotulo: 'Boxes', visivel: SEMPRE },
       { href: '/contratos', rotulo: 'Contratos de penso', visivel: SEMPRE },
+      {
+        href: '/equipas',
+        rotulo: 'Equipas',
+        visivel: (p) => eInstrutorOuGestao(p) || p === 'cliente',
+      },
     ],
   },
   {
@@ -48,6 +54,10 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
         visivel: eGestao,
       },
     ],
+  },
+  {
+    titulo: 'Pessoal',
+    itens: [{ href: '/conta', rotulo: 'A minha conta', visivel: SEMPRE }],
   },
 ]
 

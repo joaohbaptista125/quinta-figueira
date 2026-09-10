@@ -57,6 +57,8 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…090200_fase2_financeiro.sql` | `contas`, `categorias_despesa` (+ seed), `fornecedores`, `despesas`, `mensalidades_penso`, `recebimentos` |
 | `…090300_seguranca_rls.sql` | funções auxiliares, RLS de todas as tabelas, buckets de Storage |
 | `…090400_funcoes_e_vistas.sql` | `gerar_mensalidades`, sincronização de mensalidades, as 4 vistas |
+| `…100000_fase3_eventos.sql` | `equipas`, `equipa_membros`, `eventos`, `evento_participantes`, `avisos` |
+| `…100100_fase3_seguranca_e_calendario.sql` | RLS da Fase 3, `calendarios`, `agenda_por_token` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -104,6 +106,36 @@ anulável (em Postgres vários NULL não colidem, por isso há muitas boxes vazi
 Atribuir uma box liberta primeiro a anterior — ver `atribuirBox` em
 `lib/accoes/cavalos.ts`.
 
+**Aulas, treinos e competições são o mesmo `eventos`.** Partilham data, hora,
+local, responsável, participantes, presenças e avisos; o que muda é o `tipo`.
+Daí haver um só quadro do dia e um só calendário a exportar. Um tipo novo
+(estágio, passeio) é acrescentar um valor ao enum. Não voltes a partir isto em
+tabelas por tipo.
+
+**Um cavalo não pode estar em dois eventos sobrepostos.** A restrição tem de
+comparar horas que vivem em `eventos` com linhas de `evento_participantes`, e
+uma restrição de exclusão não olha para outra tabela. Por isso
+`evento_participantes.periodo` guarda uma cópia da janela do evento, mantida
+por dois triggers: `preencher_periodo_participante` ao inserir ou mudar o
+participante, e `propagar_janela_do_evento` quando o evento muda de data, de
+hora ou é cancelado. Fica a `null` sem cavalo ou com o evento cancelado, e as
+restrições de exclusão ignoram operandos nulos — que é precisamente o
+comportamento desejado. **Nunca escrevas `periodo` a partir da aplicação.**
+
+**Avisos, não chat.** `avisos` pertence a um evento OU a uma equipa, nunca aos
+dois. É comunicação de um para muitos: aparece no quadro do dia e vai na
+descrição do evento no calendário do telemóvel. Foi uma decisão deliberada e
+não um passo intermédio — um chat sem notificações fiáveis (no iPhone só
+funcionam com a app instalada no ecrã principal) ficaria deserto, com as
+conversas a continuarem no WhatsApp. Não o construas sem pedido explícito.
+
+**O token de calendário é um segredo ao portador.** Vive em `calendarios`, à
+parte de `pessoas`, porque a equipa lê `pessoas` inteira e não pode ler os
+tokens dos outros. `agenda_por_token()` é SECURITY DEFINER e é o que serve a
+agenda a quem só tem o token — uma aplicação de calendário não sabe iniciar
+sessão. `/calendario/<token>.ics` está nos caminhos públicos do middleware por
+essa razão.
+
 ### Vistas
 
 Todas com `security_invoker = on`, para a RLS aplicada ser a de quem consulta.
@@ -128,6 +160,10 @@ ignoram a RLS de `pessoas`, o que evita recursão dentro das próprias política
 - `e_gestao()` — admin ou gestor
 - `e_equipa()` — admin, gestor, instrutor ou tratador
 - `e_admin()`
+- `e_instrutor_ou_gestao()` — quem planeia o dia: admin, gestor ou instrutor
+- `participo_no_evento(uuid)`, `sou_membro_da_equipa(uuid)` — SECURITY DEFINER
+  porque uma política de `evento_participantes` que consultasse
+  `evento_participantes` entraria em recursão infinita
 
 Resumo do que cada perfil vê:
 
@@ -166,9 +202,13 @@ app/
   (publico)/      entrar, recuperar-password, definir-password, primeiro-acesso
   (painel)/       aplicação autenticada — layout com navegação e sessão
     page.tsx      dashboard, com uma variante por perfil
+    agenda/       quadro do dia, e a ficha de cada evento
+    equipas/      grupos de Horseball
+    conta/        perfil e subscrição de calendário
     pessoas/  cavalos/  boxes/  contratos/
     financeiro/   despesas/ recebimentos/ pensos/ contas/ fornecedores/ categorias/
   auth/callback/  troca do código de email por sessão
+  calendario/     ficheiro iCal por token, sem sessão
   manifest.ts     manifesto da PWA
 components/
   ui/             kit de base (botao, campos, superficie, tabela)
@@ -177,7 +217,9 @@ lib/
   supabase/       clientes de browser, servidor e middleware
   accoes/         Server Actions, uma por área
   tipos-bd.ts     tipos da base de dados (escritos à mão — ver abaixo)
-  formatos.ts     euros, datas, meses, leitura de valores escritos por pessoas
+  formatos.ts     euros, datas, horas, meses, leitura de valores escritos por pessoas
+  fatura-qr.ts    leitura do QR das faturas portuguesas (+ testes)
+  ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
 supabase/
   migrations/     esquema versionado
@@ -266,8 +308,12 @@ npm run dev
 
 npm run build                  # compila e verifica tipos
 npm run lint
+npm run testar                 # testes das funções puras (QR de faturas, iCal)
 ./scripts/validar-esquema.sh   # migrações + seed + testes de RLS
 ```
+
+`npm run testar` corre os testes de funções puras (`lib/**/*.test.ts`) com o
+executor do Node e o `--experimental-strip-types`, sem compilar nada.
 
 `validar-esquema.sh` arranca um PostgreSQL descartável, aplica o arremedo do
 Supabase (`supabase/tests/00_shim_supabase.sql`), corre todas as migrações e
@@ -296,14 +342,16 @@ offline seria uma promessa impossível de cumprir sem conflitos. Em vez disso
 
 ## 8. Faseamento
 
-Implementadas: **Fase 1** (cadastro) e **Fase 2** (financeiro e dashboard).
+Implementadas: **Fase 1** (cadastro), **Fase 2** (financeiro e dashboard) e
+**Fase 3** (eventos: aulas, treinos de Horseball, competições, convocatórias,
+presenças, avisos e subscrição de calendário).
 
-Por implementar — há espaço deixado no modelo, mas as tabelas ainda não existem:
+Fora da Fase 3, por decisão: ligar cada evento ao recebimento que o pagou.
+`eventos.recebimento_id` existe e está por usar — é trabalho da Fase 4, e
+misturá-lo com o planeamento atrasava o quadro do dia, que era o que urgia.
 
-- **Fase 3 — Aulas.** Planeamento por aluno, calendário, presenças, ligação
-  aluno ↔ cavalo ↔ instrutor, e cada aula ligada ao respectivo recebimento.
-  Ganchos: `recebimentos.tipo = 'aulas'` já existe; a futura tabela `aulas` deve
-  apontar para `recebimentos.id`.
+Por implementar:
+
 - **Fase 4 — Conta-cliente.** Login do aluno (já funciona), ver as suas aulas e
   saldo, marcar treinos de Horseball. Ganchos: perfil `cliente` com RLS já
   activa; `pessoa_papeis.jogador_horseball` já existe; a conta-corrente assenta
