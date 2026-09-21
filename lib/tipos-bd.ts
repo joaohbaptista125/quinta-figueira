@@ -29,6 +29,7 @@ export type TipoConta = 'caixa' | 'banco'
 export type TipoRecebimento = 'penso' | 'aulas' | 'outro'
 export type EstadoMensalidade = 'pendente' | 'paga' | 'anulada'
 export type TipoEvento = 'aula' | 'treino_horseball' | 'competicao'
+export type TipoOpcaoCavalo = 'raca' | 'pelagem'
 export type EstadoParticipacao =
   | 'convocado'
   | 'presente'
@@ -73,6 +74,15 @@ export type Cavalo = Carimbos & {
   proprietario_id: string | null
   activo: boolean
   notas: string | null
+}
+
+/** Uma entrada da lista de raças ou de pelagens oferecida pelo formulário. */
+export type OpcaoCavalo = Carimbos & {
+  id: string
+  tipo: TipoOpcaoCavalo
+  valor: string
+  ordem: number
+  activa: boolean
 }
 
 export type Box = Carimbos & {
@@ -365,6 +375,13 @@ export type BaseDados = {
         Conta,
         Partial<Omit<Conta, SoLeitura>> & { nome: string; tipo: TipoConta }
       >
+      opcoes_cavalo: Tabela<
+        OpcaoCavalo,
+        Partial<Omit<OpcaoCavalo, SoLeitura>> & {
+          tipo: TipoOpcaoCavalo
+          valor: string
+        }
+      >
       categorias_despesa: Tabela<
         CategoriaDespesa,
         Partial<Omit<CategoriaDespesa, SoLeitura>> & { nome: string; slug: string }
@@ -492,6 +509,7 @@ export type BaseDados = {
       tipo_conta: TipoConta
       tipo_recebimento: TipoRecebimento
       estado_mensalidade: EstadoMensalidade
+      tipo_opcao_cavalo: TipoOpcaoCavalo
       tipo_evento: TipoEvento
       estado_participacao: EstadoParticipacao
     }

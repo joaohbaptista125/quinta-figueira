@@ -24,6 +24,7 @@ import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
 import { apagarCavalo, guardarCavalo } from '@/lib/accoes/cavalos'
 import { ROTULOS_REGIME, ROTULOS_SEXO } from '@/lib/rotulos'
 import { formatarData, formatarEuros, idadeEmAnos } from '@/lib/formatos'
+import { opcoesDeCavalo } from '@/lib/consultas'
 
 export const metadata: Metadata = { title: 'Ficha de cavalo' }
 
@@ -48,11 +49,18 @@ export default async function PaginaCavalo({
   const podeEditar = eGestao(sessao.perfil)
   const idade = idadeEmAnos(cavalo.data_nascimento)
 
-  const [proprietarios, boxAtribuida, boxesLivres, contratos, despesas] =
-    await Promise.all([
+  const [
+    proprietarios,
+    opcoes,
+    boxAtribuida,
+    boxesLivres,
+    contratos,
+    despesas,
+  ] = await Promise.all([
       podeEditar
         ? supabase.from('pessoas').select('id, nome').eq('activo', true).order('nome')
         : Promise.resolve({ data: null }),
+      opcoesDeCavalo(supabase),
       supabase.from('boxes').select('id, identificacao, zona').eq('cavalo_id', id).maybeSingle(),
       podeEditar
         ? supabase
@@ -118,7 +126,12 @@ export default async function PaginaCavalo({
                   />
                 }
               >
-                <CamposCavalo cavalo={cavalo} proprietarios={proprietarios.data ?? []} />
+                <CamposCavalo
+                  cavalo={cavalo}
+                  proprietarios={proprietarios.data ?? []}
+                  racas={opcoes.racas}
+                  pelagens={opcoes.pelagens}
+                />
               </FormularioEntidade>
             ) : (
               <dl className="grid gap-3 text-sm sm:grid-cols-2">

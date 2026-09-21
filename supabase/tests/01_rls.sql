@@ -107,6 +107,21 @@ begin
   perform pg_temp.afirmar_recusa(
     $q$insert into public.pessoas (nome, nif) values ('NIF Curto', '123')$q$,
     'NIF com formato inválido é recusado');
+  -- Raças e pelagens: a lista não pode ter a mesma duas vezes só porque uma
+  -- veio com outra caixa ou com um espaço a mais.
+  perform pg_temp.afirmar(
+    (select count(*) from public.opcoes_cavalo where tipo = 'raca') = 8,
+    'as 8 raças de origem foram semeadas');
+  perform pg_temp.afirmar_recusa(
+    $sql$insert into public.opcoes_cavalo (tipo, valor) values ('raca', ' lusitano ')$sql$,
+    'a mesma raça com outra caixa e espaços é recusada');
+  perform pg_temp.afirmar_recusa(
+    $sql$insert into public.opcoes_cavalo (tipo, valor) values ('pelagem', '   ')$sql$,
+    'uma opção vazia é recusada');
+  -- O mesmo nome em tipos diferentes é legítimo.
+  insert into public.opcoes_cavalo (tipo, valor) values ('pelagem', 'Lusitano');
+  perform pg_temp.afirmar(true, 'o mesmo nome pode existir em raça e em pelagem');
+  delete from public.opcoes_cavalo where tipo = 'pelagem' and valor = 'Lusitano';
 end $$;
 
 -- --- Mensalidades: estado automático ----------------------------------------
@@ -257,6 +272,12 @@ begin
     'todos os cavalos visíveis ao cliente são dele');
   perform pg_temp.afirmar((select count(*) from public.pessoas) = 1,
     'cliente vê apenas a sua própria ficha');
+  perform pg_temp.afirmar(
+    (select count(*) from public.opcoes_cavalo where tipo = 'raca') = 8,
+    'cliente lê a lista de raças — aparece na ficha do cavalo dele');
+  perform pg_temp.afirmar_recusa(
+    $sql$insert into public.opcoes_cavalo (tipo, valor) values ('raca', 'Inventada')$sql$,
+    'cliente não acrescenta raças à lista');
   perform pg_temp.afirmar((select count(*) from public.despesas) = 0,
     'cliente NÃO vê despesas do centro');
   perform pg_temp.afirmar((select count(*) from public.contas) = 0,

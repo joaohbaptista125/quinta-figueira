@@ -59,6 +59,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…090400_funcoes_e_vistas.sql` | `gerar_mensalidades`, sincronização de mensalidades, as 4 vistas |
 | `…100000_fase3_eventos.sql` | `equipas`, `equipa_membros`, `eventos`, `evento_participantes`, `avisos` |
 | `…100100_fase3_seguranca_e_calendario.sql` | RLS da Fase 3, `calendarios`, `agenda_por_token` |
+| `…110000_opcoes_de_cavalo.sql` | `opcoes_cavalo` — lista de raças e pelagens (+ seed) |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -110,6 +111,16 @@ cavalo com intervalos de datas a cruzarem-se.
 anulável (em Postgres vários NULL não colidem, por isso há muitas boxes vazias).
 Atribuir uma box liberta primeiro a anterior — ver `atribuirBox` em
 `lib/accoes/cavalos.ts`.
+
+**Raças e pelagens são uma lista, não uma chave estrangeira.**
+`opcoes_cavalo` (tipo × valor) é o que o formulário oferece, mas
+`cavalos.raca` e `cavalos.pelagem` continuam a ser `text`. É de propósito: um
+cavalo gravado com um valor fora da lista continua válido, a pesquisa por
+`raca.ilike` continua a funcionar, e acrescentar uma raça é um INSERT e não
+uma migração. O preço é que mudar o nome de uma opção tem de mudar também os
+cavalos que a usam — é o que `renomearOpcaoCavalo` faz, e por isso é que essa
+acção existe em vez de um simples UPDATE. O índice único é sobre
+`(tipo, lower(btrim(valor)))`, para «Lusitano» e «lusitano» não coexistirem.
 
 **Aulas, treinos e competições são o mesmo `eventos`.** Partilham data, hora,
 local, responsável, participantes, presenças e avisos; o que muda é o `tipo`.
@@ -211,7 +222,8 @@ app/
     equipas/      grupos de Horseball
     conta/        perfil e subscrição de calendário
     pessoas/      ficha, e `pessoas/[id]/pensos` — a conta-corrente do cliente
-    cavalos/  boxes/  contratos/
+    cavalos/      ficha, e `cavalos/opcoes` — as listas de raças e pelagens
+    boxes/  contratos/
     financeiro/   despesas/ recebimentos/ pensos/ contas/ fornecedores/ categorias/
   auth/callback/  troca do código de email por sessão
   calendario/     ficheiro iCal por token, sem sessão
@@ -222,6 +234,8 @@ components/
   navegacao.tsx   barra lateral, barra de separadores do telemóvel e «Mais»
   pagamento-penso.tsx  receber mensalidades sem sair da conta-corrente
   formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
+  formularios/selector-com-outro.tsx  lista com saída para escrever uma nova
+  opcoes-cavalo.tsx  gerir as listas em /cavalos/opcoes
   resumo-do-dia.tsx  o que está marcado, no topo do painel
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
@@ -233,6 +247,7 @@ lib/
   vcard.ts        leitura de cartões de contacto .vcf (+ testes)
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
+  opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
 supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
@@ -312,6 +327,23 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
 - Fichas e formulários levam `voltar={{ href, rotulo }}` no
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
+
+### Listas com saída: raças e pelagens
+
+`<SelectorComOutro>` é uma lista de opções cuja última entrada abre uma caixa
+de texto. A lista não pode ser fechada — aparece sempre uma raça que ninguém
+previu — mas também não pode ser texto livre, senão o mesmo lusitano acaba
+escrito de quatro maneiras e a pesquisa deixa de servir.
+
+O que é escrito à mão viaja em `<campo>_nova`, e `opcaoOuNova()` em
+`lib/accoes/cavalos.ts` é que decide qual dos dois vale. Quando vem da caixa
+de texto, a acção acrescenta-o a `opcoes_cavalo` depois de gravar o cavalo —
+é isso que faz a opção ficar lá para a próxima. Um duplicado (23505) é
+ignorado de propósito: significa que já lá está, que é o que se queria.
+
+`/cavalos/opcoes` existe por causa do engano. Sem ela, corrigir um «Lusitno»
+que entrou na lista obrigava a ir ao painel do Supabase. Mudar o nome muda-o
+também nos cavalos; tirar da lista não apaga nada, só deixa de ser oferecido.
 
 ### Importar contactos do telemóvel
 

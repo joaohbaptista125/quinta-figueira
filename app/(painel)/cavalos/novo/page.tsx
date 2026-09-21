@@ -6,17 +6,17 @@ import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposCavalo } from '@/components/formularios/campos-cavalo'
 import { Cartao, ConteudoCartao } from '@/components/ui/superficie'
 import { guardarCavalo } from '@/lib/accoes/cavalos'
+import { opcoesDeCavalo, pessoasActivas } from '@/lib/consultas'
 
 export const metadata: Metadata = { title: 'Novo cavalo' }
 
 export default async function PaginaNovoCavalo() {
   await exigirGestao()
   const supabase = await criarClienteServidor()
-  const { data: proprietarios } = await supabase
-    .from('pessoas')
-    .select('id, nome')
-    .eq('activo', true)
-    .order('nome')
+  const [proprietarios, { racas, pelagens }] = await Promise.all([
+    pessoasActivas(supabase),
+    opcoesDeCavalo(supabase),
+  ])
 
   return (
     <>
@@ -33,7 +33,11 @@ export default async function PaginaNovoCavalo() {
             rotuloGuardar="Criar cavalo"
             permitirCriarOutro
           >
-            <CamposCavalo proprietarios={proprietarios ?? []} />
+            <CamposCavalo
+              proprietarios={proprietarios}
+              racas={racas}
+              pelagens={pelagens}
+            />
           </FormularioEntidade>
         </ConteudoCartao>
       </Cartao>

@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/campos'
 import { GrelhaCampos, SeccaoCampos } from '@/components/formulario-entidade'
 import { CampoFicheiro } from '@/components/campo-ficheiro'
+import { SelectorComOutro } from '@/components/formularios/selector-com-outro'
 import { ROTULOS_REGIME, ROTULOS_SEXO, paraOpcoes } from '@/lib/rotulos'
 import type { Cavalo } from '@/lib/tipos-bd'
 
@@ -16,9 +17,15 @@ export type OpcaoPessoa = { id: string; nome: string }
 export function CamposCavalo({
   cavalo,
   proprietarios,
+  racas,
+  pelagens,
 }: {
   cavalo?: Cavalo | null
   proprietarios: OpcaoPessoa[]
+  /** Lista de raças activas, de `opcoes_cavalo`. */
+  racas: string[]
+  /** Lista de pelagens activas, de `opcoes_cavalo`. */
+  pelagens: string[]
 }) {
   return (
     <div className="space-y-6">
@@ -97,21 +104,33 @@ export function CamposCavalo({
             </Selector>
           </Campo>
 
-          <Campo etiqueta="Raça" htmlFor="raca">
-            <Entrada
+          <Campo
+            etiqueta="Raça"
+            htmlFor="raca"
+            ajuda="Falta alguma? Escolha «Outra raça» e escreva-a — fica na lista."
+          >
+            <SelectorComOutro
               id="raca"
               name="raca"
-              defaultValue={cavalo?.raca ?? ''}
-              autoComplete="off"
+              opcoes={racas}
+              valorInicial={cavalo?.raca}
+              rotuloNova="Outra raça — escrever…"
+              exemplo="Ex.: Hanoveriano"
             />
           </Campo>
 
-          <Campo etiqueta="Pelagem" htmlFor="pelagem">
-            <Entrada
+          <Campo
+            etiqueta="Pelagem"
+            htmlFor="pelagem"
+            ajuda="Falta alguma? Escolha «Outra pelagem» e escreva-a — fica na lista."
+          >
+            <SelectorComOutro
               id="pelagem"
               name="pelagem"
-              defaultValue={cavalo?.pelagem ?? ''}
-              autoComplete="off"
+              opcoes={pelagens}
+              valorInicial={cavalo?.pelagem}
+              rotuloNova="Outra pelagem — escrever…"
+              exemplo="Ex.: Preto"
             />
           </Campo>
         </GrelhaCampos>

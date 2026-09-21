@@ -60,3 +60,23 @@ export async function contasActivas(supabase: Cliente) {
     .order('nome')
   return data ?? []
 }
+
+/**
+ * As raças e as pelagens que o formulário do cavalo oferece.
+ *
+ * Vêm as duas na mesma ida à base — são catorze linhas e não vale a pena
+ * gastar duas viagens ao Supabase por causa delas.
+ */
+export async function opcoesDeCavalo(supabase: Cliente) {
+  const { data } = await supabase
+    .from('opcoes_cavalo')
+    .select('tipo, valor')
+    .eq('activa', true)
+    .order('ordem')
+    .order('valor')
+
+  const de = (tipo: 'raca' | 'pelagem') =>
+    (data ?? []).filter((opcao) => opcao.tipo === tipo).map((opcao) => opcao.valor)
+
+  return { racas: de('raca'), pelagens: de('pelagem') }
+}

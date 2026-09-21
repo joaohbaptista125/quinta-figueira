@@ -60,9 +60,17 @@ export default async function PaginaCavalos({
         descricao={`${cavalos?.length ?? 0} cavalo(s)`}
         accoes={
           eGestao(sessao.perfil) ? (
-            <Link href="/cavalos/novo" className={classesBotao()}>
-              Novo cavalo
-            </Link>
+            <>
+              <Link
+                href="/cavalos/opcoes"
+                className={classesBotao('contorno')}
+              >
+                Raças e pelagens
+              </Link>
+              <Link href="/cavalos/novo" className={classesBotao()}>
+                Novo cavalo
+              </Link>
+            </>
           ) : null
         }
       />
