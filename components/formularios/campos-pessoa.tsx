@@ -1,5 +1,6 @@
 import { Campo, Caixa, Entrada, AreaTexto, Selector, Etiqueta } from '@/components/ui/campos'
 import { GrelhaCampos, SeccaoCampos } from '@/components/formulario-entidade'
+import { ImportarContacto } from '@/components/formularios/importar-contacto'
 import { ROTULOS_PAPEL, ROTULOS_PERFIL, paraOpcoes } from '@/lib/rotulos'
 import type { PapelPessoa, Pessoa } from '@/lib/tipos-bd'
 
@@ -18,6 +19,12 @@ export function CamposPessoa({
         titulo="Contactos"
         descricao="Só o nome é obrigatório. O resto pode ser preenchido mais tarde."
       >
+        {/*
+          Só na criação. Numa ficha já preenchida seria um botão que nunca
+          teria nada que fazer — não escreve por cima do que lá está.
+        */}
+        {pessoa ? null : <ImportarContacto />}
+
         <GrelhaCampos>
           <Campo
             etiqueta="Nome"

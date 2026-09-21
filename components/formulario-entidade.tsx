@@ -75,9 +75,11 @@ export function FormularioEntidade({
   React.useEffect(() => {
     if (resultado.ok && resultado.mensagem) {
       setChave((anterior) => anterior + 1)
+      // Os `file` ficam de fora: o de importar contactos está escondido e
+      // aparece antes do nome, e o foco ia parar a um campo que não se vê.
       const primeiro =
         referenciaFormulario.current?.querySelector<HTMLElement>(
-          'input:not([type=hidden]), select, textarea',
+          'input:not([type=hidden]):not([type=file]), select, textarea',
         )
       primeiro?.focus()
     }

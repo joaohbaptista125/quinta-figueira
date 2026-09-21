@@ -221,6 +221,7 @@ components/
   formularios/    campos de cada entidade, partilhados entre criar e editar
   navegacao.tsx   barra lateral, barra de separadores do telemóvel e «Mais»
   pagamento-penso.tsx  receber mensalidades sem sair da conta-corrente
+  formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
   resumo-do-dia.tsx  o que está marcado, no topo do painel
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
@@ -229,6 +230,7 @@ lib/
   tipos-bd.ts     tipos da base de dados (escritos à mão — ver abaixo)
   formatos.ts     euros, datas, horas, meses, leitura de valores escritos por pessoas
   fatura-qr.ts    leitura do QR das faturas portuguesas (+ testes)
+  vcard.ts        leitura de cartões de contacto .vcf (+ testes)
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
 supabase/
@@ -310,6 +312,31 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
 - Fichas e formulários levam `voltar={{ href, rotulo }}` no
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
+
+### Importar contactos do telemóvel
+
+`<ImportarContacto>` preenche nome, telefone, email e morada no formulário de
+nova pessoa. Há dois caminhos porque só um funciona em cada lado, e isto não
+vai mudar tão cedo:
+
+- **Android:** `navigator.contacts.select()` abre o selector do sistema. A
+  aplicação recebe só os contactos escolhidos, nunca a lista toda, e não há
+  permissão permanente a pedir.
+- **iPhone e computador:** a Apple nunca implementou essa API, e no iOS todos
+  os browsers são Safari por dentro. O caminho é o cartão de contacto —
+  «Partilhar contacto → Guardar em Ficheiros» dá um `.vcf`, lido por
+  `lib/vcard.ts`.
+
+O botão do selector **só aparece onde funciona**, e a detecção corre num
+`useEffect` — no servidor não há `navigator`, e desenhá-lo logo dava uma
+hidratação diferente.
+
+`lib/vcard.ts` não é um leitor completo da norma, mas aguenta o que os
+telemóveis produzem: linhas dobradas das duas maneiras (a da norma, com espaço
+à frente, e a do quoted-printable, com um `=` no fim e sem espaço),
+`ENCODING=QUOTED-PRINTABLE` para os acentos, prefixos de grupo da Apple
+(`item1.TEL`) e vários cartões no mesmo ficheiro. **Nada é escrito por cima:**
+só se preenchem os campos vazios, e o aviso diz em quais não se mexeu.
 
 ### Cobrança de pensos
 
