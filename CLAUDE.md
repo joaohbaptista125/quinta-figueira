@@ -210,7 +210,8 @@ app/
     agenda/       quadro do dia, e a ficha de cada evento
     equipas/      grupos de Horseball
     conta/        perfil e subscrição de calendário
-    pessoas/  cavalos/  boxes/  contratos/
+    pessoas/      ficha, e `pessoas/[id]/pensos` — a conta-corrente do cliente
+    cavalos/  boxes/  contratos/
     financeiro/   despesas/ recebimentos/ pensos/ contas/ fornecedores/ categorias/
   auth/callback/  troca do código de email por sessão
   calendario/     ficheiro iCal por token, sem sessão
@@ -219,6 +220,7 @@ components/
   ui/             kit de base (botao, campos, superficie, tabela, ferradura)
   formularios/    campos de cada entidade, partilhados entre criar e editar
   navegacao.tsx   barra lateral, barra de separadores do telemóvel e «Mais»
+  pagamento-penso.tsx  receber mensalidades sem sair da conta-corrente
   resumo-do-dia.tsx  o que está marcado, no topo do painel
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
@@ -298,11 +300,36 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   isto, guardar uma edição levava de volta à mesma ficha sem nada mudar no
   ecrã. Viaja uma chave, nunca o texto da mensagem — senão qualquer pessoa
   punha a frase que quisesse no endereço de outra.
+- **Criar volta à listagem; editar fica na ficha.** Cair na ficha depois de
+  criar dava a sensação de que nada tinha acontecido — a ficha é o mesmo
+  formulário, com os mesmos valores. Excepção deliberada: um evento e uma
+  equipa abrem na ficha, porque o passo seguinte (a convocatória, os membros)
+  está lá e a ficha não se parece com o formulário de criação.
 - Formulários longos dividem-se em `<SeccaoCampos>` com título. Os de pessoa e
   de cavalo eram vinte campos seguidos sem divisão nenhuma.
 - Fichas e formulários levam `voltar={{ href, rotulo }}` no
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
+
+### Cobrança de pensos
+
+`/pessoas/[id]/pensos` é a conta-corrente de um cliente: o que deve, o que já
+pagou e como pagou cada mês. A página de «Pensos do mês» responde à pergunta
+do mês para todos os clientes; esta responde à pergunta do cliente ao longo
+dos meses, que é a que se faz à mesa da cobrança.
+
+O recebimento é feito ali, por `receberPensos()` em `lib/accoes/financeiro.ts`
+— método em pastilhas, data, conta, confirmar. O formulário completo de
+recebimento continua a existir para o resto (imputar a outra pessoa, número do
+documento fiscal emitido lá fora, notas).
+
+Duas coisas a não mudar sem pensar:
+
+- **Uma mensalidade, um recebimento**, mesmo quando três meses vêm na mesma
+  transferência. É `mensalidade_id` que liga cada euro ao mês a que respeita, e
+  é isso que faz a trigger acertar o estado de cada mensalidade.
+- **O que falta é relido da base dentro da acção**, nunca aceite do formulário:
+  entre abrir a página e carregar no botão pode ter entrado outro pagamento.
 
 ### Interface no telemóvel
 
@@ -392,10 +419,10 @@ misturá-lo com o planeamento atrasava o quadro do dia, que era o que urgia.
 
 Por implementar:
 
-- **Fase 4 — Conta-cliente.** Login do aluno (já funciona), ver as suas aulas e
-  saldo, marcar treinos de Horseball. Ganchos: perfil `cliente` com RLS já
-  activa; `pessoa_papeis.jogador_horseball` já existe; a conta-corrente assenta
-  em `mensalidades_penso`.
+- **Fase 4 — Conta-cliente.** Falta a metade virada ao aluno: ver as suas aulas
+  e saldo, marcar treinos de Horseball. A metade virada à gestão já está feita
+  — a conta-corrente e a cobrança em `/pessoas/[id]/pensos`. Ganchos: perfil
+  `cliente` com RLS já activa; `pessoa_papeis.jogador_horseball` já existe.
 - **Fase 5 — Stocks e saúde.** Ração e palha com alertas, vacinas, ferrador,
   veterinário, relatórios.
 

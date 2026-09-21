@@ -71,7 +71,14 @@ export async function guardarPessoa(
   revalidatePath(`/pessoas/${resultado.id}`)
 
   if (querContinuar(dados)) return resultado
-  redirect(comConfirmacao(`/pessoas/${resultado.id}`, id ? 'guardado' : 'criado'))
+  // Criar volta à listagem; editar fica na ficha, que é de onde se veio.
+  // Cair na ficha depois de criar dava a sensação de que nada tinha
+  // acontecido: a ficha é o mesmo formulário, com os mesmos valores.
+  redirect(
+    id
+      ? comConfirmacao(`/pessoas/${resultado.id}`, 'guardado')
+      : comConfirmacao('/pessoas', 'criado'),
+  )
 }
 
 /** Substitui o conjunto de papéis da pessoa pelo indicado no formulário. */

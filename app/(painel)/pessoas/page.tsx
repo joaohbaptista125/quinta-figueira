@@ -11,12 +11,14 @@ import {
   Cabecalho,
   Corpo,
   LigacaoFicha,
+  LigacaoInterna,
   Linha,
   Tabela,
   Td,
   Th,
 } from '@/components/ui/tabela'
 import { ROTULOS_PAPEL, ROTULOS_PERFIL } from '@/lib/rotulos'
+import { formatarEuros } from '@/lib/formatos'
 import type { PapelPessoa } from '@/lib/tipos-bd'
 
 export const metadata: Metadata = { title: 'Pessoas' }
@@ -44,6 +46,27 @@ export default async function PaginaPessoas({
   }
 
   const { data: pessoas, error } = await consulta
+
+  /*
+   * Quem deve, e quanto. A gestão abre esta lista para cobrar tanto como para
+   * consultar contactos, e sem isto tinha de entrar pessoa a pessoa para
+   * descobrir. É uma leitura da vista inteira, não uma por linha: são umas
+   * centenas de mensalidades, somam-se aqui.
+   */
+  const emDivida = new Map<string, number>()
+  if (eGestao(sessao.perfil)) {
+    const { data: pensos } = await supabase
+      .from('v_pensos_por_receber')
+      .select('cliente_id, valor_em_falta')
+      .neq('estado', 'paga')
+
+    for (const linha of pensos ?? []) {
+      const falta = Number(linha.valor_em_falta)
+      if (falta > 0) {
+        emDivida.set(linha.cliente_id, (emDivida.get(linha.cliente_id) ?? 0) + falta)
+      }
+    }
+  }
 
   return (
     <>
@@ -80,6 +103,7 @@ export default async function PaginaPessoas({
                 <Th>Contactos</Th>
                 <Th>Papéis</Th>
                 <Th>Acesso</Th>
+                {eGestao(sessao.perfil) ? <Th numerico>Pensos</Th> : null}
               </Linha>
             </Cabecalho>
             <Corpo>
@@ -117,6 +141,25 @@ export default async function PaginaPessoas({
                   <Td rotulo="Acesso" className="text-muted-foreground">
                     {pessoa.perfil ? ROTULOS_PERFIL[pessoa.perfil] : '—'}
                   </Td>
+                  {eGestao(sessao.perfil) ? (
+                    <Td rotulo="Pensos" numerico>
+                      {emDivida.has(pessoa.id) ? (
+                        <LigacaoInterna
+                          href={`/pessoas/${pessoa.id}/pensos`}
+                          className="font-medium text-destructive"
+                        >
+                          {formatarEuros(emDivida.get(pessoa.id))} em dívida
+                        </LigacaoInterna>
+                      ) : (
+                        <LigacaoInterna
+                          href={`/pessoas/${pessoa.id}/pensos`}
+                          className="text-muted-foreground"
+                        >
+                          Conta-corrente
+                        </LigacaoInterna>
+                      )}
+                    </Td>
+                  ) : null}
                 </Linha>
               ))}
             </Corpo>

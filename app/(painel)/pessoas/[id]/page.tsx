@@ -9,6 +9,7 @@ import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposPessoa } from '@/components/formularios/campos-pessoa'
 import { BotaoApagar } from '@/components/botao-apagar'
+import { classesBotao } from '@/components/ui/botao'
 import {
   Cartao,
   CabecalhoCartao,
@@ -173,8 +174,14 @@ export default async function PaginaPessoa({
           {podeEditar ? (
             <>
               <Cartao>
-                <CabecalhoCartao>
+                <CabecalhoCartao className="flex flex-row items-start justify-between gap-2">
                   <TituloCartao>Contratos de penso</TituloCartao>
+                  <Link
+                    href={`/pessoas/${pessoa.id}/pensos`}
+                    className={classesBotao('contorno', 'pequeno')}
+                  >
+                    Conta-corrente
+                  </Link>
                 </CabecalhoCartao>
                 <ConteudoCartao className="px-0 sm:px-0">
                   {contratos.data && contratos.data.length > 0 ? (

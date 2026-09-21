@@ -142,7 +142,7 @@ export async function PainelGestao({
                     <Linha key={linha.mensalidade_id}>
                       <Td>
                         <Link
-                          href={`/pessoas/${linha.cliente_id}`}
+                          href={`/pessoas/${linha.cliente_id}/pensos`}
                           className="underline-offset-2 hover:underline"
                         >
                           {linha.cliente_nome}

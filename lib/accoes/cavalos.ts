@@ -79,7 +79,14 @@ export async function guardarCavalo(
   revalidatePath(`/cavalos/${resultado.id}`)
 
   if (querContinuar(dados)) return resultado
-  redirect(comConfirmacao(`/cavalos/${resultado.id}`, id ? 'guardado' : 'criado'))
+  // Criar volta à listagem; editar fica na ficha, que é de onde se veio.
+  // Cair na ficha depois de criar dava a sensação de que nada tinha
+  // acontecido: a ficha é o mesmo formulário, com os mesmos valores.
+  redirect(
+    id
+      ? comConfirmacao(`/cavalos/${resultado.id}`, 'guardado')
+      : comConfirmacao('/cavalos', 'criado'),
+  )
 }
 
 export async function apagarCavalo(

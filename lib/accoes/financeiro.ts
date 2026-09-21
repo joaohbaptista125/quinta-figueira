@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
-import { primeiroDiaDoMes } from '@/lib/formatos'
+import { formatarEuros, hoje, primeiroDiaDoMes } from '@/lib/formatos'
 import { ROTULOS_METODO, ROTULOS_TIPO_RECEBIMENTO } from '@/lib/rotulos'
 import type { MetodoPagamento, TipoRecebimento } from '@/lib/tipos-bd'
 import {
@@ -11,6 +11,7 @@ import {
   comConfirmacao,
   booleano,
   gravar,
+  listaTexto,
   querContinuar,
   texto,
   textoOuNulo,
@@ -257,4 +258,99 @@ export async function anularMensalidade(
   revalidatePath('/financeiro/pensos')
   revalidatePath('/')
   return { ok: true, mensagem: 'Mensalidade anulada.' }
+}
+
+/**
+ * Recebe uma ou várias mensalidades de penso de uma só vez.
+ *
+ * É o caminho curto da cobrança: da conta-corrente do cliente, escolher o
+ * método e confirmar. O formulário completo de recebimento continua a existir
+ * para os casos fora do normal (imputar a outra pessoa, número de documento
+ * fiscal, notas) — este resolve os noventa por cento restantes em três toques.
+ *
+ * Uma mensalidade = um recebimento, mesmo quando se recebem três meses na
+ * mesma transferência. É o que mantém `mensalidade_id` a ligar cada euro ao
+ * mês a que respeita, e é isso que faz a trigger acertar o estado de cada um.
+ */
+export async function receberPensos(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const ids = listaTexto(dados, 'mensalidades')
+  if (ids.length === 0) {
+    return { ok: false, mensagem: 'Escolha pelo menos uma mensalidade.' }
+  }
+
+  const metodo = texto(dados, 'metodo_pagamento')
+  if (!METODOS.includes(metodo as MetodoPagamento)) {
+    return { ok: false, mensagem: 'Escolha o método de pagamento.' }
+  }
+
+  const contaId = textoOuNulo(dados, 'conta_id')
+  if (!contaId) return { ok: false, mensagem: 'Escolha a conta de destino.' }
+
+  const data = textoOuNulo(dados, 'data') ?? hoje()
+
+  const supabase = await criarClienteServidor()
+
+  // O que falta de cada mensalidade vem da base, não do formulário: entre
+  // abrir a página e carregar no botão pode ter entrado outro pagamento.
+  const { data: linhas, error: erroLeitura } = await supabase
+    .from('v_pensos_por_receber')
+    .select('mensalidade_id, periodo, cliente_id, valor_em_falta')
+    .in('mensalidade_id', ids)
+
+  if (erroLeitura) return { ok: false, mensagem: traduzirErro(erroLeitura) }
+  if (!linhas || linhas.length === 0) {
+    return { ok: false, mensagem: 'Mensalidade não encontrada.' }
+  }
+
+  // Com uma só mensalidade aceita-se um valor diferente do que falta, para
+  // permitir pagamentos parciais. Com várias, cada uma é recebida por inteiro.
+  const valorEscrito = ids.length === 1 ? valorOuNulo(dados, 'valor') : null
+  if (ids.length === 1 && valorEscrito != null && valorEscrito <= 0) {
+    return { ok: false, mensagem: 'Indique um valor maior do que zero.' }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const novos = linhas
+    .map((linha) => ({
+      data,
+      pessoa_id: linha.cliente_id,
+      valor: valorEscrito ?? Number(linha.valor_em_falta),
+      metodo_pagamento: metodo as MetodoPagamento,
+      conta_id: contaId,
+      tipo: 'penso' as TipoRecebimento,
+      mensalidade_id: linha.mensalidade_id,
+      periodo: linha.periodo,
+      criado_por: user?.id ?? null,
+    }))
+    .filter((recebimento) => recebimento.valor > 0)
+
+  if (novos.length === 0) {
+    return { ok: false, mensagem: 'Estas mensalidades já estão pagas.' }
+  }
+
+  const { error } = await supabase.from('recebimentos').insert(novos)
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  const pessoaId = linhas[0].cliente_id
+  revalidatePath(`/pessoas/${pessoaId}/pensos`)
+  revalidatePath(`/pessoas/${pessoaId}`)
+  revalidatePath('/financeiro/pensos')
+  revalidatePath('/financeiro/recebimentos')
+  revalidatePath('/financeiro/contas')
+  revalidatePath('/')
+
+  const total = novos.reduce((soma, recebimento) => soma + recebimento.valor, 0)
+  return {
+    ok: true,
+    mensagem:
+      novos.length === 1
+        ? `Recebido ${formatarEuros(total)} por ${ROTULOS_METODO[metodo as MetodoPagamento]}.`
+        : `Recebidas ${novos.length} mensalidades, ${formatarEuros(total)} por ${ROTULOS_METODO[metodo as MetodoPagamento]}.`,
+  }
 }

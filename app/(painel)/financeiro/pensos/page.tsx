@@ -1,12 +1,10 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirGestao } from '@/lib/sessao'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { SelectorMes } from '@/components/selector-mes'
 import { Indicador } from '@/components/indicador'
 import { BotaoGerarMensalidades } from '@/components/botao-gerar-mensalidades'
-import { classesBotao } from '@/components/ui/botao'
 import {
   Cartao,
   CabecalhoCartao,
@@ -16,7 +14,15 @@ import {
   SemRegistos,
   TituloCartao,
 } from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
+import {
+  Cabecalho,
+  Corpo,
+  LigacaoFicha,
+  Linha,
+  Tabela,
+  Td,
+  Th,
+} from '@/components/ui/tabela'
 import { ROTULOS_ESTADO_MENSALIDADE } from '@/lib/rotulos'
 import {
   formatarEuros,
@@ -63,7 +69,7 @@ export default async function PaginaPensos({
     <>
       <CabecalhoPagina
         titulo="Pensos do mês"
-        descricao={formatarMesCapitalizado(periodo)}
+        descricao={`${formatarMesCapitalizado(periodo)} · abra um cliente para receber`}
         accoes={
           <>
             <SelectorMes periodo={periodo} />
@@ -106,19 +112,15 @@ export default async function PaginaPensos({
                   <Th numerico>Mensalidade</Th>
                   <Th numerico>Pago</Th>
                   <Th numerico>Em falta</Th>
-                  <Th />
                 </Linha>
               </Cabecalho>
               <Corpo>
                 {linhas.map((linha) => (
                   <Linha key={linha.mensalidade_id}>
                     <Td>
-                      <Link
-                        href={`/pessoas/${linha.cliente_id}`}
-                        className="font-medium underline-offset-2 hover:underline"
-                      >
+                      <LigacaoFicha href={`/pessoas/${linha.cliente_id}/pensos`}>
                         {linha.cliente_nome}
-                      </Link>
+                      </LigacaoFicha>
                       {linha.cliente_telefone ? (
                         <div className="text-xs text-muted-foreground">
                           {linha.cliente_telefone}
@@ -147,16 +149,6 @@ export default async function PaginaPensos({
                       }
                     >
                       {formatarEuros(linha.valor_em_falta)}
-                    </Td>
-                    <Td>
-                      {Number(linha.valor_em_falta) > 0 ? (
-                        <Link
-                          href={`/financeiro/recebimentos/novo?mensalidade=${linha.mensalidade_id}`}
-                          className={classesBotao('contorno', 'pequeno')}
-                        >
-                          Registar pagamento
-                        </Link>
-                      ) : null}
                     </Td>
                   </Linha>
                 ))}
