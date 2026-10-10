@@ -361,3 +361,45 @@ end $$;
 reset role;
 
 \echo '== Todos os testes passaram'
+
+-- --- Convite e acesso confirmado --------------------------------------------
+\echo '== Convite de acesso'
+reset role;
+reset request.jwt.claim.sub;
+do $$
+declare
+  v_pessoa uuid;
+  v_user   uuid := '99999999-0000-4000-8000-0000000000ff';
+begin
+  insert into public.pessoas (nome, email) values ('Convidada', 'convidada@exemplo.pt')
+  returning id into v_pessoa;
+
+  -- O convite cria a conta logo no envio: é a trigger de insert que liga.
+  insert into auth.users (id, email) values (v_user, 'convidada@exemplo.pt');
+
+  perform pg_temp.afirmar(
+    (select auth_user_id from public.pessoas where id = v_pessoa) = v_user,
+    'criar o utilizador liga-o à ficha com o mesmo email');
+  perform pg_temp.afirmar(
+    (select acesso_confirmado_em is null from public.pessoas where id = v_pessoa),
+    'ter conta criada não é o mesmo que ter entrado');
+
+  -- Só o início de sessão é que marca o acesso.
+  update auth.users set last_sign_in_at = now() where id = v_user;
+  perform pg_temp.afirmar(
+    (select acesso_confirmado_em is not null from public.pessoas where id = v_pessoa),
+    'entrar marca o acesso confirmado');
+
+  -- A renovação de sessão não mexe na primeira vez que entrou.
+  declare v_primeira timestamptz;
+  begin
+    select acesso_confirmado_em into v_primeira from public.pessoas where id = v_pessoa;
+    update auth.users set last_sign_in_at = now() + interval '1 hour' where id = v_user;
+    perform pg_temp.afirmar(
+      (select acesso_confirmado_em from public.pessoas where id = v_pessoa) = v_primeira,
+      'voltar a entrar não reescreve a primeira vez');
+  end;
+
+  delete from public.pessoas where id = v_pessoa;
+  delete from auth.users where id = v_user;
+end $$;

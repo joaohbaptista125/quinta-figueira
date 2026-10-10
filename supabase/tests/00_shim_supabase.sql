@@ -29,9 +29,13 @@ grant usage on schema public, auth, storage, extensions to anon, authenticated, 
 
 -- auth.users e auth.uid()
 create table if not exists auth.users (
-  id         uuid primary key default gen_random_uuid(),
-  email      text unique,
-  created_at timestamptz not null default now()
+  id                 uuid primary key default gen_random_uuid(),
+  email              text unique,
+  created_at         timestamptz not null default now(),
+  -- Preenchidas pelo Supabase quando a pessoa confirma o email e quando
+  -- entra. A trigger `marcar_acesso_ao_entrar` olha para last_sign_in_at.
+  email_confirmed_at timestamptz,
+  last_sign_in_at    timestamptz
 );
 
 create or replace function auth.uid()

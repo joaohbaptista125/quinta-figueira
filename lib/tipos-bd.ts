@@ -54,6 +54,11 @@ export type Pessoa = Carimbos & {
   perfil: PerfilAcesso | null
   /** Último convite de acesso enviado. Ter conta é `auth_user_id`, não isto. */
   convidado_em: string | null
+  /**
+   * Primeira vez que entrou de facto. `auth_user_id` só diz que a conta foi
+   * criada, e isso acontece logo no envio do convite.
+   */
+  acesso_confirmado_em: string | null
 }
 
 export type PessoaPapel = {

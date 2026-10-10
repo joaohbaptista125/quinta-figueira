@@ -61,6 +61,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…100100_fase3_seguranca_e_calendario.sql` | RLS da Fase 3, `calendarios`, `agenda_por_token` |
 | `…110000_opcoes_de_cavalo.sql` | `opcoes_cavalo` — lista de raças e pelagens (+ seed) |
 | `…20261010090000_convite_de_acesso.sql` | `pessoas.convidado_em` |
+| `…20261010103000_acesso_confirmado.sql` | `pessoas.acesso_confirmado_em` + trigger de entrada |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -392,9 +393,17 @@ convite vai.
   pede), `?token_hash=` (verificado no servidor, serve em qualquer
   dispositivo) e `#access_token=` (fragmento, que **nunca chega ao servidor** —
   encaminha-se para `/auth/ligar`, que o lê no browser e guarda a sessão).
-- `pessoas.convidado_em` regista o envio; `auth_user_id` é que diz se a conta
-  existe. Os dois juntos distinguem «nunca convidado» de «convidado e ainda
-  não entrou».
+- **`auth_user_id` não quer dizer que a pessoa entrou, e isto já partiu uma
+  vez.** `signInWithOtp(shouldCreateUser)` cria a linha em `auth.users` **no
+  envio do convite**, e a trigger `ligar_pessoa_ao_criar_utilizador` preenche
+  logo `auth_user_id`. Com o travão em `auth_user_id`, a ficha passava a dizer
+  «tem conta» assim que o primeiro convite saía e deixava de ser possível
+  reenviá-lo — a quem ainda não tinha entrado uma única vez. O sinal
+  verdadeiro é **`acesso_confirmado_em`**, escrito pela trigger
+  `marcar_acesso_ao_entrar` quando `auth.users.last_sign_in_at` aparece.
+- Os três estados da ficha saem daqui: nada = nunca convidado;
+  `convidado_em` sem `acesso_confirmado_em` = convidado e ainda não entrou;
+  `acesso_confirmado_em` = entra mesmo.
 - Depois de entrar pelo link, a pessoa define a palavra-passe em `/conta` —
   sem isso só conseguiria voltar a entrar pedindo outro link de cada vez.
 - **Não é preciso nenhuma chave de serviço.** Se alguma vez se pensar em

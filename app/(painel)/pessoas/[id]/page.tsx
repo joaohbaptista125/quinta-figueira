@@ -155,8 +155,8 @@ export default async function PaginaPessoa({
                   nome={pessoa.nome}
                   email={pessoa.email}
                   perfil={pessoa.perfil ? ROTULOS_PERFIL[pessoa.perfil] : null}
-                  temConta={Boolean(pessoa.auth_user_id)}
                   convidadoEm={pessoa.convidado_em}
+                  acessoConfirmadoEm={pessoa.acesso_confirmado_em}
                 />
               </ConteudoCartao>
             </Cartao>

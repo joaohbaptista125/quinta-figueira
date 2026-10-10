@@ -165,7 +165,7 @@ export async function convidarPessoa(
   const supabase = await criarClienteServidor()
   const { data: pessoa, error } = await supabase
     .from('pessoas')
-    .select('nome, email, perfil, auth_user_id, activo')
+    .select('nome, email, perfil, acesso_confirmado_em, activo')
     .eq('id', id)
     .maybeSingle()
 
@@ -178,10 +178,14 @@ export async function convidarPessoa(
       mensagem: 'Esta ficha não tem email. Preencha-o primeiro — é para lá que o convite vai.',
     }
   }
-  if (pessoa.auth_user_id) {
+  // Repare-se que o travão é `acesso_confirmado_em` e não `auth_user_id`: a
+  // linha em auth.users nasce com o envio do convite, não com a entrada. Um
+  // travão por `auth_user_id` impedia reenviar o convite a quem ainda não
+  // tinha entrado uma única vez — que era precisamente quem precisava dele.
+  if (pessoa.acesso_confirmado_em) {
     return {
       ok: false,
-      mensagem: `${pessoa.nome} já tem conta. Se perdeu a palavra-passe, use «Recuperar palavra-passe» no ecrã de entrada.`,
+      mensagem: `${pessoa.nome} já entrou na aplicação. Se perdeu a palavra-passe, use «Esqueci-me da palavra-passe» no ecrã de entrada.`,
     }
   }
   if (!pessoa.activo) {

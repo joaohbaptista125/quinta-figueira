@@ -21,26 +21,31 @@ export function ConviteAcesso({
   nome,
   email,
   perfil,
-  temConta,
   convidadoEm,
+  acessoConfirmadoEm,
 }: {
   id: string
   nome: string
   email: string | null
   /** Rótulo do perfil, ou null se a ficha não tem nenhum. */
   perfil: string | null
-  temConta: boolean
   convidadoEm: string | null
+  /**
+   * Primeira vez que entrou. É este o sinal de que tem mesmo conta — a linha
+   * em `auth.users` nasce com o envio do convite, não com a entrada.
+   */
+  acessoConfirmadoEm: string | null
 }) {
   const [resultado, convidar] = useActionState(convidarPessoa, SEM_RESULTADO)
 
-  if (temConta) {
+  if (acessoConfirmadoEm) {
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Distintivo cor="sucesso">Tem conta</Distintivo>
+          <Distintivo cor="sucesso">Entra na aplicação</Distintivo>
           <span className="text-sm text-muted-foreground">
-            Entra como {perfil ?? 'cliente'}.
+            Desde {formatarDataHora(acessoConfirmadoEm)}, como{' '}
+            {perfil ?? 'cliente'}.
           </span>
         </div>
         <p className="text-xs text-muted-foreground">
