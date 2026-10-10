@@ -3,6 +3,7 @@ import { exigirPessoa, obterOrigem } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { SubscreverCalendario } from '@/components/subscrever-calendario'
+import { FormularioDefinirPassword } from '@/app/(publico)/definir-password/formulario'
 import {
   Cartao,
   CabecalhoCartao,
@@ -77,6 +78,18 @@ export default async function PaginaConta() {
             </dl>
           </ConteudoCartao>
         </Cartao>
+
+        {/*
+          Quem entrou pela primeira vez por um link de convite não tem
+          palavra-passe nenhuma: sem isto, só conseguiria voltar a entrar
+          pedindo outro link de cada vez.
+        */}
+        <FormularioDefinirPassword
+          titulo="Palavra-passe"
+          descricao="Defina-a ou mude-a. Mínimo de 8 caracteres."
+          destino="/conta"
+          focoAutomatico={false}
+        />
 
         <Cartao className="h-fit">
           <CabecalhoCartao>

@@ -52,6 +52,8 @@ export type Pessoa = Carimbos & {
   activo: boolean
   auth_user_id: string | null
   perfil: PerfilAcesso | null
+  /** Último convite de acesso enviado. Ter conta é `auth_user_id`, não isto. */
+  convidado_em: string | null
 }
 
 export type PessoaPapel = {

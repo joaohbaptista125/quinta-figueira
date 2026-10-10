@@ -24,17 +24,30 @@ function BotaoSubmeter() {
   )
 }
 
-export function FormularioDefinirPassword() {
+export function FormularioDefinirPassword({
+  titulo = 'Definir palavra-passe',
+  descricao = 'Mínimo de 8 caracteres.',
+  destino,
+  focoAutomatico = true,
+}: {
+  titulo?: string
+  descricao?: string
+  /** Para onde voltar depois de gravar. Sem isto, vai para o painel. */
+  destino?: string
+  /** Desligar quando o formulário é só um cartão entre outros na página. */
+  focoAutomatico?: boolean
+} = {}) {
   const [resultado, accao] = useActionState(definirPassword, SEM_RESULTADO)
 
   return (
-    <Cartao>
+    <Cartao className="h-fit">
       <CabecalhoCartao>
-        <TituloCartao>Definir palavra-passe</TituloCartao>
-        <DescricaoCartao>Mínimo de 8 caracteres.</DescricaoCartao>
+        <TituloCartao>{titulo}</TituloCartao>
+        <DescricaoCartao>{descricao}</DescricaoCartao>
       </CabecalhoCartao>
       <ConteudoCartao>
         <form action={accao} className="space-y-4">
+          {destino ? <input type="hidden" name="destino" value={destino} /> : null}
           <Campo etiqueta="Nova palavra-passe" htmlFor="password" obrigatorio>
             <Entrada
               id="password"
@@ -43,7 +56,7 @@ export function FormularioDefinirPassword() {
               autoComplete="new-password"
               minLength={8}
               required
-              autoFocus
+              autoFocus={focoAutomatico}
             />
           </Campo>
 
@@ -59,7 +72,9 @@ export function FormularioDefinirPassword() {
           </Campo>
 
           {resultado.mensagem ? (
-            <Aviso tom="erro">{resultado.mensagem}</Aviso>
+            <Aviso tom={resultado.ok ? 'sucesso' : 'erro'}>
+              {resultado.mensagem}
+            </Aviso>
           ) : null}
 
           <BotaoSubmeter />

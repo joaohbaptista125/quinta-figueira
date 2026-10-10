@@ -128,7 +128,12 @@ export function formatarIntervalo(
   return b ? `${a} – ${b}` : a
 }
 
-/** '2026-09-10' → 'quinta-feira, 10 de Setembro' */
+/**
+ * '2026-09-10' → 'Quinta-feira, 10 de Setembro'
+ *
+ * O Intl devolve tudo em minúsculas; aqui os meses escrevem-se com maiúscula,
+ * como no resto da aplicação.
+ */
 export function formatarDiaPorExtenso(iso: string) {
   const texto = new Intl.DateTimeFormat('pt-PT', {
     weekday: 'long',
@@ -136,7 +141,10 @@ export function formatarDiaPorExtenso(iso: string) {
     month: 'long',
     timeZone: 'UTC',
   }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`))
-  return texto.charAt(0).toUpperCase() + texto.slice(1)
+
+  return texto
+    .replace(/^./, (letra) => letra.toUpperCase())
+    .replace(/ de (.)/, (_, letra: string) => ` de ${letra.toUpperCase()}`)
 }
 
 /** '2026-09-10' → 'Qui, 10/09' — para colunas estreitas. */
@@ -166,3 +174,72 @@ export function idadeEmAnos(dataNascimento: string | null | undefined) {
   if (mesHoje < mes || (mesHoje === mes && diaHoje < dia)) idade -= 1
   return idade >= 0 ? idade : null
 }
+
+// --- Semanas e grelhas de mês -----------------------------------------------
+// A semana começa à segunda-feira, como em Portugal. Tudo em UTC e sobre texto
+// 'AAAA-MM-DD': datas do Postgres não passam por new Date() local, senão o
+// fuso do browser fá-las saltar um dia.
+
+/** Segunda-feira da semana a que o dia pertence. */
+export function inicioDaSemana(iso: string) {
+  const data = new Date(`${iso.slice(0, 10)}T00:00:00Z`)
+  // getUTCDay() dá 0 ao domingo; isto roda para 0 = segunda.
+  const posicao = (data.getUTCDay() + 6) % 7
+  data.setUTCDate(data.getUTCDate() - posicao)
+  return data.toISOString().slice(0, 10)
+}
+
+/** Os sete dias da semana a que o dia pertence, de segunda a domingo. */
+export function diasDaSemana(iso: string) {
+  const inicio = inicioDaSemana(iso)
+  return Array.from({ length: 7 }, (_, i) => deslocarDias(inicio, i))
+}
+
+/**
+ * Os dias da grelha de um mês: semanas inteiras, da segunda antes do dia 1 ao
+ * domingo depois do último dia. São 35 ou 42 dias, conforme o mês.
+ */
+export function gradeDoMes(iso: string) {
+  const primeiro = primeiroDiaDoMes(iso)
+  const ultimo = deslocarDias(deslocarMeses(primeiro, 1), -1)
+  const fim = deslocarDias(inicioDaSemana(ultimo), 6)
+
+  const dias: string[] = []
+  for (let dia = inicioDaSemana(primeiro); dia <= fim; dia = deslocarDias(dia, 1)) {
+    dias.push(dia)
+  }
+  return dias
+}
+
+/** '2026-10-10' e '2026-10-31' são o mesmo mês; '2026-11-01' não. */
+export function mesmoMes(a: string, b: string) {
+  return a.slice(0, 7) === b.slice(0, 7)
+}
+
+/**
+ * '2026-10-05' + '2026-10-11' → '5 – 11 de Outubro'.
+ * Com meses diferentes escreve os dois: '28 de Setembro – 4 de Outubro'.
+ */
+export function formatarIntervaloDeDias(inicio: string, fim: string) {
+  const nomeDoMes = (iso: string) =>
+    new Intl.DateTimeFormat('pt-PT', { month: 'long', timeZone: 'UTC' })
+      .format(new Date(`${iso.slice(0, 10)}T00:00:00Z`))
+      .replace(/^./, (letra) => letra.toUpperCase())
+  const numeroDoDia = (iso: string) => String(Number(iso.slice(8, 10)))
+
+  if (inicio.slice(0, 7) === fim.slice(0, 7)) {
+    return `${numeroDoDia(inicio)} – ${numeroDoDia(fim)} de ${nomeDoMes(inicio)}`
+  }
+  return `${numeroDoDia(inicio)} de ${nomeDoMes(inicio)} – ${numeroDoDia(fim)} de ${nomeDoMes(fim)}`
+}
+
+/** Nomes curtos dos dias da semana, para o cabeçalho da grelha. */
+export const DIAS_DA_SEMANA_CURTOS = [
+  'Seg',
+  'Ter',
+  'Qua',
+  'Qui',
+  'Sex',
+  'Sáb',
+  'Dom',
+] as const

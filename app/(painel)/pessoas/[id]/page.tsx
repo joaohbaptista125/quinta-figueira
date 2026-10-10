@@ -9,6 +9,7 @@ import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposPessoa } from '@/components/formularios/campos-pessoa'
 import { BotaoApagar } from '@/components/botao-apagar'
+import { ConviteAcesso } from '@/components/convite-acesso'
 import { classesBotao } from '@/components/ui/botao'
 import {
   Cartao,
@@ -139,6 +140,28 @@ export default async function PaginaPessoa({
         </Cartao>
 
         <div className="space-y-4">
+          {podeEditar ? (
+            <Cartao>
+              <CabecalhoCartao>
+                <TituloCartao>Acesso à aplicação</TituloCartao>
+                <DescricaoCartao>
+                  Ninguém se inscreve sozinho: a conta nasce quando a pessoa
+                  carrega no link do convite.
+                </DescricaoCartao>
+              </CabecalhoCartao>
+              <ConteudoCartao>
+                <ConviteAcesso
+                  id={pessoa.id}
+                  nome={pessoa.nome}
+                  email={pessoa.email}
+                  perfil={pessoa.perfil ? ROTULOS_PERFIL[pessoa.perfil] : null}
+                  temConta={Boolean(pessoa.auth_user_id)}
+                  convidadoEm={pessoa.convidado_em}
+                />
+              </ConteudoCartao>
+            </Cartao>
+          ) : null}
+
           <Cartao>
             <CabecalhoCartao>
               <TituloCartao>Cavalos</TituloCartao>

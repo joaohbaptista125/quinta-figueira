@@ -86,7 +86,11 @@ export async function definirPassword(
   }
 
   revalidatePath('/', 'layout')
-  redirect('/')
+
+  // Quem vem do link de email cai no painel; quem muda a palavra-passe a
+  // partir da sua conta fica onde estava, com a confirmação do costume.
+  const destino = texto(dados, 'destino')
+  redirect(destino.startsWith('/') ? `${destino}?feito=guardado` : '/')
 }
 
 export async function sair() {

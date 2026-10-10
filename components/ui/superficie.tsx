@@ -56,6 +56,7 @@ const CORES_DISTINTIVO = {
   primario: 'bg-primary/12 text-primary',
   sucesso: 'bg-success/15 text-success',
   aviso: 'bg-warning/20 text-warning-foreground',
+  informacao: 'bg-info/15 text-info',
   perigo: 'bg-destructive/12 text-destructive',
 } as const
 

@@ -5,7 +5,7 @@ import { exigirGestao } from '@/lib/sessao'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { classesBotao } from '@/components/ui/botao'
-import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
+import { Aviso, Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
 import {
   Cabecalho,
   Corpo,
@@ -37,7 +37,7 @@ export default async function PaginaContas() {
     <>
       <CabecalhoPagina
         titulo="Contas"
-        descricao="Onde o dinheiro do centro está"
+        descricao="Caixa e contas bancárias, para saber de onde sai e para onde entra cada movimento"
         accoes={
           <Link href="/financeiro/contas/nova" className={classesBotao()}>
             Nova conta
@@ -45,9 +45,15 @@ export default async function PaginaContas() {
         }
       />
 
+      <Aviso className="mb-4">
+        <strong>A aplicação não está ligada a nenhum banco.</strong> Estes saldos
+        são o saldo inicial que indicou mais os movimentos que foram lançados
+        aqui — servem para conferir contra o extracto, não para o substituir.
+      </Aviso>
+
       <div className="mb-4">
         <Indicador
-          rotulo="Saldo total (contas activas)"
+          rotulo="Saldo registado (contas activas)"
           valor={formatarEuros(totalActivas)}
           tom={totalActivas >= 0 ? 'positivo' : 'negativo'}
         />

@@ -33,7 +33,11 @@ export function CamposConta({ conta }: { conta?: Conta | null }) {
           </Selector>
         </Campo>
 
-        <Campo etiqueta="IBAN" htmlFor="iban" ajuda="Só para contas bancárias.">
+        <Campo
+          etiqueta="IBAN"
+          htmlFor="iban"
+          ajuda="Só para distinguir contas. Bastam os últimos dígitos — a aplicação não liga ao banco."
+        >
           <Entrada
             id="iban"
             name="iban"
@@ -45,7 +49,7 @@ export function CamposConta({ conta }: { conta?: Conta | null }) {
         <Campo
           etiqueta="Saldo inicial (€)"
           htmlFor="saldo_inicial"
-          ajuda="Saldo à data em que se começou a usar a aplicação."
+          ajuda="O que a conta tinha no dia em que começou a usar a aplicação. A partir daí o saldo é o que for lançado aqui."
         >
           <Entrada
             id="saldo_inicial"

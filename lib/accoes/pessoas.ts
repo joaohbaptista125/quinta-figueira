@@ -3,6 +3,9 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { criarClienteSemSessao } from '@/lib/supabase/sem-sessao'
+import { obterOrigem, obterPessoaSessao } from '@/lib/sessao'
+import { eGestao } from '@/lib/permissoes'
 import type { PapelPessoa, PerfilAcesso } from '@/lib/tipos-bd'
 import { ROTULOS_PAPEL, ROTULOS_PERFIL } from '@/lib/rotulos'
 import {
@@ -130,4 +133,90 @@ export async function apagarPessoa(
   }
 
   redirect(comConfirmacao('/pessoas', 'apagado'))
+}
+
+// --- Convite de acesso ------------------------------------------------------
+
+/**
+ * Envia a uma pessoa o convite para entrar na aplicação.
+ *
+ * O convite é um link de email. Não há registo público: ninguém se inscreve
+ * sozinho, é a gestão que abre a porta a quem precisa. Quando a pessoa carrega
+ * no link, a conta nasce e a trigger `ligar_pessoa_ao_criar_utilizador` liga-a
+ * à ficha com o mesmo email — por isso o email da ficha tem de ser o mesmo
+ * para onde o convite vai.
+ *
+ * O envio usa um cliente novo, sem cookies, de propósito: `signInWithOtp` toca
+ * no armazenamento de sessão do cliente que o chama, e com o cliente de
+ * servidor normal isso arriscava mexer na sessão de quem está a convidar.
+ */
+export async function convidarPessoa(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const id = texto(dados, 'id')
+  if (!id) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const sessao = await obterPessoaSessao()
+  if (!sessao || !eGestao(sessao.perfil)) {
+    return { ok: false, mensagem: 'Sem permissão para convidar.' }
+  }
+
+  const supabase = await criarClienteServidor()
+  const { data: pessoa, error } = await supabase
+    .from('pessoas')
+    .select('nome, email, perfil, auth_user_id, activo')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+  if (!pessoa) return { ok: false, mensagem: 'Pessoa não encontrada.' }
+
+  if (!pessoa.email) {
+    return {
+      ok: false,
+      mensagem: 'Esta ficha não tem email. Preencha-o primeiro — é para lá que o convite vai.',
+    }
+  }
+  if (pessoa.auth_user_id) {
+    return {
+      ok: false,
+      mensagem: `${pessoa.nome} já tem conta. Se perdeu a palavra-passe, use «Recuperar palavra-passe» no ecrã de entrada.`,
+    }
+  }
+  if (!pessoa.activo) {
+    return { ok: false, mensagem: 'A ficha está inactiva. Reactive-a antes de convidar.' }
+  }
+
+  const origem = await obterOrigem()
+  const { error: erroEnvio } = await criarClienteSemSessao().auth.signInWithOtp({
+    email: pessoa.email,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${origem}/auth/callback?seguinte=/definir-password`,
+    },
+  })
+
+  if (erroEnvio) {
+    return {
+      ok: false,
+      mensagem:
+        'Não foi possível enviar o convite. O Supabase limita o número de emails por hora — tente daqui a pouco.',
+    }
+  }
+
+  await supabase
+    .from('pessoas')
+    .update({ convidado_em: new Date().toISOString() })
+    .eq('id', id)
+
+  revalidatePath(`/pessoas/${id}`)
+  revalidatePath('/pessoas')
+
+  return {
+    ok: true,
+    mensagem: `Convite enviado para ${pessoa.email}.${
+      pessoa.perfil ? '' : ' Sem perfil escolhido, entra como cliente.'
+    }`,
+  }
 }

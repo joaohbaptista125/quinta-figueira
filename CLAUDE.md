@@ -60,6 +60,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…100000_fase3_eventos.sql` | `equipas`, `equipa_membros`, `eventos`, `evento_participantes`, `avisos` |
 | `…100100_fase3_seguranca_e_calendario.sql` | RLS da Fase 3, `calendarios`, `agenda_por_token` |
 | `…110000_opcoes_de_cavalo.sql` | `opcoes_cavalo` — lista de raças e pelagens (+ seed) |
+| `…20261010090000_convite_de_acesso.sql` | `pessoas.convidado_em` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -111,6 +112,14 @@ cavalo com intervalos de datas a cruzarem-se.
 anulável (em Postgres vários NULL não colidem, por isso há muitas boxes vazias).
 Atribuir uma box liberta primeiro a anterior — ver `atribuirBox` em
 `lib/accoes/cavalos.ts`.
+
+**A aplicação não liga a nenhum banco, e não deve ligar.** `contas` é um
+livro de registo: saldo inicial mais os movimentos que forem lançados à mão. O
+saldo que mostra serve para conferir contra o extracto, não para o substituir,
+e a página diz isso em cima. O `iban` existe só para distinguir contas na
+lista — nunca o uses para nada que se pareça com uma operação bancária. Ligar
+a app a uma conta real foi uma hipótese posta de lado por causa do risco: não
+a reintroduzas sem pedido explícito.
 
 **Raças e pelagens são uma lista, não uma chave estrangeira.**
 `opcoes_cavalo` (tipo × valor) é o que o formulário oferece, mas
@@ -233,6 +242,12 @@ components/
   formularios/    campos de cada entidade, partilhados entre criar e editar
   navegacao.tsx   barra lateral, barra de separadores do telemóvel e «Mais»
   pagamento-penso.tsx  receber mensalidades sem sair da conta-corrente
+  calendario-mes.tsx   a grelha do mês da agenda
+  navegacao-agenda.tsx setas, salto por data e a escolha de vista
+  vistas-agenda.tsx    a semana em lista e o quadro do dia
+  lista-eventos.tsx    a linha de um evento, partilhada por todas as vistas
+  cartao-evento.tsx    o evento em grande, com convocados e avisos
+  convite-acesso.tsx   estado de acesso de uma pessoa, e o convite
   formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
   formularios/selector-com-outro.tsx  lista com saída para escrever uma nova
   opcoes-cavalo.tsx  gerir as listas em /cavalos/opcoes
@@ -248,6 +263,7 @@ lib/
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
+  supabase/sem-sessao.ts  cliente sem cookies, para falar em nome de outra pessoa
 supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
@@ -327,6 +343,58 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
 - Fichas e formulários levam `voltar={{ href, rotulo }}` no
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
+
+### A agenda: três vistas sobre os mesmos eventos
+
+`/agenda` abre no **mês**; `?vista=semana` e `?vista=dia` são as outras duas.
+Abria sempre no quadro de um dia, e um dia não diz nada sobre a semana a
+seguir — para saber se a sexta estava cheia era preciso lá ir.
+
+- **Mês** (`<CalendarioMes>`) é a vista de quem planeia. Abaixo de `sm` não há
+  largura para texto em sete colunas, por isso cada evento vira um ponto da
+  cor do tipo e a contagem fica ao lado do número do dia.
+- **Semana** (`<VistaSemana>`) são os sete dias em lista, incluindo os vazios —
+  é o vazio que diz onde há espaço.
+- **Dia** (`<VistaDia>`) é o quadro de sempre, com os pares aluno↔cavalo à
+  vista, que é o que se leva para a cavalariça.
+
+Duas coisas a saber antes de lhe mexer:
+
+- **O `?dia=` é sempre um dia**, também no mês e na semana, onde serve só para
+  dizer qual. É isso que faz mudar de vista não perder o sítio.
+- **O mês e a semana não carregam os nomes dos convocados**, só os contam. O
+  `select` completo é só para a vista de dia — daí haver duas consultas e não
+  um `select` condicional (os tipos do Supabase precisam de um literal).
+
+As três cores dos tipos têm de se distinguir num ponto de seis pixels. O
+Horseball usava o verde de «sucesso», que à mesma escala era a mesma mancha
+que o verde de acção das aulas; por isso existe o token `--info` (azul).
+
+### Quem entra, e como
+
+Não há registo público. **A gestão escreve a ficha e envia o convite**, em
+`/pessoas/[id]` → «Acesso à aplicação». `convidarPessoa()` manda um link de
+email (`signInWithOtp` com `shouldCreateUser`), a conta nasce quando a pessoa
+carrega no link, e a trigger `ligar_pessoa_ao_criar_utilizador` liga-a à ficha
+com o mesmo email — por isso o email da ficha tem de ser aquele para onde o
+convite vai.
+
+- O envio usa `criarClienteSemSessao()`, **nunca o cliente de servidor
+  normal**: `signInWithOtp` mexe no armazenamento de sessão de quem o chama, e
+  com os cookies do admin agarrados isso arriscava trocar-lhe a sessão.
+- `pessoas.convidado_em` regista o envio; `auth_user_id` é que diz se a conta
+  existe. Os dois juntos distinguem «nunca convidado» de «convidado e ainda
+  não entrou».
+- Depois de entrar pelo link, a pessoa define a palavra-passe em `/conta` —
+  sem isso só conseguiria voltar a entrar pedindo outro link de cada vez.
+- **Não é preciso nenhuma chave de serviço.** Se alguma vez se pensar em
+  `auth.admin.inviteUserByEmail`, note-se que isso obriga a pôr a
+  `service_role` no ambiente, que ignora toda a RLS. Este caminho não precisa.
+
+O que o Supabase precisa de ter configurado: o endereço do site e
+`/auth/callback` em **Authentication → URL Configuration**, e SMTP próprio —
+o serviço de email de origem manda meia dúzia de mensagens por hora, o que não
+chega para convidar oitenta pessoas.
 
 ### Listas com saída: raças e pelagens
 
@@ -478,10 +546,11 @@ misturá-lo com o planeamento atrasava o quadro do dia, que era o que urgia.
 
 Por implementar:
 
-- **Fase 4 — Conta-cliente.** Falta a metade virada ao aluno: ver as suas aulas
-  e saldo, marcar treinos de Horseball. A metade virada à gestão já está feita
-  — a conta-corrente e a cobrança em `/pessoas/[id]/pensos`. Ganchos: perfil
-  `cliente` com RLS já activa; `pessoa_papeis.jogador_horseball` já existe.
+- **Fase 4 — Conta-cliente.** Falta a marcação de treinos de Horseball pelo
+  próprio. O resto está: a gestão convida (ver «Quem entra, e como»), o cliente
+  entra, vê as suas próximas marcações, os seus cavalos e o que deve; e a
+  cobrança vive em `/pessoas/[id]/pensos`. Gancho que falta usar:
+  `pessoa_papeis.jogador_horseball`.
 - **Fase 5 — Stocks e saúde.** Ração e palha com alertas, vacinas, ferrador,
   veterinário, relatórios.
 
