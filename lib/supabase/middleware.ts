@@ -8,6 +8,9 @@ const CAMINHOS_PUBLICOS = [
   '/recuperar-password',
   '/definir-password',
   '/auth/callback',
+  // Onde se trata a sessão que vem no fragmento do link de email. Quem lá
+  // chega ainda não tem sessão nenhuma — é isso que lá vai buscar.
+  '/auth/ligar',
   '/offline.html',
   // Subscrição de calendário: autentica-se pelo token no endereço, não por
   // sessão — uma aplicação de calendário não sabe iniciar sessão.

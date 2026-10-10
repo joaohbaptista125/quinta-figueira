@@ -252,6 +252,7 @@ components/
   formularios/selector-com-outro.tsx  lista com saída para escrever uma nova
   opcoes-cavalo.tsx  gerir as listas em /cavalos/opcoes
   resumo-do-dia.tsx  o que está marcado, no topo do painel
+  (publico)/auth/ligar/  lê a sessão do fragmento do link de email
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
   supabase/       clientes de browser, servidor e middleware
@@ -382,6 +383,15 @@ convite vai.
 - O envio usa `criarClienteSemSessao()`, **nunca o cliente de servidor
   normal**: `signInWithOtp` mexe no armazenamento de sessão de quem o chama, e
   com os cookies do admin agarrados isso arriscava trocar-lhe a sessão.
+- **O link do convite não pode depender do PKCE, e isto já partiu uma vez.**
+  Quem pede o convite é a gestão; quem carrega no link é outra pessoa, noutro
+  browser. No PKCE a prova fica num cookie de quem pediu, por isso
+  `exchangeCodeForSession` nunca podia funcionar aqui. `/auth/callback` trata
+  as três formas que o Supabase usa, e tem de continuar a tratar as três:
+  `?code=` (PKCE — serve a recuperação de palavra-passe, que a própria pessoa
+  pede), `?token_hash=` (verificado no servidor, serve em qualquer
+  dispositivo) e `#access_token=` (fragmento, que **nunca chega ao servidor** —
+  encaminha-se para `/auth/ligar`, que o lê no browser e guarda a sessão).
 - `pessoas.convidado_em` regista o envio; `auth_user_id` é que diz se a conta
   existe. Os dois juntos distinguem «nunca convidado» de «convidado e ainda
   não entrou».
