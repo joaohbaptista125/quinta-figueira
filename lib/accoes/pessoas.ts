@@ -165,7 +165,10 @@ export async function convidarPessoa(
   const supabase = await criarClienteServidor()
   const { data: pessoa, error } = await supabase
     .from('pessoas')
-    .select('nome, email, perfil, acesso_confirmado_em, activo')
+    // `*` e não a lista de colunas de propósito: entre a Vercel publicar e a
+    // migração ser aplicada, pedir uma coluna que ainda não existe fazia a
+    // operação inteira falhar. Assim o campo vem indefinido e o convite segue.
+    .select('*')
     .eq('id', id)
     .maybeSingle()
 

@@ -1,0 +1,66 @@
+# Aplica as migrações ao Supabase quando entram no `main`.
+#
+# Existe porque o caminho manual — gerar um ficheiro, colar no SQL Editor —
+# deixa uma janela em que a Vercel já publicou o código novo e a base ainda não
+# tem as colunas que ele pede. Essa janela já partiu a aplicação em produção.
+#
+# Fica em silêncio enquanto os segredos não estiverem configurados, para não
+# encher o repositório de execuções falhadas. Para o ligar, em
+# Settings → Secrets and variables → Actions:
+#
+#   SUPABASE_ACCESS_TOKEN   token pessoal, em supabase.com/dashboard/account/tokens
+#   SUPABASE_DB_PASSWORD    palavra-passe da base de dados do projecto
+#   SUPABASE_PROJECT_REF    a referência do projecto (o código no endereço)
+
+name: Migrações
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/migracoes.yml'
+  workflow_dispatch:
+
+# Duas publicações seguidas não podem aplicar migrações ao mesmo tempo.
+concurrency:
+  group: migracoes-supabase
+  cancel-in-progress: false
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      REFERENCIA: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Há segredos configurados?
+        id: segredos
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_DB_PASSWORD" ] && [ -n "$REFERENCIA" ]; then
+            echo "prontos=sim" >> "$GITHUB_OUTPUT"
+          else
+            echo "prontos=nao" >> "$GITHUB_OUTPUT"
+            echo "::notice::Migrações não aplicadas: faltam os segredos SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD ou SUPABASE_PROJECT_REF. Veja o cabeçalho deste ficheiro."
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.segredos.outputs.prontos == 'sim'
+        with:
+          version: latest
+
+      - name: Ligar ao projecto
+        if: steps.segredos.outputs.prontos == 'sim'
+        run: supabase link --project-ref "$REFERENCIA"
+
+      - name: O que falta aplicar
+        if: steps.segredos.outputs.prontos == 'sim'
+        run: supabase migration list
+
+      - name: Aplicar
+        if: steps.segredos.outputs.prontos == 'sim'
+        run: supabase db push

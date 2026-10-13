@@ -56,5 +56,17 @@ export function traduzirErro(erro: {
   if (codigo === '42501' || codigo === 'PGRST301')
     return 'Não tem permissão para esta operação.'
 
+  /*
+   * Coluna ou tabela que o código conhece e a base ainda não.
+   *
+   * Acontece na janela entre a Vercel publicar e a migração ser aplicada, e
+   * já aconteceu de verdade. A mensagem crua do Postgres («column … does not
+   * exist») não diz nada a quem está a usar a aplicação, e o que é preciso
+   * fazer é sempre o mesmo.
+   */
+  if (codigo === '42703' || codigo === '42P01' || codigo === 'PGRST204') {
+    return 'A base de dados está desactualizada: falta aplicar a última migração no Supabase. Avise quem trata disso — nada do que escreveu se perdeu.'
+  }
+
   return erro.message || 'Ocorreu um erro inesperado.'
 }
