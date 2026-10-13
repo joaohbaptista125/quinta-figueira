@@ -66,10 +66,23 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
 
+**As migrações aplicam-se sozinhas** pelo workflow `.github/workflows/migracoes.yml`:
+entra uma migração no `main`, corre `supabase db push`. Fica em silêncio
+enquanto os segredos do repositório não estiverem configurados — as
+instruções estão no cabeçalho do ficheiro. Isto existe porque o caminho manual
+deixava uma janela em que a Vercel já tinha publicado o código novo e a base
+ainda não tinha as colunas que ele pedia, e essa janela partiu a aplicação em
+produção mais do que uma vez.
+
 Para aplicar sem o CLI, `./scripts/gerar-esquema-unico.sh [prefixo]` reúne as
 migrações num ficheiro para colar no SQL Editor — dentro de uma transacção e
 já a registar-se na tabela de controlo do Supabase, para um `db push` futuro
 não as repetir. Sem prefixo faz todas; com `20260910` faz só as desse dia.
+
+`./scripts/registar-aplicadas.sh` gera o SQL que declara todas as migrações do
+repositório como já aplicadas. Serve uma vez, na passagem do «colar à mão»
+para o `db push`: o que foi colado antes de existir contabilidade não está
+registado, e sem isto o primeiro push tentava repeti-lo.
 
 ### Decisões que custam a reverter
 
@@ -273,6 +286,7 @@ supabase/
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
+  registar-aplicadas.sh   declara as migrações já aplicadas, antes do 1.º push
   gerar-icones.mjs     gera os ícones da PWA
 ```
 

@@ -11,6 +11,15 @@
 #   SUPABASE_ACCESS_TOKEN   token pessoal, em supabase.com/dashboard/account/tokens
 #   SUPABASE_DB_PASSWORD    palavra-passe da base de dados do projecto
 #   SUPABASE_PROJECT_REF    a referência do projecto (o código no endereço)
+#
+# ANTES DA PRIMEIRA VEZ: as migrações aplicadas à mão no SQL Editor antes de
+# existir contabilidade não estão registadas, e o `db push` tentaria repeti-las.
+# Gerar o registo com:
+#
+#   ./scripts/registar-aplicadas.sh
+#
+# e colar o que sai no SQL Editor. Não altera o esquema, só declara o que já
+# foi feito.
 
 name: Migrações
 
