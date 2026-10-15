@@ -3,6 +3,7 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { ProximasMarcacoes } from '@/components/resumo-do-dia'
+import { classesBotao } from '@/components/ui/botao'
 import {
   Cartao,
   CabecalhoCartao,
@@ -13,21 +14,22 @@ import {
   TituloCartao,
 } from '@/components/ui/superficie'
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
-import { ROTULOS_METODO, ROTULOS_REGIME } from '@/lib/rotulos'
-import {
-  formatarData,
-  formatarEuros,
-  formatarMesCapitalizado,
-} from '@/lib/formatos'
+import { ROTULOS_REGIME } from '@/lib/rotulos'
+import { formatarEuros, formatarMesCapitalizado } from '@/lib/formatos'
 
 /**
  * Painel do cliente. Tudo o que aparece aqui é filtrado pela RLS: as consultas
  * não levam filtro por pessoa, é a base de dados que só devolve o que é dele.
+ *
+ * O detalhe do dinheiro vive em `/pagamentos`. Aqui fica só a pergunta —
+ * quanto falta — e o caminho para a resposta: dizer «contacte a gestão» e mais
+ * nada era um beco, e a lista dos últimos dez pagamentos repetia em miniatura
+ * uma página inteira.
  */
 export async function PainelCliente({ nome }: { nome: string }) {
   const supabase = await criarClienteServidor()
 
-  const [cavalos, pensos, recebimentos] = await Promise.all([
+  const [cavalos, pensos] = await Promise.all([
     supabase
       .from('cavalos')
       .select('id, nome, regime, raca, activo')
@@ -38,11 +40,6 @@ export async function PainelCliente({ nome }: { nome: string }) {
       .select('*')
       .neq('estado', 'paga')
       .order('periodo', { ascending: false }),
-    supabase
-      .from('recebimentos')
-      .select('id, data, valor, tipo, metodo_pagamento, periodo, descricao')
-      .order('data', { ascending: false })
-      .limit(10),
   ])
 
   const emFalta = (pensos.data ?? []).reduce(
@@ -59,23 +56,16 @@ export async function PainelCliente({ nome }: { nome: string }) {
 
       <ProximasMarcacoes />
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <Indicador
           rotulo="Os seus cavalos"
           valor={String(cavalos.data?.length ?? 0)}
         />
         <Indicador
-          rotulo="Por regularizar"
+          rotulo="Por pagar"
           valor={formatarEuros(emFalta)}
           tom={emFalta > 0 ? 'negativo' : 'positivo'}
-          detalhe={
-            emFalta > 0 ? 'Contacte a gestão para regularizar' : 'Tudo em dia'
-          }
-        />
-        <Indicador
-          rotulo="Pagamentos registados"
-          valor={String(recebimentos.data?.length ?? 0)}
-          detalhe="Últimos 10"
+          detalhe={emFalta > 0 ? 'Ver em Pagamentos' : 'Tudo em dia'}
         />
       </div>
 
@@ -125,11 +115,19 @@ export async function PainelCliente({ nome }: { nome: string }) {
         </Cartao>
 
         <Cartao>
-          <CabecalhoCartao>
-            <TituloCartao>Mensalidades por regularizar</TituloCartao>
-            <DescricaoCartao>
-              Valores de penso ainda não recebidos pelo centro
-            </DescricaoCartao>
+          <CabecalhoCartao className="flex flex-row items-start justify-between gap-2">
+            <div>
+              <TituloCartao>Mensalidades por pagar</TituloCartao>
+              <DescricaoCartao>
+                Meses de penso que o centro ainda não recebeu
+              </DescricaoCartao>
+            </div>
+            <Link
+              href="/pagamentos"
+              className={classesBotao('contorno', 'pequeno')}
+            >
+              Ver pagamentos
+            </Link>
           </CabecalhoCartao>
           <ConteudoCartao className="px-0 sm:px-0">
             {pensos.data && pensos.data.length > 0 ? (
@@ -156,54 +154,7 @@ export async function PainelCliente({ nome }: { nome: string }) {
                 </Corpo>
               </Tabela>
             ) : (
-              <SemRegistos titulo="Não tem nada por regularizar" />
-            )}
-          </ConteudoCartao>
-        </Cartao>
-
-        <Cartao className="xl:col-span-2">
-          <CabecalhoCartao>
-            <TituloCartao>Os seus pagamentos</TituloCartao>
-            <DescricaoCartao>
-              Registo interno do centro. Não substitui o recibo emitido pela
-              contabilidade.
-            </DescricaoCartao>
-          </CabecalhoCartao>
-          <ConteudoCartao className="px-0 sm:px-0">
-            {recebimentos.data && recebimentos.data.length > 0 ? (
-              <Tabela>
-                <Cabecalho>
-                  <Linha>
-                    <Th>Data</Th>
-                    <Th>Refere-se a</Th>
-                    <Th>Método</Th>
-                    <Th numerico>Valor</Th>
-                  </Linha>
-                </Cabecalho>
-                <Corpo>
-                  {recebimentos.data.map((recebimento) => (
-                    <Linha key={recebimento.id}>
-                      <Td rotulo="Data" className="whitespace-nowrap">
-                        {formatarData(recebimento.data)}
-                      </Td>
-                      <Td>
-                        {recebimento.descricao ??
-                          (recebimento.periodo
-                            ? formatarMesCapitalizado(recebimento.periodo)
-                            : '—')}
-                      </Td>
-                      <Td rotulo="Método" className="text-muted-foreground">
-                        {ROTULOS_METODO[recebimento.metodo_pagamento]}
-                      </Td>
-                      <Td rotulo="Valor" numerico className="font-medium">
-                        {formatarEuros(recebimento.valor)}
-                      </Td>
-                    </Linha>
-                  ))}
-                </Corpo>
-              </Tabela>
-            ) : (
-              <SemRegistos titulo="Ainda não há pagamentos registados" />
+              <SemRegistos titulo="Não tem nada por pagar" />
             )}
           </ConteudoCartao>
         </Cartao>

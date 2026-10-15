@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
-import { exigirPessoa } from '@/lib/sessao'
-import { eGestao } from '@/lib/permissoes'
+import { exigirGestao } from '@/lib/sessao'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { SelectorMes } from '@/components/selector-mes'
 import { Indicador } from '@/components/indicador'
@@ -32,12 +31,13 @@ export default async function PaginaRecebimentos({
 }: {
   searchParams: Promise<{ mes?: string }>
 }) {
-  const sessao = await exigirPessoa()
+  // Página da gestão. O cliente tem a dele em `/pagamentos`, com a conta
+  // corrente mês a mês em vez do mês corrente de toda a gente.
+  await exigirGestao()
   const { mes } = await searchParams
   const periodo = mes ? primeiroDiaDoMes(`${mes}-01`) : primeiroDiaDoMes()
   const fim = deslocarMeses(periodo, 1)
   const supabase = await criarClienteServidor()
-  const podeEditar = eGestao(sessao.perfil)
 
   const { data: recebimentos, error } = await supabase
     .from('recebimentos')
@@ -64,22 +64,18 @@ export default async function PaginaRecebimentos({
         accoes={
           <>
             <SelectorMes periodo={periodo} />
-            {podeEditar ? (
-              <Link href="/financeiro/recebimentos/novo" className={classesBotao()}>
-                Registar recebimento
-              </Link>
-            ) : null}
+            <Link href="/financeiro/recebimentos/novo" className={classesBotao()}>
+              Registar recebimento
+            </Link>
           </>
         }
       />
 
-      {podeEditar ? (
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <Indicador rotulo="Total do mês" valor={formatarEuros(total)} tom="positivo" />
-          <Indicador rotulo="De pensos" valor={formatarEuros(dePenso)} />
-          <Indicador rotulo="Outros" valor={formatarEuros(total - dePenso)} />
-        </div>
-      ) : null}
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <Indicador rotulo="Total do mês" valor={formatarEuros(total)} tom="positivo" />
+        <Indicador rotulo="De pensos" valor={formatarEuros(dePenso)} />
+        <Indicador rotulo="Outros" valor={formatarEuros(total - dePenso)} />
+      </div>
 
       <Cartao>
         {error ? (
@@ -102,13 +98,9 @@ export default async function PaginaRecebimentos({
                     {formatarData(recebimento.data)}
                   </Td>
                   <Td>
-                    {podeEditar ? (
-                      <LigacaoFicha href={`/financeiro/recebimentos/${recebimento.id}`}>{recebimento.pessoas?.nome ?? '—'}</LigacaoFicha>
-                    ) : (
-                      <span className="font-medium">
-                        {recebimento.pessoas?.nome ?? '—'}
-                      </span>
-                    )}
+                    <LigacaoFicha href={`/financeiro/recebimentos/${recebimento.id}`}>
+                      {recebimento.pessoas?.nome ?? '—'}
+                    </LigacaoFicha>
                     {recebimento.documento_fiscal_ref ? (
                       <div className="text-xs text-muted-foreground">
                         Doc. {recebimento.documento_fiscal_ref}
@@ -145,11 +137,9 @@ export default async function PaginaRecebimentos({
           <SemRegistos
             titulo="Sem recebimentos neste mês"
             accao={
-              podeEditar ? (
-                <Link href="/financeiro/recebimentos/novo" className={classesBotao()}>
-                  Registar recebimento
-                </Link>
-              ) : null
+              <Link href="/financeiro/recebimentos/novo" className={classesBotao()}>
+                Registar recebimento
+              </Link>
             }
           />
         )}

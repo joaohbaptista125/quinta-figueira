@@ -70,12 +70,15 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
         principal: true,
         visivel: (p) => eEquipa(p),
       },
-      { href: '/boxes', rotulo: 'Boxes', Icone: DoorOpen, visivel: SEMPRE },
+      // Boxes e contratos são trabalho de quem gere a cavalariça. A RLS já
+      // cortava o conteúdo ao que é de cada um, mas ao cliente sobravam duas
+      // entradas de menu que lhe abriam ecrãs quase vazios.
+      { href: '/boxes', rotulo: 'Boxes', Icone: DoorOpen, visivel: (p) => eEquipa(p) },
       {
         href: '/contratos',
         rotulo: 'Contratos de penso',
         Icone: FileText,
-        visivel: SEMPRE,
+        visivel: eGestao,
       },
       {
         href: '/equipas',
@@ -98,10 +101,7 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
         href: '/financeiro/recebimentos',
         rotulo: 'Recebimentos',
         Icone: Banknote,
-        // Para o cliente é a página que lhe interessa e ocupa o lugar que a
-        // de «Pessoas» deixa livre na barra.
-        principal: true,
-        visivel: (p) => eGestao(p) || p === 'cliente',
+        visivel: eGestao,
       },
       {
         href: '/financeiro/pensos',
@@ -132,6 +132,15 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
   {
     titulo: 'Pessoal',
     itens: [
+      {
+        // Quem paga não recebe: do lado do cliente a palavra é «pagamentos».
+        // Ocupa na barra o lugar que «Pessoas» lhe deixa livre.
+        href: '/pagamentos',
+        rotulo: 'Pagamentos',
+        Icone: Banknote,
+        principal: true,
+        visivel: (p) => p === 'cliente',
+      },
       {
         href: '/conta',
         rotulo: 'A minha conta',

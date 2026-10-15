@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
-import { eGestao } from '@/lib/permissoes'
+import { eEquipa, eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Pesquisa } from '@/components/pesquisa'
 import { classesBotao } from '@/components/ui/botao'
@@ -53,6 +53,11 @@ export default async function PaginaCavalos({
 
   const { data: cavalos, error } = await consulta
 
+  // O cliente só recebe os cavalos dele, por isso a coluna do proprietário
+  // era o nome dele repetido em todas as linhas, e os filtros por regime
+  // («Escola», «Centro») nunca lhe devolviam nada.
+  const daCavalarica = eEquipa(sessao.perfil)
+
   return (
     <>
       <CabecalhoPagina
@@ -77,12 +82,14 @@ export default async function PaginaCavalos({
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Pesquisa placeholder="Pesquisar por nome, raça, passaporte ou chip" />
-        <div className="flex gap-1.5 text-sm">
-          <FiltroRegime activo={regime} valor={undefined} rotulo="Todos" />
-          <FiltroRegime activo={regime} valor="penso" rotulo="A penso" />
-          <FiltroRegime activo={regime} valor="escola" rotulo="Escola" />
-          <FiltroRegime activo={regime} valor="centro" rotulo="Centro" />
-        </div>
+        {daCavalarica ? (
+          <div className="flex gap-1.5 text-sm">
+            <FiltroRegime activo={regime} valor={undefined} rotulo="Todos" />
+            <FiltroRegime activo={regime} valor="penso" rotulo="A penso" />
+            <FiltroRegime activo={regime} valor="escola" rotulo="Escola" />
+            <FiltroRegime activo={regime} valor="centro" rotulo="Centro" />
+          </div>
+        ) : null}
         <Link
           href={inactivos === '1' ? '/cavalos' : '/cavalos?inactivos=1'}
           className="text-sm text-muted-foreground underline"
@@ -100,7 +107,7 @@ export default async function PaginaCavalos({
               <Linha>
                 <Th>Nome</Th>
                 <Th>Regime</Th>
-                <Th>Proprietário</Th>
+                {daCavalarica ? <Th>Proprietário</Th> : null}
                 <Th>Raça / pelagem</Th>
                 <Th>Idade</Th>
                 <Th>Box</Th>
@@ -129,13 +136,15 @@ export default async function PaginaCavalos({
                         {ROTULOS_REGIME[cavalo.regime]}
                       </Distintivo>
                     </Td>
-                    <Td rotulo="Proprietário" className="text-muted-foreground">
-                      {cavalo.pessoas ? (
-                        <LigacaoInterna href={`/pessoas/${cavalo.pessoas.id}`}>{cavalo.pessoas.nome}</LigacaoInterna>
-                      ) : (
-                        '—'
-                      )}
-                    </Td>
+                    {daCavalarica ? (
+                      <Td rotulo="Proprietário" className="text-muted-foreground">
+                        {cavalo.pessoas ? (
+                          <LigacaoInterna href={`/pessoas/${cavalo.pessoas.id}`}>{cavalo.pessoas.nome}</LigacaoInterna>
+                        ) : (
+                          '—'
+                        )}
+                      </Td>
+                    ) : null}
                     <Td rotulo="Raça / pelagem" className="text-muted-foreground">
                       {[cavalo.raca, cavalo.pelagem].filter(Boolean).join(' · ') ||
                         '—'}
