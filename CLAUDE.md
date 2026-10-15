@@ -304,7 +304,7 @@ supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
-                  03 ferração, 04 contratos)
+                  03 ferração, 04 contratos, 05 cavalos)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -390,6 +390,15 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   estado activo saiu do formulário de pessoa — viaja escondido, para não se
   lhe tocar sem querer ao corrigir um telefone. Ninguém se desactiva a si
   próprio.
+- **Apagar um cavalo perde três coisas em silêncio.** Só
+  `contratos_penso.cavalo_id` é `restrict`; `despesas.cavalo_id` e
+  `evento_participantes.cavalo_id` são `set null` (a despesa fica sem saber de
+  que cavalo era, a aula perde o par aluno↔cavalo) e `ferracoes` é `cascade`
+  (o histórico morre com ele). Por isso `apagarCavalo` conta **antes** de
+  apagar e recusa — apagar é só para a ficha escrita por engano. A box não
+  entra na conta: ficar a `null` é precisamente o que se quer quando um cavalo
+  sai. `supabase/tests/05_cavalos.sql` prova cada um destes quatro
+  comportamentos.
 - **Apagar um contrato de penso é a operação perigosa da aplicação, e a base
   não trava.** `mensalidades_penso.contrato_id` é `on delete cascade` e
   `recebimentos.mensalidade_id` é `on delete set null`: apagar o contrato leva

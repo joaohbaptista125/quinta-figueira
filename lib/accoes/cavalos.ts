@@ -133,21 +133,59 @@ async function registarOpcao(tipo: TipoOpcaoCavalo, valor: string | null) {
 }
 
 /**
- * O que prende um cavalo. Só os contratos impedem mesmo de apagar — a chave
- * estrangeira é `restrict` —, mas a mensagem conta-os para a recusa dizer o
- * que é em vez de uma lista de hipóteses.
+ * O que prende um cavalo — e, sobretudo, o que se perderia ao apagá-lo.
+ *
+ * Só os contratos é que o Postgres trava (`restrict`). Os outros três são
+ * perda silenciosa, e é por isso que o travão tem de estar aqui:
+ *
+ *   despesas.cavalo_id           `set null` — a despesa fica sem saber de que
+ *                                 cavalo era (ferrador, veterinário, ração)
+ *   evento_participantes.cavalo_id `set null` — as aulas e os treinos que já
+ *                                 aconteceram perdem o par aluno↔cavalo
+ *   ferracoes                    `cascade`  — o histórico de ferração morre
+ *                                 com ele
+ *
+ * A box não entra na conta: `boxes.cavalo_id` fica a `null` e a box fica
+ * livre, que é precisamente o que se quer quando um cavalo sai.
  */
 async function oQuePrendeCavalo(id: string) {
   const supabase = await criarClienteServidor()
-  const { count } = await supabase
-    .from('contratos_penso')
-    .select('id', { count: 'exact', head: true })
-    .eq('cavalo_id', id)
+  const contar = (
+    tabela: 'contratos_penso' | 'despesas' | 'evento_participantes' | 'ferracoes',
+  ) =>
+    supabase.from(tabela).select('id', { count: 'exact', head: true }).eq('cavalo_id', id)
 
-  if (!count) return null
-  return count === 1 ? '1 contrato de penso' : `${count} contratos de penso`
+  const [contratos, despesas, participacoes, ferracoes] = await Promise.all([
+    contar('contratos_penso'),
+    contar('despesas'),
+    contar('evento_participantes'),
+    contar('ferracoes'),
+  ])
+
+  const partes: string[] = []
+  const juntar = (n: number | null, um: string, varios: string) => {
+    if (!n) return
+    partes.push(n === 1 ? `1 ${um}` : `${n} ${varios}`)
+  }
+
+  juntar(contratos.count, 'contrato de penso', 'contratos de penso')
+  juntar(despesas.count, 'despesa imputada', 'despesas imputadas')
+  juntar(participacoes.count, 'participação em eventos', 'participações em eventos')
+  juntar(ferracoes.count, 'ferração registada', 'ferrações registadas')
+
+  if (partes.length === 0) return null
+  if (partes.length === 1) return partes[0]
+  return `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`
 }
 
+/**
+ * Apagar um cavalo é para a ficha escrita por engano, e mais nada.
+ *
+ * A verificação é **antes** do apagar e não depois: o Postgres só recusa por
+ * causa dos contratos. As despesas e as participações ficavam a apontar para
+ * ninguém e as ferrações desapareciam, tudo sem um erro — o que se perdia só
+ * dava por si meses depois, a olhar para uma despesa de ferrador sem cavalo.
+ */
 export async function apagarCavalo(
   _anterior: ResultadoAccao,
   dados: FormData,
@@ -155,15 +193,21 @@ export async function apagarCavalo(
   const id = texto(dados, 'id')
   if (!id) return { ok: false, mensagem: 'Registo inválido.' }
 
+  const prende = await oQuePrendeCavalo(id)
+  if (prende) {
+    return {
+      ok: false,
+      mensagem: `Não dá para apagar: este cavalo tem ${prende}. Desactive-o — sai das listas e das convocatórias, e tudo o que já lá está fica de pé.`,
+    }
+  }
+
   const resultado = await apagar({ tabela: 'cavalos', id, revalidar: ['/cavalos'] })
 
   if (!resultado.ok) {
-    const prende = await oQuePrendeCavalo(id)
     return {
       ok: false,
-      mensagem: prende
-        ? `Não dá para apagar: este cavalo tem ${prende}. Desactive-o — sai das listas e dos formulários, e o histórico fica de pé.`
-        : 'Não dá para apagar: este cavalo está a ser usado noutro sítio. Desactive-o em vez de o apagar.',
+      mensagem:
+        'Não dá para apagar: este cavalo está a ser usado noutro sítio. Desactive-o em vez de o apagar.',
     }
   }
 

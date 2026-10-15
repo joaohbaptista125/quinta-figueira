@@ -135,7 +135,7 @@ export default async function PaginaCavalo({
               }}
               apagar={{
                 accao: apagarCavalo,
-                confirmacao: `Apagar a ficha de ${cavalo.nome} para sempre?\n\nO histórico de ferração vai com ela, a box fica livre, e as despesas e as participações em eventos deixam de o referir. Se tiver contratos de penso, a aplicação recusa — nesse caso use «Desactivar».`,
+                confirmacao: `Apagar a ficha de ${cavalo.nome} para sempre?\n\nSó funciona num cavalo que nunca chegou a ter nada — sem contratos, despesas, participações em eventos nem ferrações. Com qualquer uma dessas coisas a aplicação recusa e manda desactivar.`,
               }}
             />
           ) : null
