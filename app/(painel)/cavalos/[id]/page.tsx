@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
@@ -8,7 +9,6 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposCavalo } from '@/components/formularios/campos-cavalo'
-import { BotaoApagar } from '@/components/botao-apagar'
 import { FotoCavalo } from '@/components/foto-cavalo'
 import { FerracaoCavalo } from '@/components/ferracao-cavalo'
 import { AtribuicaoBox } from '@/components/atribuicao-box'
@@ -22,7 +22,12 @@ import {
   TituloCartao,
 } from '@/components/ui/superficie'
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
-import { apagarCavalo, guardarCavalo } from '@/lib/accoes/cavalos'
+import {
+  alternarActivoCavalo,
+  apagarCavalo,
+  guardarCavalo,
+} from '@/lib/accoes/cavalos'
+import { AccoesFicha } from '@/components/accoes-ficha'
 import { ROTULOS_REGIME, ROTULOS_SEXO } from '@/lib/rotulos'
 import { formatarData, formatarEuros, idadeEmAnos } from '@/lib/formatos'
 import { opcoesDeCavalo } from '@/lib/consultas'
@@ -116,6 +121,25 @@ export default async function PaginaCavalo({
             {!cavalo.activo ? <Distintivo cor="aviso">Inactivo</Distintivo> : null}
           </span>
         }
+        accoes={
+          podeEditar ? (
+            <AccoesFicha
+              id={cavalo.id}
+              alternar={{
+                accao: alternarActivoCavalo,
+                rotulo: cavalo.activo ? 'Desactivar' : 'Reactivar',
+                titulo: cavalo.activo
+                  ? `${cavalo.nome} sai das listas e das convocatórias, e tudo o que já lá está fica`
+                  : `${cavalo.nome} volta a aparecer nas listas`,
+                Icone: cavalo.activo ? EyeOff : Eye,
+              }}
+              apagar={{
+                accao: apagarCavalo,
+                confirmacao: `Apagar a ficha de ${cavalo.nome} para sempre?\n\nO histórico de ferração vai com ela, a box fica livre, e as despesas e as participações em eventos deixam de o referir. Se tiver contratos de penso, a aplicação recusa — nesse caso use «Desactivar».`,
+              }}
+            />
+          ) : null
+        }
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -129,13 +153,6 @@ export default async function PaginaCavalo({
                 accao={guardarCavalo}
                 id={cavalo.id}
                 hrefCancelar="/cavalos"
-                extra={
-                  <BotaoApagar
-                    accao={apagarCavalo}
-                    id={cavalo.id}
-                    confirmacao={`Apagar ${cavalo.nome}? Se tiver contratos ou despesas, prefira marcar como inactivo.`}
-                  />
-                }
               >
                 <CamposCavalo
                   cavalo={cavalo}

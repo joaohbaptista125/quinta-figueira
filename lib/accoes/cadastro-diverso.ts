@@ -1,6 +1,8 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { criarClienteServidor } from '@/lib/supabase/servidor'
 import {
   apagar,
   comConfirmacao,
@@ -12,7 +14,7 @@ import {
   textoOuNulo,
   valorOuNulo,
 } from './comum'
-import type { ResultadoAccao } from './resultado'
+import { traduzirErro, type ResultadoAccao } from './resultado'
 
 // --- Boxes ------------------------------------------------------------------
 
@@ -104,12 +106,52 @@ export async function guardarContrato(
   redirect(comConfirmacao('/contratos', id ? 'guardado' : 'criado'))
 }
 
+/**
+ * Apagar um contrato é mais perigoso do que parece, e a base não trava.
+ *
+ * `mensalidades_penso.contrato_id` é `on delete cascade` e
+ * `recebimentos.mensalidade_id` é `on delete set null`: apagar o contrato
+ * leva consigo todas as mensalidades e **desliga os pagamentos do mês que
+ * pagaram**. O dinheiro fica lá, mas deixa de se saber ao que respeitava, e
+ * isso não se desfaz. O Postgres aceita sem dizer nada — por isso o travão é
+ * aqui.
+ *
+ * Um contrato que já teve dinheiro em cima termina-se (`data_fim`); apagar é
+ * para o contrato que nasceu por engano e nunca chegou a cobrar nada.
+ */
 export async function apagarContrato(
   _anterior: ResultadoAccao,
   dados: FormData,
 ): Promise<ResultadoAccao> {
   const id = texto(dados, 'id')
   if (!id) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const supabase = await criarClienteServidor()
+  const { data: mensalidades, error: erroLeitura } = await supabase
+    .from('mensalidades_penso')
+    .select('id')
+    .eq('contrato_id', id)
+
+  if (erroLeitura) return { ok: false, mensagem: traduzirErro(erroLeitura) }
+
+  const ids = (mensalidades ?? []).map((linha) => linha.id)
+
+  if (ids.length > 0) {
+    const { count: pagamentos } = await supabase
+      .from('recebimentos')
+      .select('id', { count: 'exact', head: true })
+      .in('mensalidade_id', ids)
+
+    if (pagamentos && pagamentos > 0) {
+      return {
+        ok: false,
+        mensagem: `Não dá para apagar: este contrato já tem ${
+          pagamentos === 1 ? '1 pagamento imputado' : `${pagamentos} pagamentos imputados`
+        }. Apagá-lo desligaria esse dinheiro do mês que pagou. Termine o contrato — deixa de gerar mensalidades e o histórico fica de pé.`,
+      }
+    }
+  }
+
   const resultado = await apagar({
     tabela: 'contratos_penso',
     id,
@@ -117,6 +159,58 @@ export async function apagarContrato(
   })
   if (!resultado.ok) return resultado
   redirect(comConfirmacao('/contratos', 'apagado'))
+}
+
+/**
+ * Termina um contrato de penso, ou volta a pô-lo em vigor.
+ *
+ * É o equivalente ao «desactivar» das outras fichas: um contrato não tem
+ * estado activo, tem `data_fim`. A partir daí deixa de aparecer como em vigor
+ * e `gerar_mensalidades` deixa de o cobrar — as mensalidades que já existem
+ * ficam onde estão, porque respeitam a meses que passaram de verdade.
+ */
+export async function alternarVigorContrato(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const id = texto(dados, 'id')
+  if (!id) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const supabase = await criarClienteServidor()
+  const { data: contrato, error: erroLeitura } = await supabase
+    .from('contratos_penso')
+    .select('data_inicio, data_fim, cavalos(nome)')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (erroLeitura) return { ok: false, mensagem: traduzirErro(erroLeitura) }
+  if (!contrato) return { ok: false, mensagem: 'Contrato não encontrado.' }
+
+  const reabrir = contrato.data_fim !== null
+  // Datas do Postgres são texto AAAA-MM-DD e comparam-se como texto. Um
+  // contrato que começa amanhã termina na data de início, não ontem.
+  const hoje = new Date().toISOString().slice(0, 10)
+  const fim = hoje < contrato.data_inicio ? contrato.data_inicio : hoje
+
+  const { error } = await supabase
+    .from('contratos_penso')
+    .update({ data_fim: reabrir ? null : fim })
+    .eq('id', id)
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  revalidatePath('/contratos')
+  revalidatePath(`/contratos/${id}`)
+  revalidatePath('/financeiro/pensos')
+
+  const nome = contrato.cavalos?.nome ?? 'O contrato'
+
+  return {
+    ok: true,
+    mensagem: reabrir
+      ? `Contrato de ${nome} outra vez em vigor.`
+      : `Contrato de ${nome} terminado. Deixa de gerar mensalidades; as que já existem ficam.`,
+  }
 }
 
 // --- Contas -----------------------------------------------------------------

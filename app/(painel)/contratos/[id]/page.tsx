@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { CalendarPlus, CalendarX } from 'lucide-react'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposContrato } from '@/components/formularios/campos-contrato'
-import { BotaoApagar } from '@/components/botao-apagar'
 import {
   Cartao,
   CabecalhoCartao,
@@ -17,7 +17,12 @@ import {
   TituloCartao,
 } from '@/components/ui/superficie'
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
-import { apagarContrato, guardarContrato } from '@/lib/accoes/cadastro-diverso'
+import {
+  alternarVigorContrato,
+  apagarContrato,
+  guardarContrato,
+} from '@/lib/accoes/cadastro-diverso'
+import { AccoesFicha } from '@/components/accoes-ficha'
 import { cavalosActivos, pessoasActivas } from '@/lib/consultas'
 import { formatarEuros, formatarMesCapitalizado } from '@/lib/formatos'
 import { ROTULOS_ESTADO_MENSALIDADE } from '@/lib/rotulos'
@@ -59,6 +64,24 @@ export default async function PaginaContrato({
         voltar={{ href: '/contratos', rotulo: 'Contratos de penso' }}
         titulo={`${contrato.cavalos?.nome ?? 'Contrato'} · ${contrato.pessoas?.nome ?? ''}`}
         descricao={`${formatarEuros(contrato.valor_mensal)} por mês`}
+        accoes={
+          <AccoesFicha
+            id={contrato.id}
+            alternar={{
+              accao: alternarVigorContrato,
+              rotulo: contrato.data_fim ? 'Pôr em vigor' : 'Terminar',
+              titulo: contrato.data_fim
+                ? 'Volta a estar em vigor e a gerar mensalidades'
+                : 'Deixa de gerar mensalidades; as que já existem ficam',
+              Icone: contrato.data_fim ? CalendarPlus : CalendarX,
+            }}
+            apagar={{
+              accao: apagarContrato,
+              confirmacao:
+                'Apagar este contrato para sempre?\n\nAs mensalidades geradas a partir dele desaparecem com ele. Se já tiver pagamentos imputados, a aplicação recusa — nesse caso use «Terminar».',
+            }}
+          />
+        }
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -68,13 +91,6 @@ export default async function PaginaContrato({
               accao={guardarContrato}
               id={contrato.id}
               hrefCancelar="/contratos"
-              extra={
-                <BotaoApagar
-                  accao={apagarContrato}
-                  id={contrato.id}
-                  confirmacao="Apagar este contrato? As mensalidades geradas a partir dele também desaparecem."
-                />
-              }
             >
               <CamposContrato
                 contrato={contrato}

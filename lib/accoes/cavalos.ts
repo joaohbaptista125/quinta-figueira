@@ -132,6 +132,22 @@ async function registarOpcao(tipo: TipoOpcaoCavalo, valor: string | null) {
   revalidatePath('/cavalos/opcoes')
 }
 
+/**
+ * O que prende um cavalo. Só os contratos impedem mesmo de apagar — a chave
+ * estrangeira é `restrict` —, mas a mensagem conta-os para a recusa dizer o
+ * que é em vez de uma lista de hipóteses.
+ */
+async function oQuePrendeCavalo(id: string) {
+  const supabase = await criarClienteServidor()
+  const { count } = await supabase
+    .from('contratos_penso')
+    .select('id', { count: 'exact', head: true })
+    .eq('cavalo_id', id)
+
+  if (!count) return null
+  return count === 1 ? '1 contrato de penso' : `${count} contratos de penso`
+}
+
 export async function apagarCavalo(
   _anterior: ResultadoAccao,
   dados: FormData,
@@ -142,14 +158,59 @@ export async function apagarCavalo(
   const resultado = await apagar({ tabela: 'cavalos', id, revalidar: ['/cavalos'] })
 
   if (!resultado.ok) {
+    const prende = await oQuePrendeCavalo(id)
     return {
       ok: false,
-      mensagem:
-        'Não é possível apagar: o cavalo tem contratos ou despesas associados. Marque-o como inactivo.',
+      mensagem: prende
+        ? `Não dá para apagar: este cavalo tem ${prende}. Desactive-o — sai das listas e dos formulários, e o histórico fica de pé.`
+        : 'Não dá para apagar: este cavalo está a ser usado noutro sítio. Desactive-o em vez de o apagar.',
     }
   }
 
   redirect(comConfirmacao('/cavalos', 'apagado'))
+}
+
+/**
+ * Tira um cavalo da circulação, ou volta a pô-lo.
+ *
+ * É o que se faz ao cavalo que saiu do centro: deixa de aparecer nas listas e
+ * nos formulários de convocatória, e tudo o que já lá está — despesas,
+ * ferrações, participações — fica de pé.
+ */
+export async function alternarActivoCavalo(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const id = texto(dados, 'id')
+  if (!id) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const supabase = await criarClienteServidor()
+  const { data: cavalo, error: erroLeitura } = await supabase
+    .from('cavalos')
+    .select('nome, activo')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (erroLeitura) return { ok: false, mensagem: traduzirErro(erroLeitura) }
+  if (!cavalo) return { ok: false, mensagem: 'Cavalo não encontrado.' }
+
+  const activar = !cavalo.activo
+  const { error } = await supabase
+    .from('cavalos')
+    .update({ activo: activar })
+    .eq('id', id)
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  revalidatePath('/cavalos')
+  revalidatePath(`/cavalos/${id}`)
+
+  return {
+    ok: true,
+    mensagem: activar
+      ? `${cavalo.nome} voltou às listas.`
+      : `${cavalo.nome} ficou inactivo. Sai das listas, e o histórico fica.`,
+  }
 }
 
 /** Atribui (ou liberta) a box de um cavalo a partir da ficha do cavalo. */

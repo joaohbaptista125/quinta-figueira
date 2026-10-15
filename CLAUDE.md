@@ -280,6 +280,7 @@ components/
   lista-eventos.tsx    a linha de um evento, partilhada por todas as vistas
   cartao-evento.tsx    o evento em grande, com convocados e avisos
   convite-acesso.tsx   estado de acesso de uma pessoa, e o convite
+  accoes-ficha.tsx     desactivar/terminar e apagar, no topo de uma ficha
   ferracao-cavalo.tsx  quando foi ferrado, e quando volta a ser
   formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
   formularios/selector-com-outro.tsx  lista com saída para escrever uma nova
@@ -303,7 +304,7 @@ supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
-                  03 ferração)
+                  03 ferração, 04 contratos)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -378,16 +379,26 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
 - Formulários longos dividem-se em `<SeccaoCampos>` com título. Os de pessoa e
   de cavalo eram vinte campos seguidos sem divisão nenhuma.
 - **Quem sai do centro desactiva-se; apagar é para o engano de digitação.**
-  As chaves estrangeiras são `on delete restrict` de propósito: ninguém apaga
-  um histórico de pagamentos sem dar por isso. O que estava mal era o caminho
-  — o botão de apagar vivia no fundo do formulário, por baixo de vinte
-  campos, a recusa dizia só «tem cavalos, contratos ou recebimentos», e
-  «marcar como inactiva» era uma caixa de visto escondida no meio dos mesmos
-  vinte campos. Agora `<AccoesPessoa>` põe **Desactivar** e **Apagar** lado a
-  lado no cabeçalho da ficha, `oQuePrendePessoa()` conta o que bloqueia e a
-  recusa di-lo («tem 2 cavalos e 7 pagamentos registados»), e o estado activo
-  deixou de ser editável pelo formulário — viaja escondido, para não se lhe
-  tocar sem querer ao corrigir um telefone. Ninguém se desactiva a si próprio.
+  `<AccoesFicha>` põe as duas saídas lado a lado no cabeçalho da ficha de
+  **pessoa**, **cavalo** e **contrato**; antes era um só botão «Apagar» no
+  fundo do formulário, por baixo de vinte campos, e a recusa mandava «marque
+  como inactivo» — que era uma caixa de visto escondida no meio dos mesmos
+  vinte campos. A saída branda muda de nome conforme a ficha: uma pessoa e um
+  cavalo **desactivam-se** (`activo`), um contrato **termina-se**
+  (`data_fim`). Cada recusa conta o que prende o registo
+  (`oQuePrendePessoa()`, `oQuePrendeCavalo()`) em vez de listar hipóteses. O
+  estado activo saiu do formulário de pessoa — viaja escondido, para não se
+  lhe tocar sem querer ao corrigir um telefone. Ninguém se desactiva a si
+  próprio.
+- **Apagar um contrato de penso é a operação perigosa da aplicação, e a base
+  não trava.** `mensalidades_penso.contrato_id` é `on delete cascade` e
+  `recebimentos.mensalidade_id` é `on delete set null`: apagar o contrato leva
+  as mensalidades consigo e **desliga os pagamentos do mês que pagaram**, sem
+  erro nenhum. O dinheiro fica, mas deixa de se saber ao que respeitava.
+  `apagarContrato` recusa quando há pagamentos imputados, e
+  `supabase/tests/04_contratos.sql` prova o comportamento da base que o
+  justifica — se um dia essa chave passar a `restrict`, o teste falha e o
+  travão pode descer para o esquema, que é onde se preferia que vivesse.
 - Fichas e formulários levam `voltar={{ href, rotulo }}` no
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
