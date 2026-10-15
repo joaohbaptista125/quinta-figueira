@@ -469,6 +469,19 @@ a lista de Redirect URLs em **Authentication → URL Configuration** têm de
 apontar para o domínio de produção, senão é o Supabase que troca o destino do
 link pelo Site URL dele.
 
+**O convite abria o ecrã de entrada normal, e isto é a terceira vez que o
+mesmo buraco morde.** Se `/auth/callback` não estiver na lista de **Redirect
+URLs** do projecto, o Supabase **troca o destino em silêncio pelo Site URL** e
+manda a pessoa para a raiz com a sessão no fragmento. A raiz exige sessão, o
+fragmento nunca chega ao servidor, o middleware não vê ninguém e encaminha
+para `/entrar` — e quem foi convidado aterra num formulário a pedir-lhe uma
+palavra-passe que nunca teve. `<SessaoDoFragmento>` (no layout de `(publico)`)
+reconhece um fragmento com `access_token` em qualquer página pública e
+encaminha-o para `/auth/ligar`. E quando o `seguinte` se perde pelo caminho, o
+destino sai do `type` do link (`magiclink`, `invite`, `signup`, `recovery`):
+vai sempre dar a `/definir-password`. **A configuração continua a ser
+precisa** — isto é a rede, não o chão.
+
 O fornecedor é o Brevo, e já tropeçámos numa armadilha dele: `525 5.7.1
 Unauthorized IP address`. O Brevo só aceita envios de endereços IP autorizados,
 e isso vem ligado de origem nas contas novas. Os IP de saída do Supabase não

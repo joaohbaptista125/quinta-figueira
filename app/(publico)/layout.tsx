@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Marca } from '@/components/marca'
+import { SessaoDoFragmento } from '@/components/sessao-do-fragmento'
 
 export default function LayoutPublico({
   children,
@@ -8,6 +9,7 @@ export default function LayoutPublico({
 }) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-4">
+      <SessaoDoFragmento />
       <Link href="/">
         <Marca tamanho="grande" />
       </Link>

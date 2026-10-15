@@ -13,6 +13,18 @@ import {
 } from '@/components/ui/superficie'
 
 /**
+ * Tipos de link que trazem alguém a entrar pela primeira vez, ou a recuperar
+ * o acesso. Nos dois casos o passo seguinte é escolher a palavra-passe: sem
+ * isso, a pessoa só voltaria a entrar pedindo outro link de cada vez.
+ */
+const TIPOS_QUE_PEDEM_PALAVRA_PASSE = [
+  'magiclink',
+  'invite',
+  'signup',
+  'recovery',
+]
+
+/**
  * Lê a sessão do fragmento do endereço e guarda-a.
  *
  * `setSession` é o que escreve os cookies que o servidor depois lê; a seguir a
@@ -40,6 +52,17 @@ export function LigarSessao({ seguinte }: { seguinte: string }) {
     const accessToken = fragmento.get('access_token')
     const refreshToken = fragmento.get('refresh_token')
 
+    // Quando o Supabase troca o destino pelo Site URL, o `seguinte` que o
+    // convite pedia perde-se pelo caminho. O `type` do fragmento sobrevive,
+    // e diz o mesmo: quem chega assim vem de um link de email.
+    const tipo = fragmento.get('type') ?? ''
+    const destino =
+      seguinte !== '/'
+        ? seguinte
+        : TIPOS_QUE_PEDEM_PALAVRA_PASSE.includes(tipo)
+          ? '/definir-password'
+          : '/'
+
     if (!accessToken || !refreshToken) {
       setErro(
         'Este endereço não traz nenhum convite. Abra o link tal como veio no email, sem o copiar aos bocados.',
@@ -61,7 +84,7 @@ export function LigarSessao({ seguinte }: { seguinte: string }) {
           return
         }
         window.history.replaceState(null, '', window.location.pathname)
-        window.location.assign(seguinte)
+        window.location.assign(destino)
       })
 
     return () => {

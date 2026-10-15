@@ -30,9 +30,10 @@ type TipoLigacao = (typeof TIPOS)[number]
 export async function GET(pedido: NextRequest) {
   const { searchParams, origin } = new URL(pedido.url)
 
-  const seguinteBruto = searchParams.get('seguinte') ?? '/'
+  const seguintePedido = searchParams.get('seguinte')
   // Só caminhos internos: impede redireccionamento para domínios externos.
-  const seguinte = seguinteBruto.startsWith('/') ? seguinteBruto : '/'
+  const seguinte =
+    seguintePedido && seguintePedido.startsWith('/') ? seguintePedido : null
 
   const codigo = searchParams.get('code')
   const tokenHash = searchParams.get('token_hash')
@@ -46,6 +47,13 @@ export async function GET(pedido: NextRequest) {
   if (searchParams.get('error')) {
     return NextResponse.redirect(`${origin}/entrar?erro=link_expirado`)
   }
+
+  // Sem `seguinte`, o destino sai do tipo do link: quem entra por email ou
+  // vem recuperar o acesso tem a seguir de escolher a palavra-passe — senão
+  // só voltaria a entrar pedindo outro link de cada vez.
+  const destino =
+    seguinte ??
+    (tipo && tipo !== 'email' ? '/definir-password' : '/')
 
   if (codigo || tokenHash) {
     const supabase = await criarClienteServidor()
@@ -61,13 +69,13 @@ export async function GET(pedido: NextRequest) {
       return NextResponse.redirect(`${origin}/entrar?erro=link_expirado`)
     }
 
-    return NextResponse.redirect(`${origin}${seguinte}`)
+    return NextResponse.redirect(`${origin}${destino}`)
   }
 
   // Sem nada no endereço, a autenticação só pode vir no fragmento. O browser
   // leva-o consigo no encaminhamento, porque o destino não traz fragmento
   // nenhum.
   return NextResponse.redirect(
-    `${origin}/auth/ligar?seguinte=${encodeURIComponent(seguinte)}`,
+    `${origin}/auth/ligar?seguinte=${encodeURIComponent(destino)}`,
   )
 }
