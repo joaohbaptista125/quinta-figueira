@@ -437,6 +437,17 @@ sempre a mensagem crua entre parênteses. Antes disto havia uma só frase fixa a
 dizer que o Supabase limitava os emails por hora: mandava esperar uma hora por
 um problema que não passava sozinho. **Não voltes a adivinhar a causa.**
 
+**O link do convite apontava para `localhost:3000`.** `.env.example` traz
+`NEXT_PUBLIC_SITE_URL=http://localhost:3000`, e copiar esse ficheiro para as
+variáveis da Vercel é o caminho mais natural do mundo — o resultado era um
+convite com um link para a máquina de quem programa, na caixa de correio de
+outra pessoa. `escolherOrigem()` em `lib/origem.ts` (com testes) ignora agora
+um endereço local configurado quando o pedido vem de um sítio verdadeiro. Em
+desenvolvimento nada muda. **Isto não dispensa a configuração**: o Site URL e
+a lista de Redirect URLs em **Authentication → URL Configuration** têm de
+apontar para o domínio de produção, senão é o Supabase que troca o destino do
+link pelo Site URL dele.
+
 O fornecedor é o Brevo, e já tropeçámos numa armadilha dele: `525 5.7.1
 Unauthorized IP address`. O Brevo só aceita envios de endereços IP autorizados,
 e isso vem ligado de origem nas contas novas. Os IP de saída do Supabase não

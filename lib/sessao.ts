@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { escolherOrigem } from '@/lib/origem'
 import type { PerfilAcesso } from '@/lib/tipos-bd'
 import { eEquipa, eGestao } from '@/lib/permissoes'
 
@@ -17,13 +18,12 @@ export type PessoaSessao = {
 
 /** Origem pública da aplicação, para os links enviados por email. */
 export async function obterOrigem() {
-  const configurada = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-  if (configurada) return configurada.replace(/\/$/, '')
-
   const cabecalhos = await headers()
-  const anfitriao = cabecalhos.get('x-forwarded-host') ?? cabecalhos.get('host')
-  const protocolo = cabecalhos.get('x-forwarded-proto') ?? 'https'
-  return anfitriao ? `${protocolo}://${anfitriao}` : 'http://localhost:3000'
+  return escolherOrigem(
+    process.env.NEXT_PUBLIC_SITE_URL,
+    cabecalhos.get('x-forwarded-host') ?? cabecalhos.get('host'),
+    cabecalhos.get('x-forwarded-proto') ?? 'https',
+  )
 }
 
 /**
