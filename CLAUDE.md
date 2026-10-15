@@ -64,6 +64,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261010103000_acesso_confirmado.sql` | `pessoas.acesso_confirmado_em` + trigger de entrada |
 | `…20261015120000_ferracoes.sql` | `ferracoes` + `v_ferracao_cavalos` |
 | `…20261015140000_encargos.sql` | `encargos` + `recebimentos.encargo_id` + `v_encargos_por_receber` |
+| `…20261015160000_notas_cavalo.sql` | `notas_cavalo` + `v_notas_por_responder` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -199,7 +200,34 @@ dois. É comunicação de um para muitos: aparece no quadro do dia e vai na
 descrição do evento no calendário do telemóvel. Foi uma decisão deliberada e
 não um passo intermédio — um chat sem notificações fiáveis (no iPhone só
 funcionam com a app instalada no ecrã principal) ficaria deserto, com as
-conversas a continuarem no WhatsApp. Não o construas sem pedido explícito.
+conversas a continuarem no WhatsApp. **Isto continua a valer para conversa
+geral**: não construas uma sem pedido explícito.
+
+**`notas_cavalo` é a excepção, e é excepção por ser presa a um cavalo.** Não é
+chat, é o caderno do cavalo: o dono pergunta, a cavalariça responde, e daqui a
+um ano lê-se o que se passou com ele. Pouco volume, nada urgente, e o valor
+está em ficar agarrado à ficha. É também o que responde ao cliente que quer
+corrigir dados do cavalo — ele escreve, a gestão corrige à mão, que é o que
+faria de qualquer maneira para confirmar antes de gravar; uma fila de
+propostas com estado resolveria o mesmo e traria uma notificação que a
+aplicação não sabe dar.
+
+- **`autor_id` e `de_equipa` são carimbados por trigger**
+  (`carimbar_autor_da_nota`), nunca enviados pela aplicação: deixá-la dizer
+  quem escreveu era deixá-la escrever em nome de outro. `de_equipa` é uma
+  cópia do momento, e não uma consulta a `pessoas.perfil` — um tratador que
+  mude de perfil daqui a um ano não deve reescrever quem respondeu a quem.
+- **Ninguém edita nem apaga uma nota**, nem o próprio autor; só a gestão
+  apaga, para o caso de alguém escrever o que não devia. Uma conversa
+  reescrita depois do facto não serve de caderno.
+- **É a primeira vez que um cliente escreve nesta aplicação.** A política de
+  `insert` é a mesma de `cavalos_ler`: a equipa, e o dono do cavalo.
+- **O que substitui a notificação é `<NotasPorResponder>` no painel** da
+  gestão e da equipa. Sem isso, uma pergunta ficava num cavalo à espera que
+  alguém por acaso lá fosse. O cartão não aparece quando não há nada — um
+  cartão vazio todos os dias ensina a não olhar para ele.
+- Se ao fim de umas semanas ninguém lá escrever, apaga-se sem pena: o que
+  decide isto é a gestão responder lá dentro nos primeiros dias.
 
 **O token de calendário é um segredo ao portador.** Vive em `calendarios`, à
 parte de `pessoas`, porque a equipa lê `pessoas` inteira e não pode ler os
@@ -220,6 +248,8 @@ Uma vista sem isto seria um buraco na RLS — se criares outra, não te esqueça
 - `v_ferracao_cavalos` — uma linha por cavalo com a última ferração e o estado
   da próxima (`sem_registo`, `sem_data`, `atrasada`, `esta_semana`, `em_dia`)
 - `v_encargos_por_receber` — encargos avulsos com valor pago e valor em falta
+- `v_notas_por_responder` — cavalos com conversa, com a última palavra e de que
+  lado veio (`por_responder` = a última foi do cliente)
 
 ---
 
@@ -301,6 +331,8 @@ components/
   convite-acesso.tsx   estado de acesso de uma pessoa, e o convite
   accoes-ficha.tsx     desactivar/terminar e apagar, no topo de uma ficha
   ferracao-cavalo.tsx  quando foi ferrado, e quando volta a ser
+  notas-cavalo.tsx     a conversa de um cavalo, na ficha dele
+  notas-por-responder.tsx  as perguntas por responder, no painel da equipa
   formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
   formularios/selector-com-outro.tsx  lista com saída para escrever uma nova
   opcoes-cavalo.tsx  gerir as listas em /cavalos/opcoes
@@ -323,7 +355,8 @@ supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
-                  03 ferração, 04 contratos, 05 cavalos, 06 encargos)
+                  03 ferração, 04 contratos, 05 cavalos, 06 encargos,
+                  07 notas)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor

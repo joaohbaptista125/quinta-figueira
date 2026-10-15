@@ -3,6 +3,7 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { QuadroDoDia } from '@/components/resumo-do-dia'
+import { NotasPorResponder } from '@/components/notas-por-responder'
 import {
   Cartao,
   CabecalhoCartao,
@@ -45,6 +46,8 @@ export async function PainelEquipa({ nome }: { nome: string }) {
       />
 
       <QuadroDoDia />
+
+      <NotasPorResponder />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Indicador

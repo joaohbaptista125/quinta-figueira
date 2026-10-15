@@ -4,6 +4,7 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { SelectorMes } from '@/components/selector-mes'
 import { QuadroDoDia } from '@/components/resumo-do-dia'
+import { NotasPorResponder } from '@/components/notas-por-responder'
 import { classesBotao } from '@/components/ui/botao'
 import {
   Cartao,
@@ -82,6 +83,8 @@ export async function PainelGestao({
       />
 
       <QuadroDoDia />
+
+      <NotasPorResponder />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador

@@ -10,6 +10,7 @@ import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposCavalo } from '@/components/formularios/campos-cavalo'
 import { FotoCavalo } from '@/components/foto-cavalo'
 import { FerracaoCavalo } from '@/components/ferracao-cavalo'
+import { NotasCavalo } from '@/components/notas-cavalo'
 import { AtribuicaoBox } from '@/components/atribuicao-box'
 import {
   Cartao,
@@ -62,6 +63,7 @@ export default async function PaginaCavalo({
     contratos,
     despesas,
     ferracoes,
+    notas,
   ] = await Promise.all([
       podeEditar
         ? supabase.from('pessoas').select('id, nome').eq('activo', true).order('nome')
@@ -100,6 +102,12 @@ export default async function PaginaCavalo({
         .eq('cavalo_id', id)
         .order('data', { ascending: false })
         .limit(12),
+      // A conversa do cavalo: o dono pergunta, a cavalariça responde.
+      supabase
+        .from('notas_cavalo')
+        .select('id, texto, criado_em, de_equipa, pessoas(nome)')
+        .eq('cavalo_id', id)
+        .order('criado_em'),
     ])
 
   return (
@@ -193,6 +201,16 @@ export default async function PaginaCavalo({
             ferracoes={ferracoes.data ?? []}
             podeRegistar={eEquipa(sessao.perfil)}
             temProprietario={Boolean(cavalo.proprietario_id)}
+          />
+
+          <NotasCavalo
+            cavaloId={cavalo.id}
+            notas={notas.data ?? []}
+            podeEscrever={
+              eEquipa(sessao.perfil) || cavalo.proprietario_id === sessao.id
+            }
+            podeApagar={podeEditar}
+            souDaEquipa={eEquipa(sessao.perfil)}
           />
 
           {podeEditar ? (

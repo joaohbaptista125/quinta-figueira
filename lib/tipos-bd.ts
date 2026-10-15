@@ -83,6 +83,30 @@ export type Cavalo = Carimbos & {
   notas: string | null
 }
 
+/**
+ * Uma entrada da conversa de um cavalo. `autor_id` e `de_equipa` são
+ * carimbados por trigger — não os envies a partir da aplicação.
+ */
+export type NotaCavalo = {
+  id: string
+  cavalo_id: string
+  autor_id: string
+  de_equipa: boolean
+  texto: string
+  criado_em: string
+}
+
+export type NotaPorResponder = {
+  cavalo_id: string
+  cavalo_nome: string
+  ultima_nota_id: string
+  ultimo_texto: string
+  ultima_em: string
+  ultima_de_equipa: boolean
+  por_responder: boolean
+  total_notas: number
+}
+
 export type EstadoEncargo = 'pendente' | 'pago' | 'anulado'
 
 /**
@@ -457,6 +481,11 @@ export type BaseDados = {
         Conta,
         Partial<Omit<Conta, SoLeitura>> & { nome: string; tipo: TipoConta }
       >
+      notas_cavalo: Tabela<
+        NotaCavalo,
+        { cavalo_id: string; texto: string },
+        [Relacao<'cavalo_id', 'cavalos'>, Relacao<'autor_id', 'pessoas'>]
+      >
       encargos: Tabela<
         Encargo,
         Partial<Omit<Encargo, SoLeitura>> & {
@@ -587,6 +616,7 @@ export type BaseDados = {
       v_pensos_por_receber: Vista<PensoPorReceber>
       v_ferracao_cavalos: Vista<FerracaoCavalo>
       v_encargos_por_receber: Vista<EncargoPorReceber>
+      v_notas_por_responder: Vista<NotaPorResponder>
     }
     Functions: {
       gerar_mensalidades: { Args: { p_periodo: string }; Returns: number }
