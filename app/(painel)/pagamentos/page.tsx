@@ -79,10 +79,6 @@ export default async function PaginaPagamentos() {
     (soma, linha) => soma + Number(linha.valor_em_falta),
     0,
   )
-  const totalPago = linhas.reduce(
-    (soma, linha) => soma + Number(linha.valor_pago),
-    0,
-  )
   const outros = movimentos.filter((movimento) => !movimento.mensalidade_id)
 
   return (
@@ -92,7 +88,7 @@ export default async function PaginaPagamentos() {
         descricao={`O que já pagou e o que falta, mês a mês — ${sessao.nome.split(' ')[0]}`}
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Indicador
           rotulo="Por pagar"
           valor={formatarEuros(totalEmFalta)}
@@ -103,7 +99,6 @@ export default async function PaginaPagamentos() {
               : 'Tudo em dia'
           }
         />
-        <Indicador rotulo="Já pago" valor={formatarEuros(totalPago)} />
         <Indicador
           rotulo="Meses de penso"
           valor={String(linhas.length)}
