@@ -35,8 +35,10 @@ export const metadata: Metadata = { title: 'Pagamentos' }
  * **Quem paga não recebe.** Em todo o lado onde o cliente lê, a palavra é
  * «pagamento»; «recebimento» é a palavra da gestão e fica do lado dela.
  *
- * Nenhuma consulta leva filtro por pessoa: a RLS devolve só as mensalidades
- * dos contratos dele e os recebimentos que lhe estão imputados.
+ * A RLS já devolveria só o que é do cliente, mas as consultas filtram à mesma
+ * pela pessoa da sessão: sem isso, um admin que abrisse esta página via as
+ * mensalidades do centro inteiro debaixo do título «o que já pagou». O filtro
+ * é por correcção do que se mostra; a protecção continua a ser a RLS.
  */
 export default async function PaginaPagamentos() {
   const sessao = await exigirPessoa()
@@ -46,12 +48,14 @@ export default async function PaginaPagamentos() {
     supabase
       .from('v_pensos_por_receber')
       .select('*')
+      .eq('cliente_id', sessao.id)
       .order('periodo', { ascending: false }),
     // Sem `contas(nome)`: para quem paga, a conta do centro onde o dinheiro
     // entrou não é informação — e a RLS também não lha daria.
     supabase
       .from('recebimentos')
       .select('id, data, valor, metodo_pagamento, mensalidade_id, descricao')
+      .eq('pessoa_id', sessao.id)
       .order('data', { ascending: false }),
   ])
 
