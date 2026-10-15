@@ -107,6 +107,23 @@ export type NotaPorResponder = {
   total_notas: number
 }
 
+/**
+ * A morada de um telemóvel que aceitou ser avisado, e as chaves com que a
+ * notificação é encriptada. Material sensível — ver
+ * `supabase/migrations/…_subscricoes_push.sql`.
+ */
+export type SubscricaoPush = {
+  id: string
+  pessoa_id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  agente: string | null
+  criado_em: string
+  falhas: number
+  ultima_falha_em: string | null
+}
+
 export type EstadoEncargo = 'pendente' | 'pago' | 'anulado'
 
 /**
@@ -480,6 +497,17 @@ export type BaseDados = {
       contas: Tabela<
         Conta,
         Partial<Omit<Conta, SoLeitura>> & { nome: string; tipo: TipoConta }
+      >
+      subscricoes_push: Tabela<
+        SubscricaoPush,
+        {
+          pessoa_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          agente?: string | null
+        },
+        [Relacao<'pessoa_id', 'pessoas'>]
       >
       notas_cavalo: Tabela<
         NotaCavalo,

@@ -65,6 +65,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261015120000_ferracoes.sql` | `ferracoes` + `v_ferracao_cavalos` |
 | `…20261015140000_encargos.sql` | `encargos` + `recebimentos.encargo_id` + `v_encargos_por_receber` |
 | `…20261015160000_notas_cavalo.sql` | `notas_cavalo` + `v_notas_por_responder` |
+| `…20261015180000_subscricoes_push.sql` | `subscricoes_push` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -229,6 +230,12 @@ aplicação não sabe dar.
 - Se ao fim de umas semanas ninguém lá escrever, apaga-se sem pena: o que
   decide isto é a gestão responder lá dentro nos primeiros dias.
 
+**As subscrições de notificação são a tabela mais fechada da aplicação.**
+Com `endpoint`, `p256dh` e `auth` manda-se uma notificação para o telemóvel de
+alguém. Por isso `subscricoes_push` tem uma só política — cada pessoa com as
+suas — e **não há excepção para a gestão**: ninguém tem motivo para ler a
+morada do telemóvel de outra pessoa a partir de uma sessão.
+
 **O token de calendário é um segredo ao portador.** Vive em `calendarios`, à
 parte de `pessoas`, porque a equipa lê `pessoas` inteira e não pode ler os
 tokens dos outros. `agenda_por_token()` é SECURITY DEFINER e é o que serve a
@@ -337,6 +344,8 @@ components/
   formularios/selector-com-outro.tsx  lista com saída para escrever uma nova
   opcoes-cavalo.tsx  gerir as listas em /cavalos/opcoes
   resumo-do-dia.tsx  o que está marcado, no topo do painel
+  activar-notificacoes.tsx  ligar e desligar os avisos neste aparelho
+  lembrar-pagamento.tsx  o botão que avisa um cliente do que deve
   (publico)/auth/ligar/  lê a sessão do fragmento do link de email
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
@@ -350,13 +359,14 @@ lib/
   rotulos.ts      rótulos PT-PT dos enumerados
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
   origem.ts       o endereço público que vai nos links de email (+ testes)
+  notificacoes/enviar.ts  o envio de avisos — o único sítio com a chave de serviço
   supabase/sem-sessao.ts  cliente sem cookies, para falar em nome de outra pessoa
 supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
                   03 ferração, 04 contratos, 05 cavalos, 06 encargos,
-                  07 notas)
+                  07 notas, 08 subscrições)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -460,6 +470,34 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   `supabase/tests/04_contratos.sql` prova o comportamento da base que o
   justifica — se um dia essa chave passar a `restrict`, o teste falha e o
   travão pode descer para o esquema, que é onde se preferia que vivesse.
+- **`lib/notificacoes/enviar.ts` é o único ficheiro com uma chave que ignora
+  a RLS, e isso é para continuar assim.** Uma notificação vai ao telemóvel de
+  **outra pessoa**, e isso obriga a ler a subscrição dela: o caso que manda é
+  um cliente escrever uma pergunta e a equipa ter de ser avisada — a acção
+  corre com a identidade do cliente, que não pode (nem deve) ler as
+  subscrições do centro. As regras do ficheiro: é o único que lê
+  `SUPABASE_SERVICE_ROLE_KEY`; não exporta o cliente privilegiado, só funções
+  que mandam avisos; não recebe de fora nome de tabela, filtro nem consulta;
+  e só toca em `subscricoes_push`. O `import 'server-only'` faz a compilação
+  falhar se alguém o importar do lado do cliente — é a diferença entre uma
+  regra escrita e uma que se faz cumprir sozinha. **Se vires
+  `SUPABASE_SERVICE_ROLE_KEY` noutro sítio, está errado.**
+- **Avisar nunca trava o que o originou.** `avisar()` não lança: uma
+  notificação que não sai não pode fazer falhar a nota que alguém escreveu. O
+  `<NotasPorResponder>` no painel continua a ser a rede por baixo.
+- **O aviso de mensalidade é um botão, não um automatismo** —
+  `lembrarPagamento`, na conta-corrente. Foi decisão do cliente: há quem pague
+  sempre a dia 8 e esteja de férias, e há quem precise de um toque. Um aviso
+  automático a toda a gente que passa do vencimento era a maneira mais rápida
+  de estes avisos passarem a ser ignorados. **Não o automatizes sem pedido.**
+- **A convocatória avisa uma vez, ao convocar**, e não em cada correcção de
+  hora ou de cavalo: é o aviso mais frequente da aplicação.
+- **`/instalar` é público de propósito.** É o guia que a gestão manda por
+  mensagem antes de a pessoa ter entrado — e existe porque **no iPhone as
+  notificações só funcionam com a aplicação no ecrã principal**; num separador
+  normal do Safari não há sequer pedido de autorização. O
+  `<ActivarNotificacoes>` detecta esse caso e explica o caminho em vez de
+  mostrar um botão que não faria nada.
 - Fichas e formulários levam `voltar={{ href, rotulo }}` no
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
@@ -725,6 +763,11 @@ de rebentar — ver `lib/supabase/configuracao.ts`.
 
 Manifesto em `app/manifest.ts`, service worker em `public/sw.js`, registado por
 `components/registar-service-worker.tsx` (só em produção).
+
+O service worker trata também das **notificações**: o `push` mostra o aviso
+(com `tag` para dez notas do mesmo cavalo não serem dez notificações
+empilhadas) e o `notificationclick` abre o sítio exacto, reaproveitando uma
+janela já aberta em vez de abrir outra.
 
 O service worker faz **rede primeiro** nas navegações, com cache e
 `public/offline.html` como recurso final; ficheiros com hash em `/_next/static/`

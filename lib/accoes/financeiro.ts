@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { exigirGestao } from '@/lib/sessao'
+import { avisar } from '@/lib/notificacoes/enviar'
 import { formatarEuros, hoje, primeiroDiaDoMes } from '@/lib/formatos'
 import { ROTULOS_METODO, ROTULOS_TIPO_RECEBIMENTO } from '@/lib/rotulos'
 import type { MetodoPagamento, TipoRecebimento } from '@/lib/tipos-bd'
@@ -429,5 +431,64 @@ export async function receberEncargo(
   return {
     ok: true,
     mensagem: `Recebido ${formatarEuros(valor)} por ${ROTULOS_METODO[metodo as MetodoPagamento]}.`,
+  }
+}
+
+/**
+ * Lembra um cliente do que tem por pagar.
+ *
+ * **É um botão, não um automatismo.** A gestão é que decide quem avisa e
+ * quando: há quem pague sempre a dia 8 e esteja de férias, e há quem precise
+ * de um toque. Um aviso automático a toda a gente que passa do vencimento
+ * seria a maneira mais rápida de estes avisos passarem a ser ignorados.
+ *
+ * O valor é relido da base dentro da acção — entre abrir a página e carregar
+ * no botão pode ter entrado o pagamento.
+ */
+export async function lembrarPagamento(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  await exigirGestao()
+
+  const pessoaId = texto(dados, 'pessoa')
+  if (!pessoaId) return { ok: false, mensagem: 'Cliente não encontrado.' }
+
+  const supabase = await criarClienteServidor()
+
+  const [pessoa, pensos, encargos] = await Promise.all([
+    supabase.from('pessoas').select('nome').eq('id', pessoaId).maybeSingle(),
+    supabase
+      .from('v_pensos_por_receber')
+      .select('valor_em_falta')
+      .eq('cliente_id', pessoaId),
+    supabase
+      .from('v_encargos_por_receber')
+      .select('valor_em_falta')
+      .eq('pessoa_id', pessoaId)
+      .neq('estado', 'anulado'),
+  ])
+
+  if (!pessoa.data) return { ok: false, mensagem: 'Cliente não encontrado.' }
+
+  const somar = (linhas: { valor_em_falta: number }[] | null) =>
+    (linhas ?? []).reduce((soma, linha) => soma + Number(linha.valor_em_falta), 0)
+
+  const total = somar(pensos.data) + somar(encargos.data)
+
+  if (total <= 0) {
+    return { ok: false, mensagem: 'Este cliente não tem nada por pagar.' }
+  }
+
+  await avisar([pessoaId], {
+    titulo: 'Quinta da Figueira',
+    texto: `Tem ${formatarEuros(total)} por regularizar. Toque para ver o detalhe.`,
+    caminho: '/pagamentos',
+    agrupar: 'pagamentos',
+  })
+
+  return {
+    ok: true,
+    mensagem: `${pessoa.data.nome.split(' ')[0]} foi lembrado de ${formatarEuros(total)}. Chega aos aparelhos em que tiver ligado as notificações.`,
   }
 }

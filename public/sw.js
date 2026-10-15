@@ -128,3 +128,58 @@ self.addEventListener('fetch', (evento) => {
     )
   }
 })
+
+/*
+ * Notificações
+ * ---------------------------------------------------------------------------
+ * O corpo vem do servidor em JSON: título, texto, caminho a abrir e uma chave
+ * de agrupamento. O `tag` é o que faz dez notas do mesmo cavalo serem uma
+ * notificação que se vai actualizando, e não dez empilhadas no ecrã.
+ */
+self.addEventListener('push', (evento) => {
+  if (!evento.data) return
+
+  let aviso
+  try {
+    aviso = evento.data.json()
+  } catch {
+    aviso = { titulo: 'Quinta da Figueira', texto: evento.data.text(), caminho: '/' }
+  }
+
+  evento.waitUntil(
+    self.registration.showNotification(aviso.titulo ?? 'Quinta da Figueira', {
+      body: aviso.texto ?? '',
+      icon: '/icones/icone-192.png',
+      badge: '/icones/icone-192.png',
+      tag: aviso.agrupar ?? aviso.caminho ?? 'geral',
+      renotify: true,
+      data: { caminho: aviso.caminho ?? '/' },
+    }),
+  )
+})
+
+/*
+ * Tocar na notificação abre o sítio exacto — não a aplicação em geral.
+ *
+ * Se já houver uma janela aberta, vai-se a essa em vez de abrir outra: no
+ * telemóvel, duas janelas da mesma aplicação é confusão garantida.
+ */
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close()
+  const caminho = evento.notification.data?.caminho ?? '/'
+
+  evento.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((janelas) => {
+        for (const janela of janelas) {
+          const url = new URL(janela.url)
+          if (url.origin === self.location.origin && 'focus' in janela) {
+            janela.navigate?.(caminho)
+            return janela.focus()
+          }
+        }
+        return self.clients.openWindow(caminho)
+      }),
+  )
+})

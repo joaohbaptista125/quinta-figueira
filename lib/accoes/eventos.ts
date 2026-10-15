@@ -3,7 +3,13 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
-import { ROTULOS_ESTADO_PARTICIPACAO, ROTULOS_TIPO_EVENTO } from '@/lib/rotulos'
+import {
+  ROTULOS_ESTADO_PARTICIPACAO,
+  ROTULOS_TIPO_EVENTO,
+  ROTULOS_TIPO_EVENTO_CURTO,
+} from '@/lib/rotulos'
+import { formatarDiaCurto, formatarHora } from '@/lib/formatos'
+import { avisar } from '@/lib/notificacoes/enviar'
 import type { EstadoParticipacao, TipoEvento } from '@/lib/tipos-bd'
 import {
   apagar,
@@ -205,7 +211,35 @@ export async function guardarParticipante(
     mensagemActualizado: 'Actualizado.',
   })
 
+  // Só na convocatória, e não em cada correcção de hora ou de cavalo: é o
+  // aviso mais frequente da aplicação, e notificação a mais ensina a ignorar
+  // notificações.
+  if (resultado.ok && !id) await avisarConvocado(eventoId, pessoaId)
+
   return resultado
+}
+
+/** Diz a quem foi convocado o que é, quando e onde. */
+async function avisarConvocado(eventoId: string, pessoaId: string) {
+  const supabase = await criarClienteServidor()
+  const { data: evento } = await supabase
+    .from('eventos')
+    .select('tipo, titulo, data, hora_inicio, local, cancelado')
+    .eq('id', eventoId)
+    .maybeSingle()
+
+  if (!evento || evento.cancelado) return
+
+  const quando = `${formatarDiaCurto(evento.data)} às ${formatarHora(evento.hora_inicio)}`
+
+  await avisar([pessoaId], {
+    titulo: evento.titulo
+      ? `${ROTULOS_TIPO_EVENTO_CURTO[evento.tipo]}: ${evento.titulo}`
+      : `Foi convocado para ${ROTULOS_TIPO_EVENTO_CURTO[evento.tipo].toLowerCase()}`,
+    texto: evento.local ? `${quando} · ${evento.local}` : quando,
+    caminho: `/agenda/${eventoId}`,
+    agrupar: `evento-${eventoId}`,
+  })
 }
 
 export async function removerParticipante(

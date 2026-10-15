@@ -2,6 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { exigirPessoa } from '@/lib/sessao'
+import { eEquipa } from '@/lib/permissoes'
+import { avisar, pessoasDaEquipa } from '@/lib/notificacoes/enviar'
 import { texto } from './comum'
 import { traduzirErro, type ResultadoAccao } from './resultado'
 
@@ -25,6 +28,7 @@ export async function escreverNota(
     return { ok: false, mensagem: 'A nota é demasiado longa (máximo 2000 caracteres).' }
   }
 
+  const sessao = await exigirPessoa()
   const supabase = await criarClienteServidor()
   const { error } = await supabase
     .from('notas_cavalo')
@@ -36,7 +40,67 @@ export async function escreverNota(
   revalidatePath('/cavalos')
   revalidatePath('/')
 
+  await avisarDaNota({
+    cavaloId,
+    conteudo,
+    autorNome: sessao.nome,
+    deEquipa: eEquipa(sessao.perfil),
+  })
+
   return { ok: true, mensagem: 'Escrito.' }
+}
+
+/**
+ * Avisa o outro lado da conversa.
+ *
+ * Quem escreve é que decide para onde vai o aviso: uma pergunta do dono vai
+ * para a equipa toda, uma resposta da equipa vai para o dono. O aviso nunca
+ * volta para quem escreveu.
+ *
+ * Isto corre **depois** de a nota estar gravada e de propósito não trava
+ * nada: uma notificação que não sai não pode fazer falhar o que a originou.
+ */
+async function avisarDaNota({
+  cavaloId,
+  conteudo,
+  autorNome,
+  deEquipa,
+}: {
+  cavaloId: string
+  conteudo: string
+  autorNome: string
+  deEquipa: boolean
+}) {
+  const supabase = await criarClienteServidor()
+  const { data: cavalo } = await supabase
+    .from('cavalos')
+    .select('nome, proprietario_id')
+    .eq('id', cavaloId)
+    .maybeSingle()
+
+  if (!cavalo) return
+
+  const primeiroNome = autorNome.split(' ')[0]
+  const caminho = `/cavalos/${cavaloId}`
+
+  if (deEquipa) {
+    if (!cavalo.proprietario_id) return
+    await avisar([cavalo.proprietario_id], {
+      titulo: `Resposta sobre o ${cavalo.nome}`,
+      texto: conteudo,
+      caminho,
+      agrupar: `nota-${cavaloId}`,
+    })
+    return
+  }
+
+  const equipa = await pessoasDaEquipa()
+  await avisar(equipa, {
+    titulo: `${primeiroNome} perguntou sobre o ${cavalo.nome}`,
+    texto: conteudo,
+    caminho,
+    agrupar: `nota-${cavaloId}`,
+  })
 }
 
 /**

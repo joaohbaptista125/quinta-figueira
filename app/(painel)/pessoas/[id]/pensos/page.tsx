@@ -13,6 +13,7 @@ import {
   ReceberTudo,
 } from '@/components/pagamento-penso'
 import { classesBotao } from '@/components/ui/botao'
+import { LembrarPagamento } from '@/components/lembrar-pagamento'
 import {
   Aviso,
   Cartao,
@@ -129,12 +130,17 @@ export default async function PaginaContaCorrente({
         titulo="Conta-corrente"
         descricao={`Pensos de ${pessoa.data.nome}`}
         accoes={
-          <Link
-            href={`/financeiro/recebimentos/novo?pessoa=${id}`}
-            className={classesBotao('contorno')}
-          >
-            Outro recebimento
-          </Link>
+          <>
+            {totalEmFalta > 0 ? (
+              <LembrarPagamento pessoaId={id} nome={pessoa.data.nome} />
+            ) : null}
+            <Link
+              href={`/financeiro/recebimentos/novo?pessoa=${id}`}
+              className={classesBotao('contorno')}
+            >
+              Outro recebimento
+            </Link>
+          </>
         }
       />
 
