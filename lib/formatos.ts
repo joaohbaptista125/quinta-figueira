@@ -165,6 +165,18 @@ export function deslocarDias(iso: string, n: number) {
   return d.toISOString().slice(0, 10)
 }
 
+/**
+ * Dias de `de` até `ate`, as duas em 'AAAA-MM-DD'. Negativo se `ate` já passou.
+ *
+ * Em UTC e sobre o texto, como todo o resto deste ficheiro: datas do Postgres
+ * não passam por `new Date()` local, senão o fuso fá-las saltar um dia.
+ */
+export function diasAte(de: string, ate: string) {
+  const inicio = Date.parse(`${de.slice(0, 10)}T00:00:00Z`)
+  const fim = Date.parse(`${ate.slice(0, 10)}T00:00:00Z`)
+  return Math.round((fim - inicio) / 86400000)
+}
+
 /** Idade em anos a partir da data de nascimento. */
 export function idadeEmAnos(dataNascimento: string | null | undefined) {
   if (!dataNascimento) return null

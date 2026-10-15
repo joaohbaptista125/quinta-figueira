@@ -62,6 +62,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…110000_opcoes_de_cavalo.sql` | `opcoes_cavalo` — lista de raças e pelagens (+ seed) |
 | `…20261010090000_convite_de_acesso.sql` | `pessoas.convidado_em` |
 | `…20261010103000_acesso_confirmado.sql` | `pessoas.acesso_confirmado_em` + trigger de entrada |
+| `…20261015120000_ferracoes.sql` | `ferracoes` + `v_ferracao_cavalos` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -161,6 +162,20 @@ hora ou é cancelado. Fica a `null` sem cavalo ou com o evento cancelado, e as
 restrições de exclusão ignoram operandos nulos — que é precisamente o
 comportamento desejado. **Nunca escrevas `periodo` a partir da aplicação.**
 
+**A ferração é um histórico, não duas colunas em `cavalos`.** O que interessa
+é de quanto em quanto tempo *este* cavalo precisa, quem o ferrou e quanto
+custou — e duas colunas só sabem a última. `ferracoes` tem uma linha por
+passagem do ferrador; `v_ferracao_cavalos` dá a última de cada cavalo para a
+listagem não fazer sessenta consultas, e é um `left join`, porque o cavalo que
+nunca foi ferrado é precisamente o que interessa ver. **`proxima_em` é escrito
+à mão e não calculado**: o intervalo não é igual para todos (um cavalo de
+competição gasta mais depressa) e quem ferra sabe, ao sair, quando quer voltar;
+o formulário sugere seis semanas e deixa mudar. **Escrever é de `e_equipa()` e
+não só da gestão** — quem recebe o ferrador na cavalariça é o tratador, e
+obrigá-lo a pedir à gestão era a maneira certa de o registo não existir. O
+custo que lá fica é nota do que foi combinado; a despesa lança-se no
+financeiro, imputada ao cavalo.
+
 **Avisos, não chat.** `avisos` pertence a um evento OU a uma equipa, nunca aos
 dois. É comunicação de um para muitos: aparece no quadro do dia e vai na
 descrição do evento no calendário do telemóvel. Foi uma decisão deliberada e
@@ -184,6 +199,8 @@ Uma vista sem isto seria um buraco na RLS — se criares outra, não te esqueça
 - `v_resumo_mensal` — receitas vs. despesas por mês
 - `v_despesas_por_categoria` — despesa por categoria e mês
 - `v_pensos_por_receber` — mensalidades com valor pago e valor em falta
+- `v_ferracao_cavalos` — uma linha por cavalo com a última ferração e o estado
+  da próxima (`sem_registo`, `sem_data`, `atrasada`, `esta_semana`, `em_dia`)
 
 ---
 
@@ -244,6 +261,7 @@ app/
     agenda/       quadro do dia, e a ficha de cada evento
     equipas/      grupos de Horseball
     conta/        perfil e subscrição de calendário
+    pagamentos/   a conta-corrente vista de quem paga (o cliente)
     pessoas/      ficha, e `pessoas/[id]/pensos` — a conta-corrente do cliente
     cavalos/      ficha, e `cavalos/opcoes` — as listas de raças e pelagens
     boxes/  contratos/
@@ -262,6 +280,7 @@ components/
   lista-eventos.tsx    a linha de um evento, partilhada por todas as vistas
   cartao-evento.tsx    o evento em grande, com convocados e avisos
   convite-acesso.tsx   estado de acesso de uma pessoa, e o convite
+  ferracao-cavalo.tsx  quando foi ferrado, e quando volta a ser
   formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
   formularios/selector-com-outro.tsx  lista com saída para escrever uma nova
   opcoes-cavalo.tsx  gerir as listas em /cavalos/opcoes
@@ -278,11 +297,13 @@ lib/
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
+  origem.ts       o endereço público que vai nos links de email (+ testes)
   supabase/sem-sessao.ts  cliente sem cookies, para falar em nome de outra pessoa
 supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
-  tests/          arremedo do Supabase + testes de RLS
+  tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
+                  03 ferração)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -455,6 +476,32 @@ são fixos nem publicados, por isso a lista de autorizados não serve de nada
 aqui — o que resolve é desligar o bloqueio automático em **Settings →
 Security → Authorized IPs**.
 
+### A visão de cliente
+
+A conta de cliente é uma janela de leitura, e é a RLS que a fecha: as consultas
+não levam filtro por pessoa em lado nenhum. O que era preciso limar não era a
+segurança, era a linguagem — o cliente estava a ver as páginas da gestão com os
+dados dele lá dentro.
+
+**Quem paga não recebe.** Do lado do cliente a palavra é **pagamento**;
+«recebimento» é a palavra da gestão e fica do lado dela. `/pagamentos` é a
+conta-corrente vista de quem paga — por pagar, já pago, e cada mês com os
+pagamentos por baixo — e ocupa na barra de baixo o lugar que «Pessoas» lhe
+deixa livre. `/financeiro/recebimentos` é só da gestão (`exigirGestao`).
+
+O resto do que saiu, e porquê:
+
+- **Boxes** passou a `e_equipa()` e **Contratos de penso** a `e_gestao()`: ao
+  cliente eram duas entradas de menu que abriam ecrãs quase vazios.
+- A listagem de cavalos esconde a coluna **Proprietário** (era o nome dele
+  repetido em cada linha) e os filtros de regime (nunca lhe devolviam nada) a
+  quem não é da cavalariça.
+- No painel, «contacte a gestão para regularizar» era um beco sem saída; agora
+  há o caminho para os pagamentos.
+
+Falta ainda, e é trabalho da Fase 4: marcar-se a si próprio nos treinos de
+Horseball, e corrigir o telefone ou a morada da própria ficha.
+
 ### Listas com saída: raças e pelagens
 
 `<SelectorComOutro>` é uma lista de opções cuja última entrada abre uma caixa
@@ -610,8 +657,10 @@ Por implementar:
   entra, vê as suas próximas marcações, os seus cavalos e o que deve; e a
   cobrança vive em `/pessoas/[id]/pensos`. Gancho que falta usar:
   `pessoa_papeis.jogador_horseball`.
-- **Fase 5 — Stocks e saúde.** Ração e palha com alertas, vacinas, ferrador,
-  veterinário, relatórios.
+- **Fase 5 — Stocks e saúde.** Ração e palha com alertas, vacinas,
+  veterinário, relatórios. A **ferração** já está feita (pedida à parte, fora
+  da ordem das fases): `ferracoes` e `v_ferracao_cavalos`, na ficha do cavalo
+  e numa coluna da listagem.
 
 Não comeces uma destas fases sem pedido explícito.
 

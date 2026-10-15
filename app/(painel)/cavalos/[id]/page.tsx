@@ -3,13 +3,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
-import { eGestao } from '@/lib/permissoes'
+import { eEquipa, eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposCavalo } from '@/components/formularios/campos-cavalo'
 import { BotaoApagar } from '@/components/botao-apagar'
 import { FotoCavalo } from '@/components/foto-cavalo'
+import { FerracaoCavalo } from '@/components/ferracao-cavalo'
 import { AtribuicaoBox } from '@/components/atribuicao-box'
 import {
   Cartao,
@@ -56,6 +57,7 @@ export default async function PaginaCavalo({
     boxesLivres,
     contratos,
     despesas,
+    ferracoes,
   ] = await Promise.all([
       podeEditar
         ? supabase.from('pessoas').select('id, nome').eq('activo', true).order('nome')
@@ -85,6 +87,15 @@ export default async function PaginaCavalo({
             .order('data', { ascending: false })
             .limit(10)
         : Promise.resolve({ data: null }),
+      // A ferração vê-se de dentro da cavalariça e também do lado do dono:
+      // a RLS devolve as dos cavalos dele, e a pergunta «quando foi ferrado»
+      // é a mesma dos dois lados.
+      supabase
+        .from('ferracoes')
+        .select('id, data, tipo, proxima_em, ferrador, custo, notas')
+        .eq('cavalo_id', id)
+        .order('data', { ascending: false })
+        .limit(12),
     ])
 
   return (
@@ -160,6 +171,12 @@ export default async function PaginaCavalo({
 
         <div className="space-y-4">
           <FotoCavalo caminho={cavalo.foto_path} nome={cavalo.nome} />
+
+          <FerracaoCavalo
+            cavaloId={cavalo.id}
+            ferracoes={ferracoes.data ?? []}
+            podeRegistar={eEquipa(sessao.perfil)}
+          />
 
           {podeEditar ? (
             <Cartao>

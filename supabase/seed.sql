@@ -192,3 +192,14 @@ insert into public.avisos (evento_id, texto, autor_id) values
   ('77777777-0000-4000-8000-000000000003',
    'Trazer as camisolas azuis. Encontro 20 minutos antes.',
    '22222222-0000-4000-8000-000000000002');
+
+-- Ferração: um cavalo atrasado, um em dia, um da escola para esta semana, e o
+-- Vento sem registo nenhum — que é o caso que interessa ver na listagem.
+insert into public.ferracoes (cavalo_id, data, tipo, proxima_em, ferrador, custo) values
+  ('33333333-0000-4000-8000-000000000001', current_date - 70, 'completa',
+   current_date - 12, 'Sr. Alberto', 55.00),
+  ('33333333-0000-4000-8000-000000000002', current_date - 9,  'maos',
+   current_date + 33, 'Sr. Alberto', 35.00),
+  ('33333333-0000-4000-8000-000000000004', current_date - 38, 'arranjo',
+   current_date + 4,  'Sr. Alberto', 20.00)
+on conflict do nothing;

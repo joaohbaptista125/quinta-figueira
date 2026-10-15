@@ -83,6 +83,45 @@ export type Cavalo = Carimbos & {
   notas: string | null
 }
 
+export type TipoFerracao = 'completa' | 'maos' | 'pes' | 'arranjo'
+
+/**
+ * Uma passagem do ferrador por um cavalo.
+ *
+ * `proxima_em` é a data combinada com o ferrador ao sair, não um cálculo: o
+ * intervalo não é igual para todos os cavalos.
+ */
+export type Ferracao = Carimbos & {
+  id: string
+  cavalo_id: string
+  data: string
+  tipo: TipoFerracao
+  proxima_em: string | null
+  ferrador: string | null
+  custo: number | null
+  notas: string | null
+}
+
+export type EstadoFerracao =
+  | 'sem_registo'
+  | 'sem_data'
+  | 'atrasada'
+  | 'esta_semana'
+  | 'em_dia'
+
+/** Uma linha por cavalo: a última ferração e o estado da próxima. */
+export type FerracaoCavalo = {
+  cavalo_id: string
+  cavalo_nome: string
+  activo: boolean
+  ferracao_id: string | null
+  ultima_em: string | null
+  ultimo_tipo: TipoFerracao | null
+  ferrador: string | null
+  proxima_em: string | null
+  estado: EstadoFerracao
+}
+
 /** Uma entrada da lista de raças ou de pelagens oferecida pelo formulário. */
 export type OpcaoCavalo = Carimbos & {
   id: string
@@ -382,6 +421,11 @@ export type BaseDados = {
         Conta,
         Partial<Omit<Conta, SoLeitura>> & { nome: string; tipo: TipoConta }
       >
+      ferracoes: Tabela<
+        Ferracao,
+        Partial<Omit<Ferracao, SoLeitura>> & { cavalo_id: string },
+        [Relacao<'cavalo_id', 'cavalos'>]
+      >
       opcoes_cavalo: Tabela<
         OpcaoCavalo,
         Partial<Omit<OpcaoCavalo, SoLeitura>> & {
@@ -491,6 +535,7 @@ export type BaseDados = {
       v_resumo_mensal: Vista<ResumoMensal>
       v_despesas_por_categoria: Vista<DespesaPorCategoria>
       v_pensos_por_receber: Vista<PensoPorReceber>
+      v_ferracao_cavalos: Vista<FerracaoCavalo>
     }
     Functions: {
       gerar_mensalidades: { Args: { p_periodo: string }; Returns: number }

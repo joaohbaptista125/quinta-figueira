@@ -4,6 +4,7 @@
  */
 
 import type {
+  EstadoFerracao,
   EstadoMensalidade,
   EstadoParticipacao,
   TipoEvento,
@@ -13,6 +14,7 @@ import type {
   RegimeCavalo,
   SexoCavalo,
   TipoConta,
+  TipoFerracao,
   TipoRecebimento,
 } from './tipos-bd'
 
@@ -106,4 +108,27 @@ export function paraOpcoes<T extends string>(
     valor,
     rotulo: rotulos[valor],
   }))
+}
+
+export const ROTULOS_TIPO_FERRACAO: Record<TipoFerracao, string> = {
+  completa: 'Ferração completa',
+  maos: 'Só as mãos',
+  pes: 'Só os pés',
+  arranjo: 'Arranjo de cascos',
+}
+
+/** O mesmo, curto, para caber numa pastilha ao lado do nome do cavalo. */
+export const ROTULOS_TIPO_FERRACAO_CURTO: Record<TipoFerracao, string> = {
+  completa: 'Completa',
+  maos: 'Mãos',
+  pes: 'Pés',
+  arranjo: 'Arranjo',
+}
+
+export const ROTULOS_ESTADO_FERRACAO: Record<EstadoFerracao, string> = {
+  sem_registo: 'Sem registo',
+  sem_data: 'Sem data marcada',
+  atrasada: 'Atrasada',
+  esta_semana: 'Esta semana',
+  em_dia: 'Em dia',
 }

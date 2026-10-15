@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   deslocarDias,
+  diasAte,
   formatarDiaPorExtenso,
   formatarIntervaloDeDias,
   deslocarMeses,
@@ -88,4 +89,27 @@ test('o intervalo da semana só repete o mês quando é preciso', () => {
 test('o dia por extenso leva maiúscula no dia da semana e no mês', () => {
   assert.equal(formatarDiaPorExtenso('2026-10-10'), 'Sábado, 10 de Outubro')
   assert.equal(formatarDiaPorExtenso('2026-10-05'), 'Segunda-feira, 5 de Outubro')
+})
+
+// --- diasAte ----------------------------------------------------------------
+
+test('diasAte conta os dias entre duas datas', () => {
+  assert.equal(diasAte('2026-10-15', '2026-10-22'), 7)
+  assert.equal(diasAte('2026-10-15', '2026-10-15'), 0)
+})
+
+test('diasAte dá negativo quando a data já passou', () => {
+  assert.equal(diasAte('2026-10-15', '2026-10-01'), -14)
+})
+
+test('diasAte atravessa meses e anos', () => {
+  assert.equal(diasAte('2026-12-28', '2027-01-04'), 7)
+  // 2028 é bissexto: Fevereiro tem 29 dias.
+  assert.equal(diasAte('2028-02-28', '2028-03-01'), 2)
+})
+
+test('diasAte não se deixa enganar pela hora de Verão', () => {
+  // Em Portugal o relógio recua no último domingo de Outubro. Com datas
+  // lidas no fuso local, esta diferença dava 6,96 dias e arredondava mal.
+  assert.equal(diasAte('2026-10-23', '2026-10-30'), 7)
 })

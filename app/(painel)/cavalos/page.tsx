@@ -18,8 +18,11 @@ import {
   Th,
 } from '@/components/ui/tabela'
 import { ROTULOS_REGIME, ROTULOS_SEXO } from '@/lib/rotulos'
-import type { RegimeCavalo } from '@/lib/tipos-bd'
-import { idadeEmAnos } from '@/lib/formatos'
+import type {
+  EstadoFerracao as EstadoFerracaoBd,
+  RegimeCavalo,
+} from '@/lib/tipos-bd'
+import { formatarData, idadeEmAnos } from '@/lib/formatos'
 
 export const metadata: Metadata = { title: 'Cavalos' }
 
@@ -51,12 +54,25 @@ export default async function PaginaCavalos({
     )
   }
 
-  const { data: cavalos, error } = await consulta
-
   // O cliente só recebe os cavalos dele, por isso a coluna do proprietário
   // era o nome dele repetido em todas as linhas, e os filtros por regime
   // («Escola», «Centro») nunca lhe devolviam nada.
   const daCavalarica = eEquipa(sessao.perfil)
+
+  const [{ data: cavalos, error }, ferracoes] = await Promise.all([
+    consulta,
+    // Uma linha por cavalo, e não uma consulta por cavalo: quem prepara a
+    // volta do ferrador quer ver os sessenta de uma vez.
+    daCavalarica
+      ? supabase
+          .from('v_ferracao_cavalos')
+          .select('cavalo_id, proxima_em, estado')
+      : Promise.resolve({ data: null }),
+  ])
+
+  const ferracaoPorCavalo = new Map(
+    (ferracoes.data ?? []).map((linha) => [linha.cavalo_id, linha]),
+  )
 
   return (
     <>
@@ -111,6 +127,7 @@ export default async function PaginaCavalos({
                 <Th>Raça / pelagem</Th>
                 <Th>Idade</Th>
                 <Th>Box</Th>
+                {daCavalarica ? <Th>Ferração</Th> : null}
               </Linha>
             </Cabecalho>
             <Corpo>
@@ -155,6 +172,11 @@ export default async function PaginaCavalos({
                     <Td rotulo="Box" className="text-muted-foreground">
                       {cavalo.boxes?.identificacao ?? '—'}
                     </Td>
+                    {daCavalarica ? (
+                      <Td rotulo="Ferração">
+                        <EstadoFerracao linha={ferracaoPorCavalo.get(cavalo.id)} />
+                      </Td>
+                    ) : null}
                   </Linha>
                 )
               })}
@@ -198,5 +220,45 @@ function FiltroRegime({
     >
       {rotulo}
     </Link>
+  )
+}
+
+/**
+ * O estado da ferração de um cavalo, numa pastilha.
+ *
+ * O que interessa a quem prepara a volta do ferrador é o que está vermelho e
+ * o que está amarelo; o resto é fundo. Por isso o «em dia» mostra a data e
+ * não a palavra — quem está em dia não precisa de ser lido, precisa de poder
+ * ser saltado.
+ */
+function EstadoFerracao({
+  linha,
+}: {
+  linha?: { estado: EstadoFerracaoBd; proxima_em: string | null }
+}) {
+  if (!linha || linha.estado === 'sem_registo') {
+    return <span className="text-sm text-muted-foreground">—</span>
+  }
+
+  if (linha.estado === 'atrasada') {
+    return (
+      <Distintivo cor="perigo">
+        Atrasada desde {formatarData(linha.proxima_em)}
+      </Distintivo>
+    )
+  }
+
+  if (linha.estado === 'esta_semana') {
+    return <Distintivo cor="aviso">{formatarData(linha.proxima_em)}</Distintivo>
+  }
+
+  if (linha.estado === 'sem_data') {
+    return <Distintivo cor="aviso">Sem data</Distintivo>
+  }
+
+  return (
+    <span className="tabular text-sm text-muted-foreground">
+      {formatarData(linha.proxima_em)}
+    </span>
   )
 }
