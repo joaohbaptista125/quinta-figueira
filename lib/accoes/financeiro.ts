@@ -354,3 +354,80 @@ export async function receberPensos(
         : `Recebidas ${novos.length} mensalidades, ${formatarEuros(total)} por ${ROTULOS_METODO[metodo as MetodoPagamento]}.`,
   }
 }
+
+/**
+ * Recebe um encargo avulso — a ferração que o centro adiantou, e o resto.
+ *
+ * Gémeo de `receberPensos`, e pela mesma razão: o que falta é relido da base
+ * dentro da acção, nunca aceite do formulário. Entre abrir a página e
+ * carregar no botão pode ter entrado outro pagamento.
+ */
+export async function receberEncargo(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const id = textoOuNulo(dados, 'encargo')
+  if (!id) return { ok: false, mensagem: 'Escolha o encargo a receber.' }
+
+  const metodo = texto(dados, 'metodo_pagamento')
+  if (!METODOS.includes(metodo as MetodoPagamento)) {
+    return { ok: false, mensagem: 'Escolha o método de pagamento.' }
+  }
+
+  const contaId = textoOuNulo(dados, 'conta_id')
+  if (!contaId) return { ok: false, mensagem: 'Escolha a conta de destino.' }
+
+  const data = textoOuNulo(dados, 'data') ?? hoje()
+
+  const supabase = await criarClienteServidor()
+  const { data: linha, error: erroLeitura } = await supabase
+    .from('v_encargos_por_receber')
+    .select('encargo_id, pessoa_id, descricao, valor_em_falta, estado')
+    .eq('encargo_id', id)
+    .maybeSingle()
+
+  if (erroLeitura) return { ok: false, mensagem: traduzirErro(erroLeitura) }
+  if (!linha) return { ok: false, mensagem: 'Encargo não encontrado.' }
+  if (linha.estado === 'anulado') {
+    return { ok: false, mensagem: 'Este encargo está anulado.' }
+  }
+
+  const emFalta = Number(linha.valor_em_falta)
+  const valorEscrito = valorOuNulo(dados, 'valor')
+  if (valorEscrito != null && valorEscrito <= 0) {
+    return { ok: false, mensagem: 'Indique um valor maior do que zero.' }
+  }
+
+  const valor = valorEscrito ?? emFalta
+  if (valor <= 0) return { ok: false, mensagem: 'Este encargo já está pago.' }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { error } = await supabase.from('recebimentos').insert({
+    data,
+    pessoa_id: linha.pessoa_id,
+    valor,
+    metodo_pagamento: metodo as MetodoPagamento,
+    conta_id: contaId,
+    tipo: 'outro' as TipoRecebimento,
+    encargo_id: linha.encargo_id,
+    descricao: linha.descricao,
+    criado_por: user?.id ?? null,
+  })
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  revalidatePath(`/pessoas/${linha.pessoa_id}/pensos`)
+  revalidatePath(`/pessoas/${linha.pessoa_id}`)
+  revalidatePath('/financeiro/recebimentos')
+  revalidatePath('/financeiro/contas')
+  revalidatePath('/pagamentos')
+  revalidatePath('/')
+
+  return {
+    ok: true,
+    mensagem: `Recebido ${formatarEuros(valor)} por ${ROTULOS_METODO[metodo as MetodoPagamento]}.`,
+  }
+}

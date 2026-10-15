@@ -44,7 +44,7 @@ export default async function PaginaPagamentos() {
   const sessao = await exigirPessoa()
   const supabase = await criarClienteServidor()
 
-  const [pensos, pagamentos] = await Promise.all([
+  const [pensos, pagamentos, encargos] = await Promise.all([
     supabase
       .from('v_pensos_por_receber')
       .select('*')
@@ -54,8 +54,15 @@ export default async function PaginaPagamentos() {
     // entrou não é informação — e a RLS também não lha daria.
     supabase
       .from('recebimentos')
-      .select('id, data, valor, metodo_pagamento, mensalidade_id, descricao')
+      .select('id, data, valor, metodo_pagamento, mensalidade_id, encargo_id, descricao')
       .eq('pessoa_id', sessao.id)
+      .order('data', { ascending: false }),
+    // Ferração, veterinário, transporte: o que o centro adiantou e recobra.
+    supabase
+      .from('v_encargos_por_receber')
+      .select('*')
+      .eq('pessoa_id', sessao.id)
+      .neq('estado', 'anulado')
       .order('data', { ascending: false }),
   ])
 
@@ -79,7 +86,20 @@ export default async function PaginaPagamentos() {
     (soma, linha) => soma + Number(linha.valor_em_falta),
     0,
   )
-  const outros = movimentos.filter((movimento) => !movimento.mensalidade_id)
+  // Os pagamentos de encargos já aparecem na linha do encargo; aqui ficam os
+  // que não respeitam a nada em particular.
+  const outros = movimentos.filter(
+    (movimento) => !movimento.mensalidade_id && !movimento.encargo_id,
+  )
+
+  const linhasEncargos = encargos.data ?? []
+  const encargosPorPagar = linhasEncargos.filter(
+    (linha) => Number(linha.valor_em_falta) > 0,
+  )
+  const totalEncargos = encargosPorPagar.reduce(
+    (soma, linha) => soma + Number(linha.valor_em_falta),
+    0,
+  )
 
   return (
     <>
@@ -91,11 +111,20 @@ export default async function PaginaPagamentos() {
       <div className="grid gap-3 sm:grid-cols-2">
         <Indicador
           rotulo="Por pagar"
-          valor={formatarEuros(totalEmFalta)}
-          tom={totalEmFalta > 0 ? 'negativo' : 'positivo'}
+          valor={formatarEuros(totalEmFalta + totalEncargos)}
+          tom={totalEmFalta + totalEncargos > 0 ? 'negativo' : 'positivo'}
           detalhe={
-            emFalta.length > 0
-              ? `${emFalta.length === 1 ? '1 mês' : `${emFalta.length} meses`} em falta`
+            emFalta.length > 0 || encargosPorPagar.length > 0
+              ? [
+                  emFalta.length > 0
+                    ? `${emFalta.length === 1 ? '1 mês' : `${emFalta.length} meses`} de penso`
+                    : null,
+                  encargosPorPagar.length > 0
+                    ? `${encargosPorPagar.length === 1 ? '1 encargo' : `${encargosPorPagar.length} encargos`}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : 'Tudo em dia'
           }
         />
@@ -178,6 +207,44 @@ export default async function PaginaPagamentos() {
           )}
         </ConteudoCartao>
       </Cartao>
+
+      {linhasEncargos.length > 0 ? (
+        <Cartao className="mt-4">
+          <CabecalhoCartao>
+            <TituloCartao>Ferração e outros encargos</TituloCartao>
+            <DescricaoCartao>
+              O que o centro adiantou por si e lhe cobra à parte da mensalidade
+            </DescricaoCartao>
+          </CabecalhoCartao>
+          <ConteudoCartao className="px-0 sm:px-0">
+            <ol className="divide-y divide-border border-t border-border">
+              {linhasEncargos.map((linha) => {
+                const falta = Number(linha.valor_em_falta)
+                return (
+                  <li key={linha.encargo_id} className="px-4 py-3 sm:px-5">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="font-medium">{linha.descricao}</span>
+                      <Distintivo cor={falta > 0 ? 'aviso' : 'sucesso'}>
+                        {falta > 0 ? 'Por pagar' : 'Pago'}
+                      </Distintivo>
+                      <span className="tabular ml-auto font-semibold">
+                        {formatarEuros(linha.valor)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formatarData(linha.data)}
+                      {linha.cavalo_nome ? ` · ${linha.cavalo_nome}` : ''}
+                      {falta > 0 && falta !== Number(linha.valor)
+                        ? ` · faltam ${formatarEuros(falta)}`
+                        : ''}
+                    </p>
+                  </li>
+                )
+              })}
+            </ol>
+          </ConteudoCartao>
+        </Cartao>
+      ) : null}
 
       {outros.length > 0 ? (
         <Cartao className="mt-4">

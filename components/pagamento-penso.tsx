@@ -2,7 +2,7 @@
 
 import { useActionState, useId } from 'react'
 import { useFormStatus } from 'react-dom'
-import { receberPensos } from '@/lib/accoes/financeiro'
+import { receberEncargo, receberPensos } from '@/lib/accoes/financeiro'
 import { SEM_RESULTADO } from '@/lib/accoes/resultado'
 import { Botao } from '@/components/ui/botao'
 import { Campo, Entrada, Selector } from '@/components/ui/campos'
@@ -221,5 +221,70 @@ export function ReceberTudo({
         <Aviso tom={resultado.ok ? 'sucesso' : 'erro'}>{resultado.mensagem}</Aviso>
       ) : null}
     </form>
+  )
+}
+
+/**
+ * Recebe um encargo avulso — a ferração que o centro adiantou, e o resto.
+ *
+ * É o mesmo painel das mensalidades, com a mesma mecânica: método em
+ * pastilhas, data, conta, confirmar. Separado porque o que se paga é outra
+ * coisa — um encargo não tem período nem contrato, e a acção que o recebe é
+ * outra.
+ */
+export function ReceberEncargo({
+  encargoId,
+  emFalta,
+  contas,
+  contaOmissao,
+  metodoOmissao,
+}: {
+  encargoId: string
+  emFalta: number
+  contas: ContaOpcao[]
+  contaOmissao: string
+  metodoOmissao: MetodoPagamento
+}) {
+  const [resultado, executar] = useActionState(receberEncargo, SEM_RESULTADO)
+
+  return (
+    <details className="mt-2 rounded-md border border-border">
+      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
+        Registar pagamento
+      </summary>
+
+      <form action={executar} className="space-y-3 border-t border-border p-3">
+        <input type="hidden" name="encargo" value={encargoId} />
+
+        <CamposComuns
+          contas={contas}
+          contaOmissao={contaOmissao}
+          metodoOmissao={metodoOmissao}
+        />
+
+        <Campo
+          etiqueta="Valor (€)"
+          htmlFor={`valor-encargo-${encargoId}`}
+          ajuda="Já vem preenchido com o que falta. Altere para registar um pagamento parcial."
+        >
+          <Entrada
+            id={`valor-encargo-${encargoId}`}
+            name="valor"
+            inputMode="decimal"
+            defaultValue={emFalta.toFixed(2).replace('.', ',')}
+            required
+            autoComplete="off"
+          />
+        </Campo>
+
+        <BotaoRegistar rotulo="Registar pagamento" />
+
+        {resultado.mensagem ? (
+          <Aviso tom={resultado.ok ? 'sucesso' : 'erro'}>
+            {resultado.mensagem}
+          </Aviso>
+        ) : null}
+      </form>
+    </details>
   )
 }

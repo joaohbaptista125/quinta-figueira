@@ -192,6 +192,7 @@ export default async function PaginaCavalo({
             cavaloId={cavalo.id}
             ferracoes={ferracoes.data ?? []}
             podeRegistar={eEquipa(sessao.perfil)}
+            temProprietario={Boolean(cavalo.proprietario_id)}
           />
 
           {podeEditar ? (

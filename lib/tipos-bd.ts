@@ -83,6 +83,40 @@ export type Cavalo = Carimbos & {
   notas: string | null
 }
 
+export type EstadoEncargo = 'pendente' | 'pago' | 'anulado'
+
+/**
+ * O que se cobra ao cliente fora da mensalidade de penso: ferração,
+ * veterinário, transporte. `estado` é derivado dos recebimentos imputados —
+ * não o escrevas a partir da aplicação.
+ */
+export type Encargo = Carimbos & {
+  id: string
+  pessoa_id: string
+  cavalo_id: string | null
+  ferracao_id: string | null
+  descricao: string
+  valor: number
+  data: string
+  estado: EstadoEncargo
+  notas: string | null
+}
+
+export type EncargoPorReceber = {
+  encargo_id: string
+  pessoa_id: string
+  pessoa_nome: string
+  cavalo_id: string | null
+  cavalo_nome: string | null
+  ferracao_id: string | null
+  descricao: string
+  data: string
+  valor: number
+  estado: EstadoEncargo
+  valor_pago: number
+  valor_em_falta: number
+}
+
 export type TipoFerracao = 'completa' | 'maos' | 'pes' | 'arranjo'
 
 /**
@@ -220,6 +254,8 @@ export type Recebimento = Carimbos & {
   conta_id: string
   tipo: TipoRecebimento
   mensalidade_id: string | null
+  /** Paga um encargo avulso. Nunca preenchido ao mesmo tempo que o anterior. */
+  encargo_id: string | null
   periodo: string | null
   descricao: string | null
   notas: string | null
@@ -421,6 +457,19 @@ export type BaseDados = {
         Conta,
         Partial<Omit<Conta, SoLeitura>> & { nome: string; tipo: TipoConta }
       >
+      encargos: Tabela<
+        Encargo,
+        Partial<Omit<Encargo, SoLeitura>> & {
+          pessoa_id: string
+          descricao: string
+          valor: number
+        },
+        [
+          Relacao<'pessoa_id', 'pessoas'>,
+          Relacao<'cavalo_id', 'cavalos', true>,
+          Relacao<'ferracao_id', 'ferracoes', true>,
+        ]
+      >
       ferracoes: Tabela<
         Ferracao,
         Partial<Omit<Ferracao, SoLeitura>> & { cavalo_id: string },
@@ -479,6 +528,7 @@ export type BaseDados = {
           Relacao<'pessoa_id', 'pessoas'>,
           Relacao<'conta_id', 'contas'>,
           Relacao<'mensalidade_id', 'mensalidades_penso'>,
+          Relacao<'encargo_id', 'encargos'>,
         ]
       >
       equipas: Tabela<
@@ -536,6 +586,7 @@ export type BaseDados = {
       v_despesas_por_categoria: Vista<DespesaPorCategoria>
       v_pensos_por_receber: Vista<PensoPorReceber>
       v_ferracao_cavalos: Vista<FerracaoCavalo>
+      v_encargos_por_receber: Vista<EncargoPorReceber>
     }
     Functions: {
       gerar_mensalidades: { Args: { p_periodo: string }; Returns: number }

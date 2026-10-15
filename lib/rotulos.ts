@@ -4,6 +4,7 @@
  */
 
 import type {
+  EstadoEncargo,
   EstadoFerracao,
   EstadoMensalidade,
   EstadoParticipacao,
@@ -131,4 +132,10 @@ export const ROTULOS_ESTADO_FERRACAO: Record<EstadoFerracao, string> = {
   atrasada: 'Atrasada',
   esta_semana: 'Esta semana',
   em_dia: 'Em dia',
+}
+
+export const ROTULOS_ESTADO_ENCARGO: Record<EstadoEncargo, string> = {
+  pendente: 'Por pagar',
+  pago: 'Pago',
+  anulado: 'Anulado',
 }

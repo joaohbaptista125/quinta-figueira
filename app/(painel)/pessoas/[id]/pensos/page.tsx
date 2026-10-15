@@ -8,6 +8,7 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { Indicador } from '@/components/indicador'
 import {
+  ReceberEncargo,
   ReceberMensalidade,
   ReceberTudo,
 } from '@/components/pagamento-penso'
@@ -50,7 +51,7 @@ export default async function PaginaContaCorrente({
   const { id } = await params
   const supabase = await criarClienteServidor()
 
-  const [pessoa, pensos, recebimentos, contas] = await Promise.all([
+  const [pessoa, pensos, recebimentos, contas, encargos] = await Promise.all([
     supabase.from('pessoas').select('id, nome').eq('id', id).maybeSingle(),
     supabase
       .from('v_pensos_por_receber')
@@ -60,7 +61,7 @@ export default async function PaginaContaCorrente({
     supabase
       .from('recebimentos')
       .select(
-        'id, data, valor, metodo_pagamento, conta_id, mensalidade_id, tipo, periodo, descricao, contas(nome)',
+        'id, data, valor, metodo_pagamento, conta_id, mensalidade_id, encargo_id, tipo, periodo, descricao, contas(nome)',
       )
       .eq('pessoa_id', id)
       .order('data', { ascending: false }),
@@ -69,6 +70,14 @@ export default async function PaginaContaCorrente({
       .select('id, nome')
       .eq('activa', true)
       .order('nome'),
+    // Ferração e companhia: o que o centro adiantou e tem a receber à parte
+    // das mensalidades.
+    supabase
+      .from('v_encargos_por_receber')
+      .select('*')
+      .eq('pessoa_id', id)
+      .neq('estado', 'anulado')
+      .order('data', { ascending: false }),
   ])
 
   if (pessoa.error) return <ErroConsulta erro={pessoa.error} contexto="o cliente" />
@@ -98,7 +107,11 @@ export default async function PaginaContaCorrente({
     (soma, linha) => soma + Number(linha.valor_pago),
     0,
   )
-  const outros = movimentos.filter((movimento) => !movimento.mensalidade_id)
+  const outros = movimentos.filter(
+    (movimento) => !movimento.mensalidade_id && !movimento.encargo_id,
+  )
+
+  const linhasEncargos = encargos.data ?? []
 
   // O último pagamento diz quase sempre como será o próximo: quem paga por
   // transferência continua a pagar por transferência.
@@ -273,6 +286,54 @@ export default async function PaginaContaCorrente({
           )}
         </ConteudoCartao>
       </Cartao>
+
+      {linhasEncargos.length > 0 ? (
+        <Cartao className="mt-4">
+          <CabecalhoCartao>
+            <TituloCartao>Ferração e outros encargos</TituloCartao>
+            <DescricaoCartao>
+              O que o centro adiantou por este cliente, à parte das mensalidades
+            </DescricaoCartao>
+          </CabecalhoCartao>
+          <ConteudoCartao className="px-0 sm:px-0">
+            <ol className="divide-y divide-border border-t border-border">
+              {linhasEncargos.map((linha) => {
+                const falta = Number(linha.valor_em_falta)
+                return (
+                  <li key={linha.encargo_id} className="px-4 py-3 sm:px-5">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <span className="font-medium">{linha.descricao}</span>
+                      <Distintivo cor={falta > 0 ? 'aviso' : 'sucesso'}>
+                        {falta > 0 ? 'Por receber' : 'Recebido'}
+                      </Distintivo>
+                      <span className="tabular ml-auto font-semibold">
+                        {formatarEuros(linha.valor)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formatarData(linha.data)}
+                      {linha.cavalo_nome ? ` · ${linha.cavalo_nome}` : ''}
+                      {falta > 0 && falta !== Number(linha.valor)
+                        ? ` · faltam ${formatarEuros(falta)}`
+                        : ''}
+                    </p>
+
+                    {falta > 0 && contasActivas.length > 0 ? (
+                      <ReceberEncargo
+                        encargoId={linha.encargo_id}
+                        emFalta={falta}
+                        contas={contasActivas}
+                        contaOmissao={contaOmissao}
+                        metodoOmissao={metodoOmissao}
+                      />
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ol>
+          </ConteudoCartao>
+        </Cartao>
+      ) : null}
 
       {outros.length > 0 ? (
         <Cartao className="mt-4">

@@ -6,7 +6,7 @@ import { Hammer } from 'lucide-react'
 import { guardarFerracao } from '@/lib/accoes/ferracoes'
 import { SEM_RESULTADO } from '@/lib/accoes/resultado'
 import { Botao } from '@/components/ui/botao'
-import { Campo, AreaTexto, Entrada, Selector } from '@/components/ui/campos'
+import { Campo, AreaTexto, Caixa, Entrada, Selector } from '@/components/ui/campos'
 import {
   Aviso,
   Cartao,
@@ -45,10 +45,13 @@ export function FerracaoCavalo({
   cavaloId,
   ferracoes,
   podeRegistar,
+  temProprietario,
 }: {
   cavaloId: string
   ferracoes: LinhaFerracao[]
   podeRegistar: boolean
+  /** Sem dono na ficha não há a quem cobrar, e o visto não aparece. */
+  temProprietario: boolean
 }) {
   const ultima = ferracoes[0] ?? null
 
@@ -66,7 +69,11 @@ export function FerracaoCavalo({
 
       <ConteudoCartao className="space-y-3">
         {podeRegistar ? (
-          <FormularioFerracao cavaloId={cavaloId} ultima={ultima} />
+          <FormularioFerracao
+            cavaloId={cavaloId}
+            ultima={ultima}
+            temProprietario={temProprietario}
+          />
         ) : null}
 
         {ferracoes.length > 0 ? (
@@ -178,9 +185,11 @@ function BotaoRegistar() {
 function FormularioFerracao({
   cavaloId,
   ultima,
+  temProprietario,
 }: {
   cavaloId: string
   ultima: LinhaFerracao | null
+  temProprietario: boolean
 }) {
   const [resultado, executar] = useActionState(guardarFerracao, SEM_RESULTADO)
   const prefixo = useId()
@@ -257,9 +266,28 @@ function FormularioFerracao({
           <AreaTexto id={`${prefixo}-notas`} name="notas" rows={2} />
         </Campo>
 
+        {temProprietario ? (
+          /*
+           * Na Quinta da Figueira depende do cliente: uns pagam ao ferrador na
+           * hora, outros vai à conta do centro. Por isso é uma escolha e não
+           * uma regra.
+           */
+          <div className="space-y-1">
+            <Caixa
+              id={`${prefixo}-cobrar`}
+              name="cobrar"
+              etiqueta="Pôr na conta do proprietário"
+            />
+            <p className="pl-6 text-xs text-muted-foreground">
+              Marque só se foi o centro a pagar ao ferrador. Fica a aparecer
+              nos pagamentos do cliente até ser recebido.
+            </p>
+          </div>
+        ) : null}
+
         <p className="text-xs text-muted-foreground">
-          O custo fica aqui como nota do que foi combinado. A despesa do
-          ferrador lança-se no financeiro, imputada a este cavalo.
+          O custo é o que foi combinado com o ferrador. A despesa do centro
+          lança-se à parte, no financeiro, imputada a este cavalo.
         </p>
 
         <BotaoRegistar />

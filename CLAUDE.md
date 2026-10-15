@@ -63,6 +63,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261010090000_convite_de_acesso.sql` | `pessoas.convidado_em` |
 | `…20261010103000_acesso_confirmado.sql` | `pessoas.acesso_confirmado_em` + trigger de entrada |
 | `…20261015120000_ferracoes.sql` | `ferracoes` + `v_ferracao_cavalos` |
+| `…20261015140000_encargos.sql` | `encargos` + `recebimentos.encargo_id` + `v_encargos_por_receber` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -176,6 +177,23 @@ obrigá-lo a pedir à gestão era a maneira certa de o registo não existir. O
 custo que lá fica é nota do que foi combinado; a despesa lança-se no
 financeiro, imputada ao cavalo.
 
+**Encargos avulsos são o que se cobra fora da mensalidade.** A ferração
+obrigou a isto: na Quinta da Figueira **depende do cliente** — uns pagam ao
+ferrador na hora, noutros é o centro que paga e recobra. O segundo caso não
+tinha onde viver, porque uma mensalidade é por contrato × mês e não por
+acontecimento. `encargos` é uma linha de «isto fica a dever-se»: a quem,
+quanto, porquê e de que cavalo. O veterinário e o transporte cabem lá sem
+migração nova, de propósito.
+
+O desenho é o das mensalidades, para quem conhece uma reconhecer o outro: o
+**estado é derivado** dos recebimentos imputados (`recebimentos.encargo_id`,
+trigger `recebimentos_sincronizar_encargo`) e não se escreve à mão; pagamento
+parcial mantém `pendente`; `anulado` nunca é revertido sozinho. Um recebimento
+paga uma mensalidade **ou** um encargo, nunca os dois — com os dois
+preenchidos não se saberia a qual respeitava o dinheiro. O índice único sobre
+`ferracao_id` faz com que a mesma ferração não possa ser cobrada duas vezes,
+e é isso que torna o botão idempotente.
+
 **Avisos, não chat.** `avisos` pertence a um evento OU a uma equipa, nunca aos
 dois. É comunicação de um para muitos: aparece no quadro do dia e vai na
 descrição do evento no calendário do telemóvel. Foi uma decisão deliberada e
@@ -201,6 +219,7 @@ Uma vista sem isto seria um buraco na RLS — se criares outra, não te esqueça
 - `v_pensos_por_receber` — mensalidades com valor pago e valor em falta
 - `v_ferracao_cavalos` — uma linha por cavalo com a última ferração e o estado
   da próxima (`sem_registo`, `sem_data`, `atrasada`, `esta_semana`, `em_dia`)
+- `v_encargos_por_receber` — encargos avulsos com valor pago e valor em falta
 
 ---
 
@@ -304,7 +323,7 @@ supabase/
   migrations/     esquema versionado
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
-                  03 ferração, 04 contratos, 05 cavalos)
+                  03 ferração, 04 contratos, 05 cavalos, 06 encargos)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
