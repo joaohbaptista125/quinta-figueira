@@ -429,6 +429,21 @@ O que o Supabase precisa de ter configurado: o endereço do site e
 o serviço de email de origem manda meia dúzia de mensagens por hora, o que não
 chega para convidar oitenta pessoas.
 
+**Quando o convite não sai, a razão está nos Auth Logs do Supabase**, e a
+mensagem da aplicação di-la em português: `traduzirErroAutenticacao` em
+`lib/accoes/resultado.ts` separa limite de envios (429), SMTP que recusa (500
+ou «Error sending»), contas por email desligadas e endereço recusado, e leva
+sempre a mensagem crua entre parênteses. Antes disto havia uma só frase fixa a
+dizer que o Supabase limitava os emails por hora: mandava esperar uma hora por
+um problema que não passava sozinho. **Não voltes a adivinhar a causa.**
+
+O fornecedor é o Brevo, e já tropeçámos numa armadilha dele: `525 5.7.1
+Unauthorized IP address`. O Brevo só aceita envios de endereços IP autorizados,
+e isso vem ligado de origem nas contas novas. Os IP de saída do Supabase não
+são fixos nem publicados, por isso a lista de autorizados não serve de nada
+aqui — o que resolve é desligar o bloqueio automático em **Settings →
+Security → Authorized IPs**.
+
 ### Listas com saída: raças e pelagens
 
 `<SelectorComOutro>` é uma lista de opções cuja última entrada abre uma caixa
