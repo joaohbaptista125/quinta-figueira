@@ -136,14 +136,19 @@ export function CamposPessoa({
             </Selector>
           </Campo>
 
-          <div className="flex items-end pb-2">
-            <Caixa
-              id="activo"
-              name="activo"
-              etiqueta="Pessoa activa"
-              defaultChecked={pessoa?.activo ?? true}
-            />
-          </div>
+          {pessoa ? (
+            /*
+             * Numa ficha que já existe, activar e desactivar tem botão
+             * próprio no topo. Aqui o valor viaja escondido: a caixa de visto
+             * estava a meio de vinte campos e tanto se passava por ela como
+             * se lhe tocava sem querer ao corrigir um telefone.
+             */
+            <input type="hidden" name="activo" value={pessoa.activo ? 'on' : ''} />
+          ) : (
+            <div className="flex items-end pb-2">
+              <Caixa id="activo" name="activo" etiqueta="Pessoa activa" defaultChecked />
+            </div>
+          )}
         </GrelhaCampos>
 
         <div className="space-y-1.5">

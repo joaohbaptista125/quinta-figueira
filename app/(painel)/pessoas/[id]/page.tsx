@@ -8,7 +8,6 @@ import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposPessoa } from '@/components/formularios/campos-pessoa'
-import { BotaoApagar } from '@/components/botao-apagar'
 import { ConviteAcesso } from '@/components/convite-acesso'
 import { classesBotao } from '@/components/ui/botao'
 import {
@@ -21,7 +20,8 @@ import {
   TituloCartao,
 } from '@/components/ui/superficie'
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
-import { apagarPessoa, guardarPessoa } from '@/lib/accoes/pessoas'
+import { guardarPessoa } from '@/lib/accoes/pessoas'
+import { AccoesPessoa } from '@/components/accoes-pessoa'
 import {
   ROTULOS_METODO,
   ROTULOS_PAPEL,
@@ -97,6 +97,16 @@ export default async function PaginaPessoa({
             {!pessoa.activo ? <Distintivo cor="aviso">Inactivo</Distintivo> : null}
           </span>
         }
+        accoes={
+          podeEditar ? (
+            <AccoesPessoa
+              id={pessoa.id}
+              nome={pessoa.nome}
+              activa={pessoa.activo}
+              eEuPropria={pessoa.id === sessao.id}
+            />
+          ) : null
+        }
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -110,13 +120,6 @@ export default async function PaginaPessoa({
                 accao={guardarPessoa}
                 id={pessoa.id}
                 hrefCancelar="/pessoas"
-                extra={
-                  <BotaoApagar
-                    accao={apagarPessoa}
-                    id={pessoa.id}
-                    confirmacao={`Apagar ${pessoa.nome}? Se tiver cavalos ou movimentos associados, prefira marcar como inactivo.`}
-                  />
-                }
               >
                 <CamposPessoa
                   pessoa={pessoa}

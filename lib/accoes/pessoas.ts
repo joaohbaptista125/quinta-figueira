@@ -113,6 +113,45 @@ async function sincronizarPapeis(pessoaId: string, papeis: PapelPessoa[]) {
   return erroInserir ? traduzirErro(erroInserir) : null
 }
 
+/**
+ * Conta o que prende uma pessoa à aplicação, para a recusa dizer o que é.
+ *
+ * As chaves estrangeiras são `on delete restrict`, e isso é de propósito:
+ * ninguém apaga um histórico de pagamentos por engano. Mas a mensagem que
+ * daqui saía era «tem cavalos, contratos ou recebimentos» — e depois a pessoa
+ * ficava a abrir separadores à procura de qual deles.
+ *
+ * As contagens correm em paralelo e só pedem a contagem, não as linhas.
+ */
+async function oQuePrendePessoa(id: string) {
+  const supabase = await criarClienteServidor()
+  const contar = (tabela: 'cavalos' | 'contratos_penso' | 'recebimentos', coluna: string) =>
+    supabase
+      .from(tabela)
+      .select('id', { count: 'exact', head: true })
+      .eq(coluna, id)
+
+  const [cavalos, contratos, recebimentos] = await Promise.all([
+    contar('cavalos', 'proprietario_id'),
+    contar('contratos_penso', 'cliente_id'),
+    contar('recebimentos', 'pessoa_id'),
+  ])
+
+  const partes: string[] = []
+  const juntar = (n: number | null, um: string, varios: string) => {
+    if (!n) return
+    partes.push(n === 1 ? `1 ${um}` : `${n} ${varios}`)
+  }
+
+  juntar(cavalos.count, 'cavalo', 'cavalos')
+  juntar(contratos.count, 'contrato de penso', 'contratos de penso')
+  juntar(recebimentos.count, 'pagamento registado', 'pagamentos registados')
+
+  if (partes.length === 0) return null
+  if (partes.length === 1) return partes[0]
+  return `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`
+}
+
 export async function apagarPessoa(
   _anterior: ResultadoAccao,
   dados: FormData,
@@ -127,16 +166,74 @@ export async function apagarPessoa(
   })
 
   if (!resultado.ok) {
-    return {
-      ok: false,
-      mensagem:
-        resultado.mensagem === 'Não é possível: o registo está a ser usado noutro sítio.'
-          ? 'Não é possível apagar: esta pessoa tem cavalos, contratos ou recebimentos associados. Marque-a como inactiva.'
-          : resultado.mensagem,
+    if (
+      resultado.mensagem === 'Não é possível: o registo está a ser usado noutro sítio.'
+    ) {
+      const prende = await oQuePrendePessoa(id)
+      return {
+        ok: false,
+        mensagem: prende
+          ? `Não dá para apagar: esta ficha tem ${prende}. Desactive-a — sai das listas e deixa de contar, e o histórico fica de pé.`
+          : 'Não dá para apagar: esta ficha está a ser usada noutro sítio. Desactive-a em vez de a apagar.',
+      }
     }
+    return resultado
   }
 
   redirect(comConfirmacao('/pessoas', 'apagado'))
+}
+
+/**
+ * Tira uma pessoa da circulação, ou volta a pô-la.
+ *
+ * É o que se faz a quem sai do centro, e é quase sempre isto e não apagar: o
+ * que ela pagou e os cavalos que teve são história que o centro precisa de
+ * manter. Existe à parte do formulário porque estava escondido numa caixa a
+ * meio de vinte campos, e ninguém a encontrava quando a recusa de apagar
+ * mandava «marque como inactiva».
+ */
+export async function alternarActivoPessoa(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const id = texto(dados, 'id')
+  if (!id) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const sessao = await obterPessoaSessao()
+  if (!sessao || !eGestao(sessao.perfil)) {
+    return { ok: false, mensagem: 'Sem permissão para esta operação.' }
+  }
+  if (sessao.id === id) {
+    return { ok: false, mensagem: 'Não se pode desactivar a si próprio.' }
+  }
+
+  const supabase = await criarClienteServidor()
+  const { data: pessoa, error: erroLeitura } = await supabase
+    .from('pessoas')
+    .select('nome, activo')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (erroLeitura) return { ok: false, mensagem: traduzirErro(erroLeitura) }
+  if (!pessoa) return { ok: false, mensagem: 'Pessoa não encontrada.' }
+
+  const activar = !pessoa.activo
+  const { error } = await supabase
+    .from('pessoas')
+    .update({ activo: activar })
+    .eq('id', id)
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  revalidatePath('/pessoas')
+  revalidatePath(`/pessoas/${id}`)
+
+  return {
+    ok: true,
+    mensagem: activar
+      ? `${pessoa.nome} voltou às listas.`
+      : `${pessoa.nome} ficou inactiva. Sai das listas, e o histórico fica.`,
+  }
 }
 
 // --- Convite de acesso ------------------------------------------------------

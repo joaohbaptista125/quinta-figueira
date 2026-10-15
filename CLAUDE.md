@@ -377,6 +377,17 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   está lá e a ficha não se parece com o formulário de criação.
 - Formulários longos dividem-se em `<SeccaoCampos>` com título. Os de pessoa e
   de cavalo eram vinte campos seguidos sem divisão nenhuma.
+- **Quem sai do centro desactiva-se; apagar é para o engano de digitação.**
+  As chaves estrangeiras são `on delete restrict` de propósito: ninguém apaga
+  um histórico de pagamentos sem dar por isso. O que estava mal era o caminho
+  — o botão de apagar vivia no fundo do formulário, por baixo de vinte
+  campos, a recusa dizia só «tem cavalos, contratos ou recebimentos», e
+  «marcar como inactiva» era uma caixa de visto escondida no meio dos mesmos
+  vinte campos. Agora `<AccoesPessoa>` põe **Desactivar** e **Apagar** lado a
+  lado no cabeçalho da ficha, `oQuePrendePessoa()` conta o que bloqueia e a
+  recusa di-lo («tem 2 cavalos e 7 pagamentos registados»), e o estado activo
+  deixou de ser editável pelo formulário — viaja escondido, para não se lhe
+  tocar sem querer ao corrigir um telefone. Ninguém se desactiva a si próprio.
 - Fichas e formulários levam `voltar={{ href, rotulo }}` no
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
