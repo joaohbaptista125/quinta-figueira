@@ -1,6 +1,5 @@
 'use client'
 
-import { UserCheck, UserMinus } from 'lucide-react'
 import { alternarActivoPessoa, apagarPessoa } from '@/lib/accoes/pessoas'
 import { AccoesFicha } from '@/components/accoes-ficha'
 
@@ -33,7 +32,7 @@ export function AccoesPessoa({
               titulo: activa
                 ? `${primeiroNome} sai das listas e dos formulários, e tudo o que já lá está fica`
                 : `${primeiroNome} volta a aparecer nas listas`,
-              Icone: activa ? UserMinus : UserCheck,
+              icone: activa ? 'desactivar' : 'reactivar',
             }
       }
       apagar={{

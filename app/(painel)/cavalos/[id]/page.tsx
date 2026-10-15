@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Eye, EyeOff } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
@@ -131,7 +130,7 @@ export default async function PaginaCavalo({
                 titulo: cavalo.activo
                   ? `${cavalo.nome} sai das listas e das convocatórias, e tudo o que já lá está fica`
                   : `${cavalo.nome} volta a aparecer nas listas`,
-                Icone: cavalo.activo ? EyeOff : Eye,
+                icone: cavalo.activo ? 'esconder' : 'mostrar',
               }}
               apagar={{
                 accao: apagarCavalo,

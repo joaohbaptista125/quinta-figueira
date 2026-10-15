@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
-import { CalendarPlus, CalendarX } from 'lucide-react'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
@@ -73,7 +72,7 @@ export default async function PaginaContrato({
               titulo: contrato.data_fim
                 ? 'Volta a estar em vigor e a gerar mensalidades'
                 : 'Deixa de gerar mensalidades; as que já existem ficam',
-              Icone: contrato.data_fim ? CalendarPlus : CalendarX,
+              icone: contrato.data_fim ? 'reabrir' : 'terminar',
             }}
             apagar={{
               accao: apagarContrato,

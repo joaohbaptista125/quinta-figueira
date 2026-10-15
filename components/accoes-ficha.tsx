@@ -2,12 +2,39 @@
 
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { Trash2 } from 'lucide-react'
+import {
+  CalendarPlus,
+  CalendarX,
+  Eye,
+  EyeOff,
+  Trash2,
+  UserCheck,
+  UserMinus,
+} from 'lucide-react'
 import { SEM_RESULTADO, type ResultadoAccao } from '@/lib/accoes/resultado'
 import { Botao } from '@/components/ui/botao'
 import { Aviso } from '@/components/ui/superficie'
 
 type Accao = (anterior: ResultadoAccao, dados: FormData) => Promise<ResultadoAccao>
+
+/**
+ * O ícone viaja como nome, não como componente.
+ *
+ * Quem desenha estas fichas é um Server Component, e uma função não atravessa
+ * a fronteira para o cliente — passar `Icone: Eye` rebentava a página inteira
+ * ao desenhar, com um erro que não dizia de onde vinha. Server Actions são a
+ * excepção (vão marcadas); um componente de ícone não é.
+ */
+const ICONES = {
+  desactivar: UserMinus,
+  reactivar: UserCheck,
+  esconder: EyeOff,
+  mostrar: Eye,
+  terminar: CalendarX,
+  reabrir: CalendarPlus,
+} as const
+
+export type IconeAccao = keyof typeof ICONES
 
 /**
  * As duas saídas de uma ficha, no cabeçalho: tirar da circulação, ou apagar.
@@ -35,7 +62,7 @@ export function AccoesFicha({
     rotulo: string
     /** O que vai acontecer, para o `title` do botão. */
     titulo?: string
-    Icone: React.ComponentType<{ className?: string }>
+    icone: IconeAccao
   }
   apagar: {
     accao: Accao
@@ -61,7 +88,7 @@ export function AccoesFicha({
             <BotaoAlternar
               rotulo={alternar.rotulo}
               titulo={alternar.titulo}
-              Icone={alternar.Icone}
+              icone={alternar.icone}
             />
           </form>
         ) : null}
@@ -94,16 +121,17 @@ async function naoFazNada(): Promise<ResultadoAccao> {
 function BotaoAlternar({
   rotulo,
   titulo,
-  Icone,
+  icone,
 }: {
   rotulo: string
   titulo?: string
-  Icone: React.ComponentType<{ className?: string }>
+  icone: IconeAccao
 }) {
   const { pending } = useFormStatus()
+  const Icone = ICONES[icone]
   return (
     <Botao type="submit" variante="contorno" disabled={pending} title={titulo}>
-      <Icone className="size-4" />
+      <Icone className="size-4" aria-hidden />
       {pending ? 'Um instante…' : rotulo}
     </Botao>
   )
