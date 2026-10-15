@@ -70,3 +70,46 @@ export function traduzirErro(erro: {
 
   return erro.message || 'Ocorreu um erro inesperado.'
 }
+
+/**
+ * Traduz erros de autenticação do Supabase (o envio do convite, sobretudo).
+ *
+ * Isto existe porque a mensagem que estava aqui antes era uma só, fixa, a
+ * dizer que o Supabase limita o número de emails por hora. Assumia uma causa
+ * em vez de mostrar a verdadeira: com o SMTP mal configurado — remetente não
+ * verificado no fornecedor, chave de SMTP trocada pela palavra-passe da conta,
+ * Login errado — o Supabase devolve um 500 «Error sending …», que não tem nada
+ * a ver com limites. Quem lia a mensagem esperava uma hora à toa.
+ *
+ * A mensagem crua vai sempre no fim, entre parênteses: é o que permite a quem
+ * está ao balcão repetir ao telefone o que a aplicação disse.
+ */
+export function traduzirErroAutenticacao(erro: {
+  code?: string
+  status?: number
+  message?: string
+}): string {
+  const codigo = erro.code ?? ''
+  const estado = erro.status ?? 0
+  const bruto = erro.message ?? ''
+  const texto = bruto.toLowerCase()
+  const cru = bruto ? ` (${bruto})` : ''
+
+  if (estado === 429 || codigo === 'over_email_send_rate_limit') {
+    return `Demasiados emails num curto espaço de tempo. O Supabase tem um limite por hora em Authentication → Rate Limits — aumente-o ou tente daqui a pouco.${cru}`
+  }
+
+  if (estado >= 500 || texto.includes('error sending')) {
+    return `O Supabase não conseguiu entregar o email ao servidor de envio. Confirme o SMTP em Authentication → Emails: remetente verificado no fornecedor, e a chave de SMTP (não a palavra-passe da conta) no campo da palavra-passe.${cru}`
+  }
+
+  if (codigo === 'signup_disabled' || codigo === 'email_provider_disabled') {
+    return `O Supabase tem as contas por email desligadas. Ligue-as em Authentication → Providers → Email.${cru}`
+  }
+
+  if (codigo === 'validation_failed' || texto.includes('invalid email')) {
+    return `O Supabase recusou o endereço de email da ficha. Verifique se está bem escrito.${cru}`
+  }
+
+  return `Não foi possível enviar o convite.${cru || ' O Supabase não disse porquê.'}`
+}

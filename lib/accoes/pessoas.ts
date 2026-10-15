@@ -18,7 +18,11 @@ import {
   texto,
   textoOuNulo,
 } from './comum'
-import { traduzirErro, type ResultadoAccao } from './resultado'
+import {
+  traduzirErro,
+  traduzirErroAutenticacao,
+  type ResultadoAccao,
+} from './resultado'
 
 const PAPEIS_VALIDOS = Object.keys(ROTULOS_PAPEL) as PapelPessoa[]
 const PERFIS_VALIDOS = Object.keys(ROTULOS_PERFIL) as PerfilAcesso[]
@@ -205,11 +209,11 @@ export async function convidarPessoa(
   })
 
   if (erroEnvio) {
-    return {
-      ok: false,
-      mensagem:
-        'Não foi possível enviar o convite. O Supabase limita o número de emails por hora — tente daqui a pouco.',
-    }
+    // Nada de adivinhar a causa: a mensagem vem do erro real. A versão
+    // anterior dizia sempre «o Supabase limita os emails por hora», e com o
+    // SMTP mal configurado isso mandava esperar uma hora por um problema que
+    // não passava sozinho.
+    return { ok: false, mensagem: traduzirErroAutenticacao(erroEnvio) }
   }
 
   await supabase
