@@ -1,12 +1,10 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { exigirGestao } from '@/lib/sessao'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { FormularioEntidade } from '@/components/formulario-entidade'
 import { CamposRecebimento } from '@/components/formularios/campos-recebimento'
-import { Aviso, Cartao, ConteudoCartao } from '@/components/ui/superficie'
-import { classesBotao } from '@/components/ui/botao'
+import { Cartao, ConteudoCartao } from '@/components/ui/superficie'
 import { guardarRecebimento } from '@/lib/accoes/financeiro'
 import { contasActivas, pessoasActivas } from '@/lib/consultas'
 import { mensalidadesEmAberto } from '@/lib/consultas-financeiro'
@@ -27,25 +25,6 @@ export default async function PaginaNovoRecebimento({
     contasActivas(supabase),
     mensalidadesEmAberto(supabase),
   ])
-
-  if (contas.length === 0) {
-    return (
-      <>
-        <CabecalhoPagina titulo="Registar recebimento" />
-        <Cartao className="max-w-2xl">
-          <ConteudoCartao className="space-y-3 pt-4 sm:pt-5">
-            <Aviso tom="atencao">
-              Ainda não há contas registadas. Um recebimento entra sempre numa
-              conta.
-            </Aviso>
-            <Link href="/financeiro/contas/nova" className={classesBotao()}>
-              Criar conta
-            </Link>
-          </ConteudoCartao>
-        </Cartao>
-      </>
-    )
-  }
 
   const preSeleccionada = mensalidade
     ? mensalidades.find((linha) => linha.mensalidade_id === mensalidade)

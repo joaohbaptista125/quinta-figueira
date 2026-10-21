@@ -215,13 +215,8 @@ export async function PainelGestao({
               </Tabela>
             ) : (
               <SemRegistos
-                titulo="Ainda não há contas"
-                descricao="Crie a caixa e as contas bancárias para começar a registar movimentos."
-                accao={
-                  <Link href="/financeiro/contas/nova" className={classesBotao()}>
-                    Criar conta
-                  </Link>
-                }
+                titulo="Ainda não houve movimentos"
+                descricao="A caixa do centro aparece aqui sozinha no primeiro lançamento."
               />
             )}
           </ConteudoCartao>

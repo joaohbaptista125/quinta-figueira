@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { contaDeDestino } from '@/lib/contas'
 import { exigirPessoa } from '@/lib/sessao'
 import { avisar, pessoasDaGestao } from '@/lib/notificacoes/enviar'
 import { formatarEuros, formatarMes, hoje } from '@/lib/formatos'
@@ -181,7 +182,6 @@ export async function confirmarDeclaracao(
   const id = texto(dados, 'id')
   const contaId = textoOuNulo(dados, 'conta_id')
   if (!id) return { ok: false, mensagem: 'Registo inválido.' }
-  if (!contaId) return { ok: false, mensagem: 'Escolha a conta de destino.' }
 
   const metodo = textoOuNulo(dados, 'metodo_pagamento')
   if (metodo && !METODOS.includes(metodo as MetodoPagamento)) {
@@ -201,9 +201,16 @@ export async function confirmarDeclaracao(
     .eq('id', id)
     .maybeSingle()
 
+  // Com uma conta só — ou nenhuma — não se pergunta nada: usa-se a que houver,
+  // e se não houver nenhuma nasce a Caixa. Obrigar a montar contas antes de
+  // confirmar um pagamento era burocracia, e ainda por cima com a palavra
+  // «conta» a querer dizer outra coisa.
+  const destino = await contaDeDestino(supabase, contaId)
+  if (!destino.ok) return { ok: false, mensagem: destino.erro }
+
   const { error } = await supabase.rpc('confirmar_pagamento_declarado', {
     p_declaracao: id,
-    p_conta: contaId,
+    p_conta: destino.id,
     p_valor: valor,
     p_data: textoOuNulo(dados, 'data'),
     p_metodo: (metodo as MetodoPagamento | null) ?? null,

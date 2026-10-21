@@ -113,21 +113,24 @@ export function CamposDespesa({
           </Selector>
         </Campo>
 
-        <Campo etiqueta="Conta de origem" htmlFor="conta_id" obrigatorio>
-          <Selector
-            id="conta_id"
-            name="conta_id"
-            defaultValue={despesa?.conta_id ?? ''}
-            required
-          >
-            <option value="">— Escolher —</option>
-            {contas.map((conta) => (
-              <option key={conta.id} value={conta.id}>
-                {conta.nome}
-              </option>
-            ))}
-          </Selector>
-        </Campo>
+        {/* Só se pergunta quando há mais do que uma conta. Com uma só, a
+            acção usa-a; sem nenhuma, cria a Caixa. */}
+        {contas.length > 1 ? (
+          <Campo etiqueta="Saiu de" htmlFor="conta_id">
+            <Selector
+              id="conta_id"
+              name="conta_id"
+              defaultValue={despesa?.conta_id ?? ''}
+            >
+              <option value="">— a caixa do centro —</option>
+              {contas.map((conta) => (
+                <option key={conta.id} value={conta.id}>
+                  {conta.nome}
+                </option>
+              ))}
+            </Selector>
+          </Campo>
+        ) : null}
 
         <Campo etiqueta="Fornecedor" htmlFor="fornecedor_id">
           <Selector

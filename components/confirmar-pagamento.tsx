@@ -46,15 +46,6 @@ export function ConfirmarPagamento({
 }) {
   const [aRecusar, setARecusar] = useState(false)
 
-  if (contas.length === 0) {
-    return (
-      <Aviso tom="atencao">
-        Não há nenhuma conta activa, e um recebimento tem de entrar nalguma.
-        Crie a caixa ou a conta bancária para poder confirmar pagamentos.
-      </Aviso>
-    )
-  }
-
   if (aRecusar) {
     return <Recusar declaracaoId={declaracaoId} aoDesistir={() => setARecusar(false)} />
   }
@@ -98,7 +89,13 @@ function Confirmar({
 
       <EscolhaMetodo omissao={metodo} legenda="Como entrou" />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div
+        className={
+          contas.length > 1
+            ? 'grid gap-3 sm:grid-cols-3'
+            : 'grid gap-3 sm:grid-cols-2'
+        }
+      >
         <Campo etiqueta="Valor" htmlFor={`${prefixo}-valor`}>
           <Entrada
             id={`${prefixo}-valor`}
@@ -117,20 +114,23 @@ function Confirmar({
           />
         </Campo>
 
-        <Campo etiqueta="Entrou na conta" htmlFor={`${prefixo}-conta`}>
-          <Selector
-            id={`${prefixo}-conta`}
-            name="conta_id"
-            defaultValue={contaOmissao}
-            required
-          >
-            {contas.map((conta) => (
-              <option key={conta.id} value={conta.id}>
-                {conta.nome}
-              </option>
-            ))}
-          </Selector>
-        </Campo>
+        {/* Com uma conta só, ou nenhuma, não há escolha nenhuma a fazer: o
+            dinheiro entra na caixa do centro, e a acção trata disso. */}
+        {contas.length > 1 ? (
+          <Campo etiqueta="Entrou em" htmlFor={`${prefixo}-conta`}>
+            <Selector
+              id={`${prefixo}-conta`}
+              name="conta_id"
+              defaultValue={contaOmissao}
+            >
+              {contas.map((conta) => (
+                <option key={conta.id} value={conta.id}>
+                  {conta.nome}
+                </option>
+              ))}
+            </Selector>
+          </Campo>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-2">

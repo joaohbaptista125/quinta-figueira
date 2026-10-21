@@ -106,9 +106,9 @@ export default async function PaginaContas() {
         ) : (
           <SemRegistos
             titulo="Ainda não há contas"
-            descricao="Crie pelo menos a caixa em dinheiro e a conta bancária principal."
+            descricao="Não é preciso criar nenhuma: a caixa do centro nasce sozinha no primeiro lançamento. Crie uma conta à parte só se quiser separar o dinheiro por banco."
             accao={
-              <Link href="/financeiro/contas/nova" className={classesBotao()}>
+              <Link href="/financeiro/contas/nova" className={classesBotao('contorno')}>
                 Nova conta
               </Link>
             }

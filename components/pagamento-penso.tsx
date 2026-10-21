@@ -40,20 +40,23 @@ function CamposComuns({
           />
         </Campo>
 
-        <Campo etiqueta="Entrou na conta" htmlFor={`${prefixo}-conta`}>
-          <Selector
-            id={`${prefixo}-conta`}
-            name="conta_id"
-            defaultValue={contaOmissao}
-            required
-          >
-            {contas.map((conta) => (
-              <option key={conta.id} value={conta.id}>
-                {conta.nome}
-              </option>
-            ))}
-          </Selector>
-        </Campo>
+        {/* Só se pergunta quando há mais do que uma; com uma conta só a
+            pergunta não tem resposta errada nem certa. */}
+        {contas.length > 1 ? (
+          <Campo etiqueta="Entrou em" htmlFor={`${prefixo}-conta`}>
+            <Selector
+              id={`${prefixo}-conta`}
+              name="conta_id"
+              defaultValue={contaOmissao}
+            >
+              {contas.map((conta) => (
+                <option key={conta.id} value={conta.id}>
+                  {conta.nome}
+                </option>
+              ))}
+            </Selector>
+          </Campo>
+        ) : null}
       </div>
     </>
   )

@@ -16,7 +16,6 @@ import { classesBotao } from '@/components/ui/botao'
 import { LembrarPagamento } from '@/components/lembrar-pagamento'
 import { PagamentosPorConfirmar } from '@/components/pagamentos-por-confirmar'
 import {
-  Aviso,
   Cartao,
   CabecalhoCartao,
   ConteudoCartao,
@@ -194,17 +193,7 @@ export default async function PaginaContaCorrente({
 
       <PagamentosPorConfirmar pessoaId={id} />
 
-      {contasActivas.length === 0 ? (
-        <Aviso tom="atencao" className="mt-4">
-          Não há nenhuma conta activa, e um recebimento tem de entrar nalguma.{' '}
-          <Link href="/financeiro/contas/nova" className="underline">
-            Crie a caixa ou a conta bancária
-          </Link>{' '}
-          para poder registar pagamentos.
-        </Aviso>
-      ) : null}
-
-      {totalEmFalta > 0 && contasActivas.length > 0 ? (
+      {totalEmFalta > 0 ? (
         <Cartao className="mt-4">
           <CabecalhoCartao>
             <TituloCartao>Receber</TituloCartao>
@@ -295,7 +284,7 @@ export default async function PaginaContaCorrente({
                       </ul>
                     ) : null}
 
-                    {falta > 0 && contasActivas.length > 0 ? (
+                    {falta > 0 ? (
                       <ReceberMensalidade
                         mensalidadeId={linha.mensalidade_id}
                         emFalta={falta}
@@ -353,7 +342,7 @@ export default async function PaginaContaCorrente({
                         : ''}
                     </p>
 
-                    {falta > 0 && contasActivas.length > 0 ? (
+                    {falta > 0 ? (
                       <ReceberEncargo
                         encargoId={linha.encargo_id}
                         emFalta={falta}

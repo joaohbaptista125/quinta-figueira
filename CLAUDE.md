@@ -141,6 +141,28 @@ lista — nunca o uses para nada que se pareça com uma operação bancária. Li
 a app a uma conta real foi uma hipótese posta de lado por causa do risco: não
 a reintroduzas sem pedido explícito.
 
+**Ninguém tem de criar uma conta para registar dinheiro, e isto já partiu o
+uso real.** `recebimentos.conta_id` e `despesas.conta_id` são `not null` — é o
+que faz `v_saldos_contas` bater certo, e fica assim —, mas a aplicação estava a
+transformar isso num muro: confirmar um pagamento, lançar uma despesa ou
+registar um recebimento batiam todos em «ainda não há contas registadas, crie
+uma conta». Para um centro que não liga a app a banco nenhum isso é burocracia
+pura, ainda por cima com a palavra «conta» a querer dizer outra coisa.
+
+`contaDeDestino()` em `lib/contas.ts` resolve-o: usa a conta escolhida, ou a
+que houver, e **se não houver nenhuma cria a «Caixa»** no momento em que o
+primeiro movimento precisa dela. As quatro acções que lançam dinheiro
+(`guardarDespesa`, `guardarRecebimento`, `receberPensos`, `receberEncargo`) e a
+confirmação de pagamentos passam por lá. Um 23505 na criação não é erro: é
+outra sessão a ter criado a Caixa primeiro, e é essa que se usa.
+
+Do lado da interface, a regra é **só se pergunta quando há mais do que uma
+conta**. Com uma só, ou nenhuma, o selector não aparece em lado nenhum — nem no
+painel de confirmar, nem no de receber, nem nos formulários completos. E
+nenhum ecrã volta a mandar criar contas: os estados vazios dizem que a caixa
+nasce sozinha, e criar uma conta à parte é para quem quiser separar o dinheiro
+por banco.
+
 **Raças e pelagens são uma lista, não uma chave estrangeira.**
 `opcoes_cavalo` (tipo × valor) é o que o formulário oferece, mas
 `cavalos.raca` e `cavalos.pelagem` continuam a ser `text`. É de propósito: um
@@ -429,6 +451,7 @@ lib/
   rotulos.ts      rótulos PT-PT dos enumerados
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
   origem.ts       o endereço público que vai nos links de email (+ testes)
+  contas.ts       a conta onde o dinheiro entra, criada sozinha se faltar
   notificacoes/enviar.ts  o envio de avisos — o único sítio com a chave de serviço
   supabase/sem-sessao.ts  cliente sem cookies, para falar em nome de outra pessoa
 supabase/

@@ -19,6 +19,7 @@ import {
   textoOuNulo,
   valorOuNulo,
 } from './comum'
+import { contaDeDestino } from '@/lib/contas'
 import { traduzirErro, type ResultadoAccao } from './resultado'
 
 const METODOS = Object.keys(ROTULOS_METODO) as MetodoPagamento[]
@@ -41,7 +42,6 @@ export async function guardarDespesa(
 
   if (!descricao) return { ok: false, mensagem: 'Escreva uma descrição.' }
   if (!categoriaId) return { ok: false, mensagem: 'Escolha a categoria.' }
-  if (!contaId) return { ok: false, mensagem: 'Escolha a conta de origem.' }
   if (valorTotal == null || valorTotal < 0) {
     return { ok: false, mensagem: 'Indique um valor válido.' }
   }
@@ -54,6 +54,11 @@ export async function guardarDespesa(
   const anexoPath = textoOuNulo(dados, 'anexo_path')
 
   const supabase = await criarClienteServidor()
+  // Sem conta escolhida usa-se a que houver, e se não houver nenhuma nasce a
+  // Caixa. Ninguém tem de montar contas para registar dinheiro.
+  const destino = await contaDeDestino(supabase, contaId)
+  if (!destino.ok) return { ok: false, mensagem: destino.erro }
+  const conta = destino.id
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -69,7 +74,7 @@ export async function guardarDespesa(
       valor_total: valorTotal,
       taxa_iva: valorOuNulo(dados, 'taxa_iva') ?? 0,
       metodo_pagamento: metodo,
-      conta_id: contaId,
+      conta_id: conta,
       paga: booleano(dados, 'paga'),
       cavalo_id: textoOuNulo(dados, 'cavalo_id'),
       notas: textoOuNulo(dados, 'notas'),
@@ -136,7 +141,6 @@ export async function guardarRecebimento(
   const tipo = texto(dados, 'tipo')
 
   if (!pessoaId) return { ok: false, mensagem: 'Escolha a pessoa.' }
-  if (!contaId) return { ok: false, mensagem: 'Escolha a conta de destino.' }
   if (valor == null || valor <= 0) {
     return { ok: false, mensagem: 'Indique um valor maior do que zero.' }
   }
@@ -155,6 +159,11 @@ export async function guardarRecebimento(
     tipo === 'penso' ? textoOuNulo(dados, 'mensalidade_id') : null
 
   const supabase = await criarClienteServidor()
+  // Sem conta escolhida usa-se a que houver, e se não houver nenhuma nasce a
+  // Caixa. Ninguém tem de montar contas para registar dinheiro.
+  const destino = await contaDeDestino(supabase, contaId)
+  if (!destino.ok) return { ok: false, mensagem: destino.erro }
+  const conta = destino.id
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -167,7 +176,7 @@ export async function guardarRecebimento(
       pessoa_id: pessoaId,
       valor,
       metodo_pagamento: metodo,
-      conta_id: contaId,
+      conta_id: conta,
       tipo,
       mensalidade_id: mensalidadeId,
       periodo,
@@ -293,11 +302,15 @@ export async function receberPensos(
   }
 
   const contaId = textoOuNulo(dados, 'conta_id')
-  if (!contaId) return { ok: false, mensagem: 'Escolha a conta de destino.' }
 
   const data = textoOuNulo(dados, 'data') ?? hoje()
 
   const supabase = await criarClienteServidor()
+  // Sem conta escolhida usa-se a que houver, e se não houver nenhuma nasce a
+  // Caixa. Ninguém tem de montar contas para registar dinheiro.
+  const destino = await contaDeDestino(supabase, contaId)
+  if (!destino.ok) return { ok: false, mensagem: destino.erro }
+  const conta = destino.id
 
   // O que falta de cada mensalidade vem da base, não do formulário: entre
   // abrir a página e carregar no botão pode ter entrado outro pagamento.
@@ -328,7 +341,7 @@ export async function receberPensos(
       pessoa_id: linha.cliente_id,
       valor: valorEscrito ?? Number(linha.valor_em_falta),
       metodo_pagamento: metodo as MetodoPagamento,
-      conta_id: contaId,
+      conta_id: conta,
       tipo: 'penso' as TipoRecebimento,
       mensalidade_id: linha.mensalidade_id,
       periodo: linha.periodo,
@@ -382,11 +395,15 @@ export async function receberEncargo(
   }
 
   const contaId = textoOuNulo(dados, 'conta_id')
-  if (!contaId) return { ok: false, mensagem: 'Escolha a conta de destino.' }
 
   const data = textoOuNulo(dados, 'data') ?? hoje()
 
   const supabase = await criarClienteServidor()
+  // Sem conta escolhida usa-se a que houver, e se não houver nenhuma nasce a
+  // Caixa. Ninguém tem de montar contas para registar dinheiro.
+  const destino = await contaDeDestino(supabase, contaId)
+  if (!destino.ok) return { ok: false, mensagem: destino.erro }
+  const conta = destino.id
   const { data: linha, error: erroLeitura } = await supabase
     .from('v_encargos_por_receber')
     .select('encargo_id, pessoa_id, descricao, valor_em_falta, estado')
@@ -417,7 +434,7 @@ export async function receberEncargo(
     pessoa_id: linha.pessoa_id,
     valor,
     metodo_pagamento: metodo as MetodoPagamento,
-    conta_id: contaId,
+    conta_id: conta,
     tipo: 'outro' as TipoRecebimento,
     encargo_id: linha.encargo_id,
     descricao: linha.descricao,
