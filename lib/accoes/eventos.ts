@@ -8,7 +8,7 @@ import {
   ROTULOS_TIPO_EVENTO,
   ROTULOS_TIPO_EVENTO_CURTO,
 } from '@/lib/rotulos'
-import { formatarDiaCurto, formatarHora } from '@/lib/formatos'
+import { deslocarDias, formatarDiaCurto, formatarHora } from '@/lib/formatos'
 import { avisar } from '@/lib/notificacoes/enviar'
 import type { EstadoParticipacao, TipoEvento } from '@/lib/tipos-bd'
 import {
@@ -16,6 +16,7 @@ import {
   comConfirmacao,
   booleano,
   gravar,
+  inteiroOuNulo,
   listaTexto,
   querContinuar,
   texto,
@@ -61,19 +62,29 @@ export async function guardarEvento(
 
   const equipaId = textoOuNulo(dados, 'equipa_id')
 
+  // Repetir só faz sentido ao marcar. Numa edição o campo nem aparece: mudar
+  // a hora de uma aula não devia criar sete aulas novas.
+  const semanas = id ? 1 : Math.min(Math.max(inteiroOuNulo(dados, 'semanas') ?? 1, 1), 52)
+  const serieId = semanas > 1 ? crypto.randomUUID() : null
+
+  const comuns = {
+    tipo: tipo as TipoEvento,
+    titulo: textoOuNulo(dados, 'titulo'),
+    hora_inicio: horaInicio,
+    hora_fim: horaFim,
+    local: textoOuNulo(dados, 'local'),
+    responsavel_id: textoOuNulo(dados, 'responsavel_id'),
+    equipa_id: equipaId,
+    notas: textoOuNulo(dados, 'notas'),
+  }
+
   const resultado = await gravar({
     tabela: 'eventos',
     id,
     valores: {
-      tipo,
-      titulo: textoOuNulo(dados, 'titulo'),
+      ...comuns,
       data,
-      hora_inicio: horaInicio,
-      hora_fim: horaFim,
-      local: textoOuNulo(dados, 'local'),
-      responsavel_id: textoOuNulo(dados, 'responsavel_id'),
-      equipa_id: equipaId,
-      notas: textoOuNulo(dados, 'notas'),
+      serie_id: serieId,
       ...(id ? {} : { criado_por: user?.id ?? null }),
     },
     revalidar: CAMINHOS,
@@ -82,21 +93,187 @@ export async function guardarEvento(
 
   if (!resultado.ok || !resultado.id) return resultado
 
-  // Marcar a equipa num evento novo convoca-a: é o atalho que evita escolher
-  // os mesmos oito jogadores todas as semanas.
-  if (!id && equipaId) {
-    const erro = await convocarMembrosDaEquipa(resultado.id, equipaId)
-    if (erro) {
+  const criados = [resultado.id]
+
+  // As repetições são linhas independentes com a mesma etiqueta: cancelar uma
+  // não mexe nas outras, e é isso que se quer quando a aula de 4 de Novembro
+  // cai por causa da chuva.
+  if (semanas > 1) {
+    const { data: seguintes, error } = await supabase
+      .from('eventos')
+      .insert(
+        Array.from({ length: semanas - 1 }, (_, i) => ({
+          ...comuns,
+          data: deslocarDias(data, (i + 1) * 7),
+          serie_id: serieId,
+          criado_por: user?.id ?? null,
+        })),
+      )
+      .select('id')
+
+    if (error) {
       return {
         ok: true,
-        mensagem: `Evento criado, mas a convocatória falhou: ${erro}`,
+        mensagem: `A primeira marcação ficou feita, mas as repetições falharam: ${traduzirErro(error)}`,
+      }
+    }
+
+    criados.push(...(seguintes ?? []).map((evento) => evento.id))
+  }
+
+  // Marcar a equipa num evento novo convoca-a: é o atalho que evita escolher
+  // os mesmos oito jogadores todas as semanas. Com repetição, convoca em
+  // todas — senão a repetição só poupava metade do trabalho.
+  if (!id && equipaId) {
+    for (const eventoId of criados) {
+      const erro = await convocarMembrosDaEquipa(eventoId, equipaId)
+      if (erro) {
+        return {
+          ok: true,
+          mensagem: `Marcações criadas, mas a convocatória falhou: ${erro}`,
+        }
       }
     }
   }
 
-  revalidatePath(`/agenda/${resultado.id}`)
-  if (querContinuar(dados)) return resultado
+  for (const eventoId of criados) revalidatePath(`/agenda/${eventoId}`)
+
+  if (querContinuar(dados)) {
+    return semanas > 1
+      ? { ...resultado, mensagem: `${semanas} marcações criadas, de semana a semana.` }
+      : resultado
+  }
+
   redirect(comConfirmacao(`/agenda/${resultado.id}`, id ? 'guardado' : 'criado'))
+}
+
+/**
+ * Copia os convocados deste evento para as marcações seguintes da série.
+ *
+ * É o passo que falta à repetição: marcar oito terças de uma vez não serve de
+ * nada se depois for preciso convocar os mesmos quatro alunos oito vezes.
+ *
+ * Um cavalo já ocupado à mesma hora noutro evento faz falhar **essa linha** e
+ * mais nenhuma — a restrição de exclusão trata disso —, e a mensagem diz
+ * quantas ficaram por fora em vez de fingir que correu tudo bem.
+ */
+export async function copiarConvocatoriaDaSerie(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const eventoId = texto(dados, 'evento_id')
+  if (!eventoId) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const supabase = await criarClienteServidor()
+
+  const { data: evento } = await supabase
+    .from('eventos')
+    .select('serie_id, data')
+    .eq('id', eventoId)
+    .maybeSingle()
+
+  if (!evento?.serie_id) {
+    return { ok: false, mensagem: 'Esta marcação não faz parte de nenhuma série.' }
+  }
+
+  const [convocados, seguintes] = await Promise.all([
+    supabase
+      .from('evento_participantes')
+      .select('pessoa_id, cavalo_id')
+      .eq('evento_id', eventoId),
+    supabase
+      .from('eventos')
+      .select('id')
+      .eq('serie_id', evento.serie_id)
+      .gt('data', evento.data)
+      .eq('cancelado', false),
+  ])
+
+  const lista = convocados.data ?? []
+  const destinos = seguintes.data ?? []
+
+  if (lista.length === 0) {
+    return { ok: false, mensagem: 'Não há ninguém convocado para copiar.' }
+  }
+  if (destinos.length === 0) {
+    return { ok: false, mensagem: 'Não há marcações seguintes nesta série.' }
+  }
+
+  let falhadas = 0
+  for (const destino of destinos) {
+    for (const convocado of lista) {
+      const { error } = await supabase.from('evento_participantes').upsert(
+        {
+          evento_id: destino.id,
+          pessoa_id: convocado.pessoa_id,
+          cavalo_id: convocado.cavalo_id,
+        },
+        { onConflict: 'evento_id,pessoa_id', ignoreDuplicates: true },
+      )
+      if (error) falhadas += 1
+    }
+    revalidatePath(`/agenda/${destino.id}`)
+  }
+
+  for (const caminho of CAMINHOS) revalidatePath(caminho)
+
+  const quantas = destinos.length === 1 ? '1 marcação' : `${destinos.length} marcações`
+
+  return {
+    ok: true,
+    mensagem:
+      falhadas > 0
+        ? `Copiado para ${quantas}, com ${falhadas} por fora — quase sempre um cavalo já ocupado nessa hora. Confirme as datas em falta.`
+        : `Copiado para ${quantas}.`,
+  }
+}
+
+/** Cancela as marcações seguintes da mesma série. A desta fica como está. */
+export async function cancelarSeguintesDaSerie(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const eventoId = texto(dados, 'evento_id')
+  const motivo = textoOuNulo(dados, 'motivo')
+  if (!eventoId) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const supabase = await criarClienteServidor()
+
+  const { data: evento } = await supabase
+    .from('eventos')
+    .select('serie_id, data')
+    .eq('id', eventoId)
+    .maybeSingle()
+
+  if (!evento?.serie_id) {
+    return { ok: false, mensagem: 'Esta marcação não faz parte de nenhuma série.' }
+  }
+
+  const { data: cancelados, error } = await supabase
+    .from('eventos')
+    .update({ cancelado: true, motivo_cancelamento: motivo })
+    .eq('serie_id', evento.serie_id)
+    .gt('data', evento.data)
+    .eq('cancelado', false)
+    .select('id')
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  const quantas = (cancelados ?? []).length
+  if (quantas === 0) {
+    return { ok: false, mensagem: 'Não havia marcações seguintes por cancelar.' }
+  }
+
+  for (const cancelado of cancelados ?? []) revalidatePath(`/agenda/${cancelado.id}`)
+  for (const caminho of CAMINHOS) revalidatePath(caminho)
+
+  return {
+    ok: true,
+    mensagem:
+      quantas === 1
+        ? '1 marcação seguinte cancelada.'
+        : `${quantas} marcações seguintes canceladas.`,
+  }
 }
 
 /** Acrescenta ao evento quem ainda não estiver convocado. */

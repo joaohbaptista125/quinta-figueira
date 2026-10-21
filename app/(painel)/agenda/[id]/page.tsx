@@ -10,6 +10,7 @@ import { CamposEvento } from '@/components/formularios/campos-evento'
 import { Convocatoria } from '@/components/convocatoria'
 import { Avisos } from '@/components/avisos'
 import { CancelarEvento } from '@/components/cancelar-evento'
+import { SerieEvento } from '@/components/serie-evento'
 import { BotaoApagar } from '@/components/botao-apagar'
 import {
   Cartao,
@@ -57,6 +58,16 @@ export default async function PaginaEvento({
       ? supabase.from('equipas').select('id, nome').eq('activa', true).order('nome')
       : Promise.resolve({ data: [] }),
   ])
+
+  // A série é uma etiqueta, não um dono: só se vai buscá-la quando existe, e
+  // só para dizer em que ponto da repetição esta marcação está.
+  const { data: marcacoes } = evento.serie_id
+    ? await supabase
+        .from('eventos')
+        .select('id, data, cancelado')
+        .eq('serie_id', evento.serie_id)
+        .order('data')
+    : { data: null }
 
   const convocados = (evento.evento_participantes ?? []).map((linha) => ({
     id: linha.id,
@@ -152,6 +163,25 @@ export default async function PaginaEvento({
                 </FormularioEntidade>
               </ConteudoCartao>
             </Cartao>
+
+            {marcacoes && marcacoes.length > 1 ? (
+              <Cartao>
+                <CabecalhoCartao>
+                  <TituloCartao>Repetição</TituloCartao>
+                  <DescricaoCartao>
+                    Cada marcação é independente. Mudar a hora ou um convocado
+                    aqui não mexe nas outras.
+                  </DescricaoCartao>
+                </CabecalhoCartao>
+                <ConteudoCartao>
+                  <SerieEvento
+                    eventoId={evento.id}
+                    marcacoes={marcacoes}
+                    podeEditar={podeEditar}
+                  />
+                </ConteudoCartao>
+              </Cartao>
+            ) : null}
 
             <Cartao>
               <CabecalhoCartao>

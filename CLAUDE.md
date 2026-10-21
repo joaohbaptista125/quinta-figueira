@@ -66,6 +66,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261015140000_encargos.sql` | `encargos` + `recebimentos.encargo_id` + `v_encargos_por_receber` |
 | `…20261015160000_notas_cavalo.sql` | `notas_cavalo` + `v_notas_por_responder` |
 | `…20261015180000_subscricoes_push.sql` | `subscricoes_push` |
+| `…20261021090000_serie_de_eventos.sql` | `eventos.serie_id` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -154,6 +155,23 @@ local, responsável, participantes, presenças e avisos; o que muda é o `tipo`.
 Daí haver um só quadro do dia e um só calendário a exportar. Um tipo novo
 (estágio, passeio) é acrescentar um valor ao enum. Não voltes a partir isto em
 tabelas por tipo.
+
+**A repetição semanal é uma etiqueta, não um objecto.** Numa escola quase tudo
+é semanal, e marcar a aula de terça às 18:30 oito vezes era nove campos vezes
+oito. `eventos.serie_id` é só isto: as marcações nascidas da mesma repetição
+partilham um id. **Não há tabela de séries, e não deve haver** — cada evento
+continua independente: cancelar o de 4 de Novembro não mexe nos outros,
+mudar-lhe a hora ou o picadeiro não muda a dos outros, e a convocatória é de
+cada um, porque é assim que acontece na cavalariça. A etiqueta serve para
+responder a «e as seguintes?» nas duas únicas perguntas que valem a pena em
+bloco — `copiarConvocatoriaDaSerie` e `cancelarSeguintesDaSerie` — e nada
+mais. Um evento que perca os irmãos continua um evento válido, e desenhar a
+agenda nunca precisa de ir buscar a série.
+
+O campo «Repetir» só aparece ao **marcar** (`components/formularios/campos-evento.tsx`):
+numa edição, mudar a hora de uma aula não devia criar sete aulas novas. Com
+equipa escolhida, a convocatória da equipa entra em **todas** as marcações —
+senão a repetição poupava metade do trabalho.
 
 **Um cavalo não pode estar em dois eventos sobrepostos.** A restrição tem de
 comparar horas que vivem em `eventos` com linhas de `evento_participantes`, e
@@ -335,6 +353,7 @@ components/
   vistas-agenda.tsx    a semana em lista e o quadro do dia
   lista-eventos.tsx    a linha de um evento, partilhada por todas as vistas
   cartao-evento.tsx    o evento em grande, com convocados e avisos
+  serie-evento.tsx     a repetição semanal vista de dentro de uma marcação
   convite-acesso.tsx   estado de acesso de uma pessoa, e o convite
   accoes-ficha.tsx     desactivar/terminar e apagar, no topo de uma ficha
   ferracao-cavalo.tsx  quando foi ferrado, e quando volta a ser

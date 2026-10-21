@@ -332,6 +332,8 @@ export type Evento = Carimbos & {
   local: string | null
   responsavel_id: string | null
   equipa_id: string | null
+  /** Marcações nascidas da mesma repetição semanal. Etiqueta, não dono. */
+  serie_id: string | null
   notas: string | null
   cancelado: boolean
   motivo_cancelamento: string | null

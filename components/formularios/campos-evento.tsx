@@ -4,6 +4,22 @@ import { ROTULOS_TIPO_EVENTO, paraOpcoes } from '@/lib/rotulos'
 import { hoje } from '@/lib/formatos'
 import type { Evento } from '@/lib/tipos-bd'
 
+/**
+ * Até quantas semanas se repete a marcação.
+ *
+ * Numa escola quase tudo é semanal — a aula de terça às 18:30 é a mesma até ao
+ * fim do período. A lista pára nas 16 semanas de propósito: um trimestre é o
+ * horizonte em que ainda se sabe quem vai estar cá.
+ */
+const REPETICOES = [
+  { valor: 1, rotulo: 'Não repetir' },
+  { valor: 2, rotulo: 'Durante 2 semanas' },
+  { valor: 4, rotulo: 'Durante 4 semanas' },
+  { valor: 8, rotulo: 'Durante 8 semanas' },
+  { valor: 12, rotulo: 'Durante 12 semanas' },
+  { valor: 16, rotulo: 'Durante 16 semanas' },
+]
+
 export function CamposEvento({
   evento,
   responsaveis,
@@ -56,6 +72,22 @@ export function CamposEvento({
             required
           />
         </Campo>
+
+        {evento ? null : (
+          <Campo
+            etiqueta="Repetir"
+            htmlFor="semanas"
+            ajuda="Marca o mesmo à mesma hora, de semana a semana. Cada marcação fica independente: cancelar uma não mexe nas outras."
+          >
+            <Selector id="semanas" name="semanas" defaultValue="1">
+              {REPETICOES.map((opcao) => (
+                <option key={opcao.valor} value={opcao.valor}>
+                  {opcao.rotulo}
+                </option>
+              ))}
+            </Selector>
+          </Campo>
+        )}
 
         <Campo etiqueta="Local" htmlFor="local" ajuda="Ex.: Picadeiro coberto">
           <Entrada
