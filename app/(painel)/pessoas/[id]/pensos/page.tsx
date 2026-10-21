@@ -32,16 +32,20 @@ import {
 } from '@/lib/formatos'
 import type { MetodoPagamento } from '@/lib/tipos-bd'
 
-export const metadata: Metadata = { title: 'Conta-corrente' }
+export const metadata: Metadata = { title: 'Pensos e encargos' }
 
 /**
- * Conta-corrente de pensos de um cliente.
+ * O que um cliente deve e o que já pagou.
  *
  * O que já havia era a lista dos pensos de um mês, para todos os clientes. À
  * mesa da cobrança a pergunta é a inversa — «este cliente, o que deve e o que
  * já pagou» — e a resposta obrigava a andar mês a mês. Esta página é essa
  * vista, e traz consigo o recebimento: escolher o método e confirmar, sem
  * passar pelo formulário completo.
+ *
+ * O título não diz «conta-corrente» de propósito: na mesma aplicação há
+ * «Contas», que são a caixa e os bancos do centro, e as duas palavras parecidas
+ * a querer dizer coisas diferentes eram metade da confusão desta secção.
  */
 export default async function PaginaContaCorrente({
   params,
@@ -84,7 +88,7 @@ export default async function PaginaContaCorrente({
   if (pessoa.error) return <ErroConsulta erro={pessoa.error} contexto="o cliente" />
   if (!pessoa.data) notFound()
   if (pensos.error) {
-    return <ErroConsulta erro={pensos.error} contexto="a conta-corrente" />
+    return <ErroConsulta erro={pensos.error} contexto="o que este cliente deve" />
   }
 
   const linhas = pensos.data ?? []
@@ -104,6 +108,18 @@ export default async function PaginaContaCorrente({
     (soma, linha) => soma + Number(linha.valor_em_falta),
     0,
   )
+
+  // A dívida não é só de pensos: a ferração que o centro adiantou é dinheiro a
+  // receber na mesma, e o indicador que a ignorava dizia «tudo em dia» a quem
+  // devia duas ferrações.
+  const encargosEmFalta = (encargos.data ?? []).filter(
+    (linha) => Number(linha.valor_em_falta) > 0,
+  )
+  const totalEncargos = encargosEmFalta.reduce(
+    (soma, linha) => soma + Number(linha.valor_em_falta),
+    0,
+  )
+  const totalEmDivida = totalEmFalta + totalEncargos
   const totalRecebido = linhas.reduce(
     (soma, linha) => soma + Number(linha.valor_pago),
     0,
@@ -127,11 +143,11 @@ export default async function PaginaContaCorrente({
     <>
       <CabecalhoPagina
         voltar={{ href: `/pessoas/${id}`, rotulo: pessoa.data.nome }}
-        titulo="Conta-corrente"
-        descricao={`Pensos de ${pessoa.data.nome}`}
+        titulo="Pensos e encargos"
+        descricao={`O que ${pessoa.data.nome} deve, e o que já pagou`}
         accoes={
           <>
-            {totalEmFalta > 0 ? (
+            {totalEmDivida > 0 ? (
               <LembrarPagamento pessoaId={id} nome={pessoa.data.nome} />
             ) : null}
             <Link
@@ -147,13 +163,22 @@ export default async function PaginaContaCorrente({
       <div className="grid gap-3 sm:grid-cols-3">
         <Indicador
           rotulo="Em dívida"
-          valor={formatarEuros(totalEmFalta)}
+          valor={formatarEuros(totalEmDivida)}
           detalhe={
-            emFalta.length > 0
-              ? `${emFalta.length} mês(es) por receber`
+            totalEmDivida > 0
+              ? [
+                  emFalta.length > 0
+                    ? `${emFalta.length} ${emFalta.length === 1 ? 'mês' : 'meses'} de penso`
+                    : null,
+                  encargosEmFalta.length > 0
+                    ? `${encargosEmFalta.length} ${encargosEmFalta.length === 1 ? 'encargo' : 'encargos'}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : 'Tudo em dia'
           }
-          tom={totalEmFalta > 0 ? 'negativo' : 'positivo'}
+          tom={totalEmDivida > 0 ? 'negativo' : 'positivo'}
         />
         <Indicador
           rotulo="Recebido em pensos"
@@ -181,8 +206,9 @@ export default async function PaginaContaCorrente({
           <CabecalhoCartao>
             <TituloCartao>Receber</TituloCartao>
             <DescricaoCartao>
-              Liquida de uma vez tudo o que está em falta. Para receber só um mês,
-              ou parte dele, use o «Registar pagamento» da linha.
+              Liquida de uma vez todas as <strong>mensalidades</strong> em falta.
+              Para receber só um mês, ou parte dele, use o «Registar pagamento»
+              da linha; os encargos recebem-se um a um, mais abaixo.
             </DescricaoCartao>
           </CabecalhoCartao>
           <ConteudoCartao>
@@ -282,10 +308,10 @@ export default async function PaginaContaCorrente({
           ) : (
             <SemRegistos
               titulo="Sem mensalidades"
-              descricao="As mensalidades nascem dos contratos de penso, e são criadas mês a mês em «Pensos do mês»."
+              descricao="As mensalidades nascem dos contratos de penso, e são criadas mês a mês em «Por receber»."
               accao={
-                <Link href="/financeiro/pensos" className={classesBotao()}>
-                  Ir a Pensos do mês
+                <Link href="/financeiro/por-receber" className={classesBotao()}>
+                  Ir a Por receber
                 </Link>
               }
             />

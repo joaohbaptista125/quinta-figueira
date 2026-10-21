@@ -28,7 +28,7 @@ export default async function PaginaNovoContrato({
       <CabecalhoPagina
         voltar={{ href: '/contratos', rotulo: 'Contratos de penso' }}
         titulo="Novo contrato de penso"
-        descricao="As mensalidades são geradas depois, em Pensos do mês."
+        descricao="As mensalidades são geradas depois, em Financeiro → Por receber."
       />
       <Cartao className="max-w-3xl">
         <ConteudoCartao className="pt-4 sm:pt-5">

@@ -339,7 +339,9 @@ app/
     pessoas/      ficha, e `pessoas/[id]/pensos` — a conta-corrente do cliente
     cavalos/      ficha, e `cavalos/opcoes` — as listas de raças e pelagens
     boxes/  contratos/
-    financeiro/   despesas/ recebimentos/ pensos/ contas/ fornecedores/ categorias/
+    financeiro/   resumo (page.tsx), por-receber/, despesas/, recebimentos/,
+                  contas/ (caixa e bancos), definicoes/ → fornecedores/ e
+                  categorias/
   auth/callback/  troca do código de email por sessão
   calendario/     ficheiro iCal por token, sem sessão
   manifest.ts     manifesto da PWA
@@ -703,12 +705,49 @@ telemóveis produzem: linhas dobradas das duas maneiras (a da norma, com espaço
 (`item1.TEL`) e vários cartões no mesmo ficheiro. **Nada é escrito por cima:**
 só se preenchem os campos vazios, e o aviso diz em quais não se mexeu.
 
+### O financeiro: duas perguntas, e não seis páginas
+
+A secção tinha seis entradas de menu e nenhuma delas dizia por onde começar.
+Três problemas, e o que se fez a cada um:
+
+- **«Conta» queria dizer duas coisas.** `contas` são a caixa e os bancos do
+  centro; «conta-corrente» era o que um cliente deve. Agora o menu diz
+  **«Caixa e bancos»**, e a página do cliente chama-se **«Pensos e encargos»**.
+  A tabela e as rotas não mudaram — isto é vocabulário, não esquema.
+- **Havia três sítios a mostrar dinheiro a entrar** (Recebimentos, Pensos do
+  mês, e a conta-corrente de cada cliente) e nenhum respondia a «quem me
+  deve»: «Pensos do mês» mostrava **um mês de cada vez**, e quem deve três
+  meses é precisamente quem interessa ver; e **ignorava os encargos**, que são
+  dinheiro que o centro adiantou ao ferrador. `/financeiro/por-receber`
+  substitui-a: uma linha por **cliente**, pensos e encargos somados, de todos
+  os meses, ordenada **pelo mais antigo** — porque quem está há mais tempo a
+  dever é quem precisa do telefonema, e não quem deve mais euros por acaso.
+  A geração das mensalidades do mês mudou-se para o fundo dessa página, onde
+  se vê quantas faltam.
+- **Fornecedores e categorias ocupavam duas das seis entradas**, e mexe-se
+  nelas uma vez por ano. Passaram para `/financeiro/definicoes`, que é uma
+  entrada só. As duas páginas ganharam `voltar` para lá, que no telemóvel é o
+  único caminho de regresso.
+
+`/financeiro` é a porta: as duas perguntas em grande — **quem me deve**, **o
+que gastei** — e os saldos por baixo. O aviso no topo não é decoração, é o
+contrato desta secção: **isto é um livro de registo**, a aplicação não liga a
+nenhum banco, não movimenta dinheiro nenhum, e o que lá está serve para
+conferir contra o extracto e não para o substituir. Foi decisão explícita do
+cliente, e repete-se em `/financeiro/contas`.
+
+`ItemNavegacao.exacto` existe por causa disto: sem ele, `/financeiro` acendia
+no menu em todas as páginas que lhe ficam por baixo.
+
 ### Cobrança de pensos
 
-`/pessoas/[id]/pensos` é a conta-corrente de um cliente: o que deve, o que já
-pagou e como pagou cada mês. A página de «Pensos do mês» responde à pergunta
-do mês para todos os clientes; esta responde à pergunta do cliente ao longo
-dos meses, que é a que se faz à mesa da cobrança.
+`/pessoas/[id]/pensos` é a página de um cliente: o que deve, o que já pagou e
+como pagou cada mês. `/financeiro/por-receber` responde «quem me deve» para
+todos; esta responde à pergunta do cliente ao longo dos meses, que é a que se
+faz à mesa da cobrança. O indicador «Em dívida» soma **pensos e encargos** —
+contar só os pensos dizia «tudo em dia» a quem devia duas ferrações —, mas o
+botão «Receber tudo» continua a ser só das mensalidades, porque é
+`mensalidade_id` que liga cada euro ao mês.
 
 O recebimento é feito ali, por `receberPensos()` em `lib/accoes/financeiro.ts`
 — método em pastilhas, data, conta, confirmar. O formulário completo de
@@ -731,7 +770,7 @@ escritório. As duas coisas que mais custaram a acertar:
 - **A navegação de baixo.** `<BarraInferior>` mostra quatro secções mais
   «Mais». As quatro saem dos itens de `SECCOES` marcados `principal: true`,
   pela ordem em que lá estão e depois de filtrados pelo perfil — por isso o
-  cliente, que não vê «Pessoas», recebe «Recebimentos» nesse lugar. O que
+  cliente, que não vê «Pessoas», recebe «Pagamentos» nesse lugar. O que
   existia antes era uma fila de doze pastilhas com deslize horizontal: viam-se
   três, e não havia como adivinhar que existiam mais nove. O `<main>` leva
   `pb-24` porque a barra é fixa.

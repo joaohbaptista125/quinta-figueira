@@ -180,7 +180,8 @@ export async function guardarRecebimento(
     },
     revalidar: [
       '/financeiro/recebimentos',
-      '/financeiro/pensos',
+      '/financeiro/por-receber',
+      '/financeiro',
       '/financeiro/contas',
       '/',
     ],
@@ -203,7 +204,8 @@ export async function apagarRecebimento(
     id,
     revalidar: [
       '/financeiro/recebimentos',
-      '/financeiro/pensos',
+      '/financeiro/por-receber',
+      '/financeiro',
       '/financeiro/contas',
       '/',
     ],
@@ -229,7 +231,8 @@ export async function gerarMensalidades(
 
   if (error) return { ok: false, mensagem: traduzirErro(error) }
 
-  revalidatePath('/financeiro/pensos')
+  revalidatePath('/financeiro/por-receber')
+  revalidatePath('/financeiro')
   revalidatePath('/')
 
   const criadas = typeof data === 'number' ? data : 0
@@ -257,7 +260,8 @@ export async function anularMensalidade(
 
   if (error) return { ok: false, mensagem: traduzirErro(error) }
 
-  revalidatePath('/financeiro/pensos')
+  revalidatePath('/financeiro/por-receber')
+  revalidatePath('/financeiro')
   revalidatePath('/')
   return { ok: true, mensagem: 'Mensalidade anulada.' }
 }
@@ -342,7 +346,8 @@ export async function receberPensos(
   const pessoaId = linhas[0].cliente_id
   revalidatePath(`/pessoas/${pessoaId}/pensos`)
   revalidatePath(`/pessoas/${pessoaId}`)
-  revalidatePath('/financeiro/pensos')
+  revalidatePath('/financeiro/por-receber')
+  revalidatePath('/financeiro')
   revalidatePath('/financeiro/recebimentos')
   revalidatePath('/financeiro/contas')
   revalidatePath('/')

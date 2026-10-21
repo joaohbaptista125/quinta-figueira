@@ -97,7 +97,7 @@ export async function guardarContrato(
       data_fim: textoOuNulo(dados, 'data_fim'),
       notas: textoOuNulo(dados, 'notas'),
     },
-    revalidar: ['/contratos', '/financeiro/pensos'],
+    revalidar: ['/contratos', '/financeiro/por-receber', '/financeiro'],
     mensagemCriado: 'Contrato criado. Pode continuar a introduzir contratos.',
   })
 
@@ -155,7 +155,7 @@ export async function apagarContrato(
   const resultado = await apagar({
     tabela: 'contratos_penso',
     id,
-    revalidar: ['/contratos', '/financeiro/pensos'],
+    revalidar: ['/contratos', '/financeiro/por-receber', '/financeiro'],
   })
   if (!resultado.ok) return resultado
   redirect(comConfirmacao('/contratos', 'apagado'))
@@ -201,7 +201,8 @@ export async function alternarVigorContrato(
 
   revalidatePath('/contratos')
   revalidatePath(`/contratos/${id}`)
-  revalidatePath('/financeiro/pensos')
+  revalidatePath('/financeiro/por-receber')
+  revalidatePath('/financeiro')
 
   const nome = contrato.cavalos?.nome ?? 'O contrato'
 

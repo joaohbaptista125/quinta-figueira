@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Banknote,
-  CalendarCheck,
   CalendarDays,
   CircleUser,
   DoorOpen,
@@ -13,10 +12,11 @@ import {
   FileText,
   House,
   LogOut,
+  Coins,
+  Landmark,
   Receipt,
   Shield,
-  Tags,
-  Truck,
+  SlidersHorizontal,
   Users,
   Wallet,
   X,
@@ -35,6 +35,11 @@ type ItemNavegacao = {
   Icone: Icone
   /** Vai para a barra de baixo no telemóvel; os restantes ficam em «Mais». */
   principal?: boolean
+  /**
+   * Só acende no próprio caminho, e não nos que lhe ficam por baixo. É o que
+   * uma página-porta precisa: `/financeiro` não é «Despesas».
+   */
+  exacto?: boolean
   /** Quem pode ver a entrada. */
   visivel: (perfil: PerfilAcesso | null) => boolean
 }
@@ -91,6 +96,21 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
   {
     titulo: 'Financeiro',
     itens: [
+      // A ordem é a das duas perguntas: quem me deve, o que gastei. O resto
+      // é o livro de registo e as listas de apoio.
+      {
+        href: '/financeiro',
+        rotulo: 'Resumo',
+        Icone: Wallet,
+        exacto: true,
+        visivel: eGestao,
+      },
+      {
+        href: '/financeiro/por-receber',
+        rotulo: 'Por receber',
+        Icone: Banknote,
+        visivel: eGestao,
+      },
       {
         href: '/financeiro/despesas',
         rotulo: 'Despesas',
@@ -100,31 +120,23 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
       {
         href: '/financeiro/recebimentos',
         rotulo: 'Recebimentos',
-        Icone: Banknote,
+        Icone: Coins,
         visivel: eGestao,
       },
       {
-        href: '/financeiro/pensos',
-        rotulo: 'Pensos do mês',
-        Icone: CalendarCheck,
-        visivel: eGestao,
-      },
-      {
+        // «Conta» queria dizer duas coisas: os bancos do centro e o que um
+        // cliente deve. Esta é a primeira, e passa a dizê-lo pelo nome.
         href: '/financeiro/contas',
-        rotulo: 'Contas',
-        Icone: Wallet,
+        rotulo: 'Caixa e bancos',
+        Icone: Landmark,
         visivel: eGestao,
       },
       {
-        href: '/financeiro/fornecedores',
-        rotulo: 'Fornecedores',
-        Icone: Truck,
-        visivel: eGestao,
-      },
-      {
-        href: '/financeiro/categorias',
-        rotulo: 'Categorias de despesa',
-        Icone: Tags,
+        // Fornecedores e categorias mexem-se uma vez por ano e ocupavam duas
+        // das seis entradas desta secção.
+        href: '/financeiro/definicoes',
+        rotulo: 'Definições',
+        Icone: SlidersHorizontal,
         visivel: eGestao,
       },
     ],
@@ -151,8 +163,8 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
   },
 ]
 
-function estaActivo(caminho: string, href: string) {
-  if (href === '/') return caminho === '/'
+function estaActivo(caminho: string, href: string, exacto = false) {
+  if (href === '/' || exacto) return caminho === href
   return caminho === href || caminho.startsWith(`${href}/`)
 }
 
@@ -176,14 +188,14 @@ export function NavegacaoLateral({ perfil }: { perfil: PerfilAcesso | null }) {
             <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {seccao.titulo}
             </p>
-            {itens.map(({ href, rotulo, Icone }) => (
+            {itens.map(({ href, rotulo, Icone, exacto }) => (
               <Link
                 key={href}
                 href={href}
-                aria-current={estaActivo(caminho, href) ? 'page' : undefined}
+                aria-current={estaActivo(caminho, href, exacto) ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
-                  estaActivo(caminho, href)
+                  estaActivo(caminho, href, exacto)
                     ? 'bg-primary/12 font-medium text-primary'
                     : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
                 )}
@@ -242,7 +254,9 @@ export function BarraInferior({
 
   // O «Mais» também acende quando a página aberta é uma das que estão lá
   // dentro, para nunca haver nenhuma sem indicação de onde se está.
-  const maisActivo = !naBarra.some((item) => estaActivo(caminho, item.href))
+  const maisActivo = !naBarra.some((item) =>
+    estaActivo(caminho, item.href, item.exacto),
+  )
 
   return (
     <>
@@ -267,8 +281,8 @@ export function BarraInferior({
             gridTemplateColumns: `repeat(${naBarra.length + 1}, minmax(0, 1fr))`,
           }}
         >
-          {naBarra.map(({ href, rotulo, Icone }) => {
-            const activo = estaActivo(caminho, href)
+          {naBarra.map(({ href, rotulo, Icone, exacto }) => {
+            const activo = estaActivo(caminho, href, exacto)
             return (
               <li key={href}>
                 <Link
@@ -364,14 +378,14 @@ function PainelMais({
                 <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {seccao.titulo}
                 </p>
-                {itens.map(({ href, rotulo, Icone }) => (
+                {itens.map(({ href, rotulo, Icone, exacto }) => (
                   <Link
                     key={href}
                     href={href}
-                    aria-current={estaActivo(caminho, href) ? 'page' : undefined}
+                    aria-current={estaActivo(caminho, href, exacto) ? 'page' : undefined}
                     className={cn(
                       'flex items-center gap-3 rounded-md px-3 py-3 text-sm transition-colors',
-                      estaActivo(caminho, href)
+                      estaActivo(caminho, href, exacto)
                         ? 'bg-primary/12 font-medium text-primary'
                         : 'hover:bg-accent',
                     )}

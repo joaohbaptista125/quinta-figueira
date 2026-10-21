@@ -108,7 +108,7 @@ export async function PainelGestao({
         <Indicador
           rotulo="Pensos por receber"
           valor={formatarEuros(totalEmFalta)}
-          detalhe={`${pensos.data?.length ?? 0} mensalidade(s)`}
+          detalhe={`${pensos.data?.length ?? 0} mensalidade(s) deste mês · ver tudo em Por receber`}
           tom={totalEmFalta > 0 ? 'negativo' : 'positivo'}
         />
       </div>
@@ -124,7 +124,7 @@ export async function PainelGestao({
               </DescricaoCartao>
             </div>
             <Link
-              href={`/financeiro/pensos?mes=${periodo.slice(0, 7)}`}
+              href="/financeiro/por-receber"
               className={classesBotao('contorno', 'pequeno')}
             >
               Ver todos
@@ -164,7 +164,7 @@ export async function PainelGestao({
             ) : (
               <SemRegistos
                 titulo="Nenhum penso em falta"
-                descricao="Todas as mensalidades geradas para este mês estão pagas. Se faltarem contratos, gere as mensalidades na página Pensos do mês."
+                descricao="Todas as mensalidades geradas para este mês estão pagas. Se faltarem contratos, gere as mensalidades em Financeiro → Por receber."
               />
             )}
           </ConteudoCartao>

@@ -30,6 +30,7 @@ export default async function PaginaCategorias() {
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/financeiro/definicoes', rotulo: 'Definições' }}
         titulo="Categorias de despesa"
         descricao="Vêm preenchidas de origem; ajuste-as ao vocabulário do centro."
         accoes={

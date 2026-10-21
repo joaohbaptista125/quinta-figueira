@@ -42,6 +42,7 @@ export default async function PaginaFornecedores({
   return (
     <>
       <CabecalhoPagina
+        voltar={{ href: '/financeiro/definicoes', rotulo: 'Definições' }}
         titulo="Fornecedores"
         accoes={
           <Link href="/financeiro/fornecedores/novo" className={classesBotao()}>

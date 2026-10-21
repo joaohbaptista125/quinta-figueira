@@ -18,7 +18,7 @@ import {
 import { ROTULOS_TIPO_CONTA } from '@/lib/rotulos'
 import { formatarEuros } from '@/lib/formatos'
 
-export const metadata: Metadata = { title: 'Contas' }
+export const metadata: Metadata = { title: 'Caixa e bancos' }
 
 export default async function PaginaContas() {
   await exigirGestao()
@@ -36,8 +36,9 @@ export default async function PaginaContas() {
   return (
     <>
       <CabecalhoPagina
-        titulo="Contas"
-        descricao="Caixa e contas bancárias, para saber de onde sai e para onde entra cada movimento"
+        voltar={{ href: '/financeiro', rotulo: 'Financeiro' }}
+        titulo="Caixa e bancos"
+        descricao="De onde sai e para onde entra cada movimento. Não confundir com o que um cliente deve: isso está em «Por receber»."
         accoes={
           <Link href="/financeiro/contas/nova" className={classesBotao()}>
             Nova conta

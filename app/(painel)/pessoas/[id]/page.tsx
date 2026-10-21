@@ -206,7 +206,7 @@ export default async function PaginaPessoa({
                     href={`/pessoas/${pessoa.id}/pensos`}
                     className={classesBotao('contorno', 'pequeno')}
                   >
-                    Conta-corrente
+                    Pensos e encargos
                   </Link>
                 </CabecalhoCartao>
                 <ConteudoCartao className="px-0 sm:px-0">

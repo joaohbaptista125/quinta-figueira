@@ -143,7 +143,7 @@ export default async function PaginaContrato({
             ) : (
               <SemRegistos
                 titulo="Sem mensalidades geradas"
-                descricao="Gere-as na página «Pensos do mês»."
+                descricao="Gere-as na página «Por receber», no financeiro."
               />
             )}
           </ConteudoCartao>

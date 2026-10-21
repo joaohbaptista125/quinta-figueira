@@ -155,7 +155,7 @@ export default async function PaginaPessoas({
                           href={`/pessoas/${pessoa.id}/pensos`}
                           className="text-muted-foreground"
                         >
-                          Conta-corrente
+                          Pensos e encargos
                         </LigacaoInterna>
                       )}
                     </Td>
