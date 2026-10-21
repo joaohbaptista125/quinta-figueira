@@ -67,6 +67,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261015160000_notas_cavalo.sql` | `notas_cavalo` + `v_notas_por_responder` |
 | `…20261015180000_subscricoes_push.sql` | `subscricoes_push` |
 | `…20261021090000_serie_de_eventos.sql` | `eventos.serie_id` |
+| `…20261021110000_pagamentos_declarados.sql` | `pagamentos_declarados` + `confirmar_pagamento_declarado` + `v_pagamentos_por_confirmar` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -213,6 +214,50 @@ paga uma mensalidade **ou** um encargo, nunca os dois — com os dois
 preenchidos não se saberia a qual respeitava o dinheiro. O índice único sobre
 `ferracao_id` faz com que a mesma ferração não possa ser cobrada duas vezes,
 e é isso que torna o botão idempotente.
+
+**Uma declaração de pagamento não é um recebimento, e nunca pode vir a ser.**
+`pagamentos_declarados` é o cliente a dizer «já paguei»: quanto, quando, como,
+e contra que mês ou encargo. Existe porque o extracto do banco diz «TRF 180,00
+JOAO B» e não diz de que mês era, nem de que cavalo, nem se eram dois meses de
+uma vez — e quem sabe isso é quem pagou.
+
+- **Declarar não mexe em estado nenhum.** `mensalidades_penso.estado` e
+  `encargos.estado` continuam a derivar **só** dos recebimentos imputados. Não
+  há trigger nenhuma daqui para lá, e não pode haver: com uma, qualquer cliente
+  se dava por pago carregando num botão, e a aplicação passava a ser um
+  intermediário de pagamento em vez de um livro de registo.
+  `supabase/tests/09_pagamentos_declarados.sql` prova isto — se alguém ligar as
+  duas coisas «para poupar um clique», é aí que rebenta.
+- **O cliente declara, só a gestão decide.** A política de `update` é
+  `e_gestao()`, e é ela — não uma verificação de interface — que impede o
+  cliente de pôr a própria declaração a `confirmada`.
+- **`pessoa_id`, `estado` e a decisão são carimbados por trigger**
+  (`pagamentos_declarados_carimbar`, `…_carimbar_decisao`), como em
+  `notas_cavalo`. Uma declaração nasce sempre `pendente`, venha o que vier no
+  INSERT.
+- **`confirmar_pagamento_declarado()` cria o recebimento e fecha a declaração
+  na mesma transacção.** Sem isso, um erro entre os dois passos deixava
+  dinheiro lançado com a declaração ainda por confirmar, e a gestão a
+  confirmá-la outra vez. **Não é SECURITY DEFINER de propósito** — corre com a
+  identidade de quem chama, e é a RLS de `recebimentos` que trava um cliente.
+  A guarda `e_gestao()` lá dentro serve só para a mensagem de erro dizer a
+  verdade; se alguém tornar a função SECURITY DEFINER, essa guarda passa a ser
+  a única coisa entre um cliente e a caixa do centro.
+- **O que fica registado é o que a gestão confirmar**, não o que o cliente
+  escreveu: valor, data e método são corrigíveis ao confirmar. **A conta de
+  destino escolhe-se sempre do lado da gestão** — o cliente não sabe, nem deve
+  saber, para que conta do centro o dinheiro entrou.
+- **Recusar exige motivo**, porque é a única coisa que o cliente vai ler. A
+  recusa liberta o índice único, por isso ele pode declarar outra vez com os
+  dados certos.
+- **Um índice único por item enquanto pendente** faz com que carregar duas
+  vezes no botão não declare duas vezes — e é isso que deixa a linha dizer «a
+  aguardar confirmação» sem ambiguidade.
+- O que substitui a notificação, aqui como nas notas, é
+  `<PagamentosPorConfirmar>`: completo em `/financeiro/por-receber`, compacto
+  no painel, e filtrado por pessoa na ficha dela. Sem ele, o cliente ficava
+  convencido de que tinha avisado o centro — o que é pior do que não ter
+  avisado.
 
 **Avisos, não chat.** `avisos` pertence a um evento OU a uma equipa, nunca aos
 dois. É comunicação de um para muitos: aparece no quadro do dia e vai na
@@ -367,6 +412,10 @@ components/
   resumo-do-dia.tsx  o que está marcado, no topo do painel
   activar-notificacoes.tsx  ligar e desligar os avisos neste aparelho
   lembrar-pagamento.tsx  o botão que avisa um cliente do que deve
+  declarar-pagamento.tsx  «Já paguei», do lado de quem paga
+  confirmar-pagamento.tsx  confirmar ou recusar, do lado de quem recebe
+  pagamentos-por-confirmar.tsx  o que está à espera de decisão
+  escolha-metodo.tsx   método de pagamento em pastilhas, partilhado
   (publico)/auth/ligar/  lê a sessão do fragmento do link de email
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
@@ -387,7 +436,7 @@ supabase/
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
                   03 ferração, 04 contratos, 05 cavalos, 06 encargos,
-                  07 notas, 08 subscrições)
+                  07 notas, 08 subscrições, 09 pagamentos declarados)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -639,8 +688,10 @@ Security → Authorized IPs**.
 
 ### A visão de cliente
 
-A conta de cliente é uma janela de leitura, e é a RLS que a fecha: as consultas
-não levam filtro por pessoa em lado nenhum. O que era preciso limar não era a
+A conta de cliente é quase toda de leitura, e é a RLS que a fecha: as consultas
+não levam filtro por pessoa em lado nenhum. O cliente escreve em dois sítios, e
+só nesses: as **notas do cavalo**, e o **«Já paguei»** — que é uma afirmação à
+espera de confirmação, não um lançamento (ver a decisão em cima). O que era preciso limar não era a
 segurança, era a linguagem — o cliente estava a ver as páginas da gestão com os
 dados dele lá dentro.
 
@@ -662,6 +713,12 @@ O resto do que saiu, e porquê:
 
 Falta ainda, e é trabalho da Fase 4: marcar-se a si próprio nos treinos de
 Horseball, e corrigir o telefone ou a morada da própria ficha.
+
+**Quem paga não lança.** Em `/pagamentos`, cada mês ou encargo em falta tem um
+botão **«Já paguei»** — e o texto diz isso e não «Pagar», porque o que ele faz
+é avisar o centro. A linha passa a «a aguardar confirmação» (nem paga, nem por
+avisar), com saída para retirar enquanto ninguém decidiu. Esta aplicação não
+movimenta dinheiro e não emite documento nenhum; o botão di-lo ali mesmo.
 
 ### Listas com saída: raças e pelagens
 

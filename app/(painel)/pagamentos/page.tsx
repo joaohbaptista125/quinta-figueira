@@ -14,6 +14,10 @@ import {
   SemRegistos,
   TituloCartao,
 } from '@/components/ui/superficie'
+import {
+  DeclararPagamento,
+  type DeclaracaoDoItem,
+} from '@/components/declarar-pagamento'
 import { ROTULOS_ESTADO_MENSALIDADE, ROTULOS_METODO } from '@/lib/rotulos'
 import {
   formatarData,
@@ -44,7 +48,7 @@ export default async function PaginaPagamentos() {
   const sessao = await exigirPessoa()
   const supabase = await criarClienteServidor()
 
-  const [pensos, pagamentos, encargos] = await Promise.all([
+  const [pensos, pagamentos, encargos, declaracoes] = await Promise.all([
     supabase
       .from('v_pensos_por_receber')
       .select('*')
@@ -64,6 +68,17 @@ export default async function PaginaPagamentos() {
       .eq('pessoa_id', sessao.id)
       .neq('estado', 'anulado')
       .order('data', { ascending: false }),
+    // «Já paguei»: o que esta pessoa avisou e ainda não foi confirmado, ou foi
+    // recusado. A RLS já devolvia só as dela; o filtro é pela mesma razão das
+    // outras consultas desta página.
+    supabase
+      .from('pagamentos_declarados')
+      .select(
+        'id, mensalidade_id, encargo_id, valor, data, metodo_pagamento, referencia, estado, motivo',
+      )
+      .eq('pessoa_id', sessao.id)
+      .neq('estado', 'confirmada')
+      .order('criado_em', { ascending: false }),
   ])
 
   if (pensos.error) {
@@ -91,6 +106,31 @@ export default async function PaginaPagamentos() {
   const outros = movimentos.filter(
     (movimento) => !movimento.mensalidade_id && !movimento.encargo_id,
   )
+
+  // A mais recente de cada item: uma pendente é única por construção (índice
+  // único na base), mas recusadas pode haver várias ao longo do tempo.
+  const declaracaoPorMensalidade = new Map<string, DeclaracaoDoItem>()
+  const declaracaoPorEncargo = new Map<string, DeclaracaoDoItem>()
+  for (const linha of declaracoes.data ?? []) {
+    const alvo: DeclaracaoDoItem = {
+      id: linha.id,
+      valor: Number(linha.valor),
+      data: linha.data,
+      metodo_pagamento: linha.metodo_pagamento,
+      referencia: linha.referencia,
+      estado: linha.estado as DeclaracaoDoItem['estado'],
+      motivo: linha.motivo,
+    }
+    if (linha.mensalidade_id && !declaracaoPorMensalidade.has(linha.mensalidade_id)) {
+      declaracaoPorMensalidade.set(linha.mensalidade_id, alvo)
+    }
+    if (linha.encargo_id && !declaracaoPorEncargo.has(linha.encargo_id)) {
+      declaracaoPorEncargo.set(linha.encargo_id, alvo)
+    }
+  }
+
+  // O último método usado diz quase sempre como será o próximo.
+  const metodoOmissao = movimentos[0]?.metodo_pagamento ?? 'transferencia'
 
   const linhasEncargos = encargos.data ?? []
   const encargosPorPagar = linhasEncargos.filter(
@@ -169,6 +209,15 @@ export default async function PaginaPagamentos() {
                         : ''}
                     </p>
 
+                    {falta > 0 ? (
+                      <DeclararPagamento
+                        mensalidadeId={linha.mensalidade_id}
+                        emFalta={falta}
+                        declaracao={declaracaoPorMensalidade.get(linha.mensalidade_id)}
+                        metodoOmissao={metodoOmissao}
+                      />
+                    ) : null}
+
                     {recebidos.length > 0 ? (
                       <ul className="mt-1.5 space-y-0.5">
                         {recebidos.map((pagamento) => (
@@ -238,6 +287,15 @@ export default async function PaginaPagamentos() {
                         ? ` · faltam ${formatarEuros(falta)}`
                         : ''}
                     </p>
+
+                    {falta > 0 ? (
+                      <DeclararPagamento
+                        encargoId={linha.encargo_id}
+                        emFalta={falta}
+                        declaracao={declaracaoPorEncargo.get(linha.encargo_id)}
+                        metodoOmissao={metodoOmissao}
+                      />
+                    ) : null}
                   </li>
                 )
               })}

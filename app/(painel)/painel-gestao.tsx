@@ -5,6 +5,7 @@ import { Indicador } from '@/components/indicador'
 import { SelectorMes } from '@/components/selector-mes'
 import { QuadroDoDia } from '@/components/resumo-do-dia'
 import { NotasPorResponder } from '@/components/notas-por-responder'
+import { PagamentosPorConfirmar } from '@/components/pagamentos-por-confirmar'
 import { classesBotao } from '@/components/ui/botao'
 import {
   Cartao,
@@ -83,6 +84,8 @@ export async function PainelGestao({
       />
 
       <QuadroDoDia />
+
+      <PagamentosPorConfirmar compacto />
 
       <NotasPorResponder />
 

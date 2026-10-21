@@ -6,6 +6,7 @@ import { ErroConsulta } from '@/components/erro-consulta'
 import { Indicador } from '@/components/indicador'
 import { SelectorMes } from '@/components/selector-mes'
 import { BotaoGerarMensalidades } from '@/components/botao-gerar-mensalidades'
+import { PagamentosPorConfirmar } from '@/components/pagamentos-por-confirmar'
 import {
   Cartao,
   CabecalhoCartao,
@@ -146,6 +147,10 @@ export default async function PaginaPorReceber({
         titulo="Por receber"
         descricao="Quem deve ao centro, e desde quando. Abra um nome para receber."
       />
+
+      {/* Em cima de tudo: é a única coisa desta página que alguém está à
+          espera que aconteça. */}
+      <PagamentosPorConfirmar />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Indicador

@@ -14,6 +14,7 @@ import {
 } from '@/components/pagamento-penso'
 import { classesBotao } from '@/components/ui/botao'
 import { LembrarPagamento } from '@/components/lembrar-pagamento'
+import { PagamentosPorConfirmar } from '@/components/pagamentos-por-confirmar'
 import {
   Aviso,
   Cartao,
@@ -190,6 +191,8 @@ export default async function PaginaContaCorrente({
           detalhe="Desde o início do contrato"
         />
       </div>
+
+      <PagamentosPorConfirmar pessoaId={id} />
 
       {contasActivas.length === 0 ? (
         <Aviso tom="atencao" className="mt-4">

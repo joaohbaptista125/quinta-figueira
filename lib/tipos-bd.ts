@@ -158,6 +158,55 @@ export type EncargoPorReceber = {
   valor_em_falta: number
 }
 
+export type EstadoDeclaracao = 'pendente' | 'confirmada' | 'recusada'
+
+/**
+ * Um pagamento que o cliente diz ter feito, à espera de confirmação.
+ *
+ * **Não é dinheiro.** Não mexe no estado de mensalidades nem de encargos —
+ * isso continua a derivar só dos recebimentos, e um recebimento continua a ser
+ * escrita de gestão. `pessoa_id`, `estado`, `decidido_por` e `decidido_em` são
+ * carimbados por trigger: não os envies.
+ */
+export type PagamentoDeclarado = Carimbos & {
+  id: string
+  pessoa_id: string
+  mensalidade_id: string | null
+  encargo_id: string | null
+  valor: number
+  data: string
+  metodo_pagamento: MetodoPagamento
+  referencia: string | null
+  notas: string | null
+  estado: EstadoDeclaracao
+  recebimento_id: string | null
+  decidido_por: string | null
+  decidido_em: string | null
+  motivo: string | null
+}
+
+/** Declarações por confirmar, com o que falta do item a que respeitam. */
+export type PagamentoPorConfirmar = {
+  declaracao_id: string
+  pessoa_id: string
+  pessoa_nome: string
+  pessoa_telefone: string | null
+  mensalidade_id: string | null
+  encargo_id: string | null
+  valor: number
+  data: string
+  metodo_pagamento: MetodoPagamento
+  referencia: string | null
+  notas: string | null
+  criado_em: string
+  respeita_a: 'penso' | 'encargo'
+  periodo: string | null
+  cavalo_nome: string | null
+  encargo_descricao: string | null
+  /** Null quando o item desapareceu ou foi anulado. */
+  valor_em_falta: number | null
+}
+
 export type TipoFerracao = 'completa' | 'maos' | 'pes' | 'arranjo'
 
 /**
@@ -516,6 +565,23 @@ export type BaseDados = {
         { cavalo_id: string; texto: string },
         [Relacao<'cavalo_id', 'cavalos'>, Relacao<'autor_id', 'pessoas'>]
       >
+      pagamentos_declarados: Tabela<
+        PagamentoDeclarado,
+        // `pessoa_id` e `estado` são carimbados pela trigger, por isso não
+        // entram nos obrigatórios da inserção.
+        Partial<Omit<PagamentoDeclarado, SoLeitura>> & {
+          valor: number
+          data: string
+          metodo_pagamento: MetodoPagamento
+        },
+        [
+          Relacao<'pessoa_id', 'pessoas'>,
+          Relacao<'mensalidade_id', 'mensalidades_penso', true>,
+          Relacao<'encargo_id', 'encargos', true>,
+          Relacao<'recebimento_id', 'recebimentos', true>,
+          Relacao<'decidido_por', 'pessoas', true>,
+        ]
+      >
       encargos: Tabela<
         Encargo,
         Partial<Omit<Encargo, SoLeitura>> & {
@@ -647,6 +713,7 @@ export type BaseDados = {
       v_ferracao_cavalos: Vista<FerracaoCavalo>
       v_encargos_por_receber: Vista<EncargoPorReceber>
       v_notas_por_responder: Vista<NotaPorResponder>
+      v_pagamentos_por_confirmar: Vista<PagamentoPorConfirmar>
     }
     Functions: {
       gerar_mensalidades: { Args: { p_periodo: string }; Returns: number }
@@ -662,6 +729,16 @@ export type BaseDados = {
       sou_membro_da_equipa: { Args: { p_equipa: string }; Returns: boolean }
       obter_token_calendario: { Args: { p_renovar?: boolean }; Returns: string }
       agenda_por_token: { Args: { p_token: string }; Returns: LinhaAgenda[] }
+      confirmar_pagamento_declarado: {
+        Args: {
+          p_declaracao: string
+          p_conta: string
+          p_valor?: number | null
+          p_data?: string | null
+          p_metodo?: MetodoPagamento | null
+        }
+        Returns: string
+      }
     }
     Enums: {
       sexo_cavalo: SexoCavalo
@@ -675,6 +752,7 @@ export type BaseDados = {
       tipo_opcao_cavalo: TipoOpcaoCavalo
       tipo_evento: TipoEvento
       estado_participacao: EstadoParticipacao
+      estado_declaracao: EstadoDeclaracao
     }
     CompositeTypes: Record<string, never>
   }

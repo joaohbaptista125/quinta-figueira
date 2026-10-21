@@ -164,6 +164,34 @@ export async function pessoasDaEquipa(): Promise<string[]> {
 }
 
 /**
+ * Quem é da gestão, para os avisos que são de dinheiro.
+ *
+ * `pessoasDaEquipa()` inclui instrutores e tratadores, que não vêem o
+ * financeiro — mandar-lhes um aviso de pagamento seria contar-lhes o que a RLS
+ * lhes esconde, e ensiná-los a ignorar notificações que não lhes dizem
+ * respeito.
+ */
+export async function pessoasDaGestao(): Promise<string[]> {
+  if (!notificacoesConfiguradas) return []
+
+  try {
+    const supabase = createClient<BaseDados>(supabaseUrl, chaveServico!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+
+    const { data } = await supabase
+      .from('pessoas')
+      .select('id')
+      .eq('activo', true)
+      .in('perfil', ['admin', 'gestor'])
+
+    return (data ?? []).map((pessoa) => pessoa.id)
+  } catch {
+    return []
+  }
+}
+
+/**
  * O mesmo envio, mas a contar o que correu bem e o que correu mal.
  *
  * Serve só o teste que a pessoa faz a si própria em `/conta`. O envio normal
