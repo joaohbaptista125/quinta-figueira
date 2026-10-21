@@ -484,7 +484,13 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   `SUPABASE_SERVICE_ROLE_KEY` noutro sítio, está errado.**
 - **Avisar nunca trava o que o originou.** `avisar()` não lança: uma
   notificação que não sai não pode fazer falhar a nota que alguém escreveu. O
-  `<NotasPorResponder>` no painel continua a ser a rede por baixo.
+  `<NotasPorResponder>` no painel continua a ser a rede por baixo. O preço
+  disso é o silêncio ser ambíguo enquanto se monta a coisa — por isso existe
+  **«Enviar um teste a mim próprio»** em `/conta`, que chama
+  `avisarComRelatorio()` e é o único caminho em que o motivo verdadeiro chega
+  ao ecrã: que variável falta pelo nome (nunca o valor), o que a base
+  respondeu, ou o que o serviço de push devolveu. O destino é sempre a própria
+  pessoa, por isso não revela nada sobre os aparelhos de ninguém.
 - **O aviso de mensalidade é um botão, não um automatismo** —
   `lembrarPagamento`, na conta-corrente. Foi decisão do cliente: há quem pague
   sempre a dia 8 e esteja de férias, e há quem precise de um toque. Um aviso

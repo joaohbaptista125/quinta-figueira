@@ -1,10 +1,11 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { Bell, BellOff, Share } from 'lucide-react'
+import { Bell, BellOff, Send, Share } from 'lucide-react'
 import {
   guardarSubscricao,
   removerSubscricao,
+  testarNotificacoes,
 } from '@/lib/accoes/notificacoes'
 import { SEM_RESULTADO } from '@/lib/accoes/resultado'
 import { Botao } from '@/components/ui/botao'
@@ -33,6 +34,7 @@ function nomeDoAparelho() {
 
 type Estado =
   | 'a-verificar'
+  | 'sem-configuracao'
   | 'sem-suporte'
   | 'precisa-instalar'
   | 'negada'
@@ -76,7 +78,10 @@ export function ActivarNotificacoes({ chavePublica }: { chavePublica: string }) 
 
   useEffect(() => {
     if (!chavePublica) {
-      setEstado('sem-suporte')
+      // Chave pública em falta é problema de instalação, não do aparelho —
+      // e dizer «este aparelho não aceita» mandava quem está a montar isto
+      // procurar no sítio errado.
+      setEstado('sem-configuracao')
       return
     }
 
@@ -196,6 +201,17 @@ export function ActivarNotificacoes({ chavePublica }: { chavePublica: string }) 
     )
   }
 
+  if (estado === 'sem-configuracao') {
+    return (
+      <p className="text-sm text-muted-foreground">
+        As notificações ainda não estão configuradas nesta instalação: falta a
+        chave pública no ambiente (<code>NEXT_PUBLIC_VAPID_PUBLIC_KEY</code>).
+        Depois de a pôr, é preciso publicar outra vez — esta chave é fixada na
+        compilação.
+      </p>
+    )
+  }
+
   if (estado === 'sem-suporte') {
     return (
       <p className="text-sm text-muted-foreground">
@@ -233,6 +249,8 @@ export function ActivarNotificacoes({ chavePublica }: { chavePublica: string }) 
         </Botao>
       )}
 
+      {estado === 'ligada' ? <BotaoTeste /> : null}
+
       {erro ? <Aviso tom="erro">{erro}</Aviso> : null}
       {!erro && mensagem ? <Aviso tom="sucesso">{mensagem}</Aviso> : null}
 
@@ -241,5 +259,32 @@ export function ActivarNotificacoes({ chavePublica }: { chavePublica: string }) 
         de ligar nos dois.
       </p>
     </div>
+  )
+}
+
+/**
+ * «Enviar um aviso de teste a mim próprio.»
+ *
+ * É a única maneira de alguém saber, sem adivinhar, se as quatro variáveis do
+ * ambiente estão certas — e quando não estão, diz qual falta ou o que o
+ * serviço de push respondeu.
+ */
+function BotaoTeste() {
+  const [resultado, executar, pendente] = useActionState(
+    async () => testarNotificacoes(),
+    SEM_RESULTADO,
+  )
+
+  return (
+    <form action={executar} className="space-y-2">
+      <Botao type="submit" variante="contorno" disabled={pendente}>
+        <Send className="size-4" aria-hidden />
+        {pendente ? 'A enviar…' : 'Enviar um teste a mim próprio'}
+      </Botao>
+
+      {resultado.mensagem ? (
+        <Aviso tom={resultado.ok ? 'sucesso' : 'erro'}>{resultado.mensagem}</Aviso>
+      ) : null}
+    </form>
   )
 }

@@ -2,6 +2,7 @@
 
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
+import { avisarComRelatorio } from '@/lib/notificacoes/enviar'
 import { texto, textoOuNulo } from './comum'
 import { traduzirErro, type ResultadoAccao } from './resultado'
 
@@ -65,4 +66,48 @@ export async function removerSubscricao(
   if (error) return { ok: false, mensagem: traduzirErro(error) }
 
   return { ok: true, mensagem: 'Este telemóvel deixa de ser avisado.' }
+}
+
+/**
+ * Manda um aviso de teste a quem carregou no botão.
+ *
+ * Existe porque o envio normal é mudo: uma notificação que não sai não pode
+ * fazer falhar o que a originou. Isso é o correcto em produção e inútil para
+ * quem está a montar — ficava-se sem saber se o silêncio era sucesso ou
+ * avaria. Aqui, e só aqui, o motivo verdadeiro chega ao ecrã.
+ *
+ * O destino é sempre a própria pessoa, por isso não há nada a revelar sobre
+ * os aparelhos de ninguém.
+ */
+export async function testarNotificacoes(): Promise<ResultadoAccao> {
+  const sessao = await exigirPessoa()
+
+  const { enviados, falhados, motivo } = await avisarComRelatorio(sessao.id, {
+    titulo: 'Quinta da Figueira',
+    texto: 'Teste de notificação. Se está a ler isto, está tudo configurado.',
+    caminho: '/conta',
+    agrupar: 'teste',
+  })
+
+  if (enviados > 0 && falhados === 0) {
+    return {
+      ok: true,
+      mensagem:
+        enviados === 1
+          ? 'Enviado. Deve aparecer no aparelho dentro de segundos — se não aparecer, veja se as notificações da aplicação estão activas nas definições do telemóvel.'
+          : `Enviado para ${enviados} aparelhos.`,
+    }
+  }
+
+  if (enviados > 0) {
+    return {
+      ok: true,
+      mensagem: `Enviado para ${enviados}, mas ${falhados} falharam. ${motivo ?? ''}`.trim(),
+    }
+  }
+
+  return {
+    ok: false,
+    mensagem: motivo ?? 'Não foi possível enviar, e não houve motivo nenhum.',
+  }
 }
