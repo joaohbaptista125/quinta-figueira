@@ -1,12 +1,20 @@
 import 'server-only'
 
 /**
- * Onde é que isto está a correr, e a que distância está a base de dados.
+ * Porque é que isto parece lento: medido, não adivinhado.
  * =============================================================================
  *
- * Cada navegação é uma renderização no servidor que fala com o Supabase, por
- * isso o que se sente ao clicar é, em boa parte, a distância entre os dois.
- * Isto existe para essa pergunta deixar de se responder por palpite.
+ * Cada navegação é uma renderização no servidor que fala com o Supabase. Há
+ * três coisas que a podem atrasar, e são bem diferentes uma da outra:
+ *
+ * 1. **A distância ao Postgres** — as consultas de dados.
+ * 2. **A distância ao servidor de autenticação**, que é outro serviço: é fácil
+ *    medir o primeiro e julgar que se mediu o segundo, e foi exactamente esse
+ *    o engano que deu origem a este ficheiro. O caminho da sessão passa por lá
+ *    e não pelo Postgres.
+ * 3. **O arranque a frio** — a função a ser criada do nada porque ninguém
+ *    entrou na aplicação nos últimos minutos. Não se mede em milissegundos de
+ *    rede: vê-se em quantos pedidos esta instância já serviu.
  */
 
 /**
@@ -58,6 +66,29 @@ export function estadoDaRegiao(): EstadoDaRegiao {
       : actual === REGIAO_ESPERADA
         ? 'igual'
         : 'diferente',
+  }
+}
+
+/**
+ * Há quanto tempo esta instância existe, e quantos pedidos já serviu.
+ *
+ * Estas duas variáveis vivem no topo do módulo: são criadas **uma vez por
+ * instância da função**, não uma vez por pedido. Um pedido que veja
+ * `servidos: 1` é o primeiro desta instância — ou seja, pagou o arranque a
+ * frio. Ver `servidos: 1` sempre que se abre a aplicação é a resposta à
+ * pergunta «porque é que a primeira página demora tanto».
+ *
+ * É um indicador, não um cronómetro: não diz quantos milissegundos custou o
+ * arranque, diz se houve arranque.
+ */
+const NASCIDA_EM = Date.now()
+let pedidosServidos = 0
+
+export function estadoDaInstancia() {
+  pedidosServidos += 1
+  return {
+    servidos: pedidosServidos,
+    idadeSegundos: Math.round((Date.now() - NASCIDA_EM) / 1000),
   }
 }
 

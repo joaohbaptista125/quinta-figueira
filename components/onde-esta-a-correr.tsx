@@ -1,10 +1,11 @@
 import { MapPin } from 'lucide-react'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import {
+  estadoDaInstancia,
   estadoDaRegiao,
   medirIdaEVolta,
   nomeDaRegiao,
-} from '@/lib/regiao'
+} from '@/lib/diagnostico'
 import {
   Aviso,
   Cartao,
@@ -32,11 +33,23 @@ import {
  */
 export async function OndeEstaACorrer() {
   const regiao = estadoDaRegiao()
+  const instancia = estadoDaInstancia()
   const supabase = await criarClienteServidor()
 
-  const idaEVolta = await medirIdaEVolta(() =>
+  // Os dois serviços medidos à parte, de propósito. O Postgres pode estar ao
+  // lado e o servidor de autenticação continuar a custar uma viagem — e é por
+  // lá que passa o caminho da sessão, duas vezes por navegação.
+  const dados = await medirIdaEVolta(() =>
     supabase.from('contas').select('id', { head: true, count: 'exact' }),
   )
+  const autenticacao = await medirIdaEVolta(() => supabase.auth.getUser())
+  const sessaoLocal = await medirIdaEVolta(() => supabase.auth.getClaims())
+
+  // `getClaims()` verifica o token localmente quando o projecto usa chaves
+  // assimétricas; sem elas cai para `getUser()` e custa o mesmo. A diferença
+  // entre os dois números é a resposta a «já liguei as chaves?».
+  const chavesAssimetricas =
+    autenticacao !== null && sessaoLocal !== null && sessaoLocal < autenticacao / 2
 
   return (
     <Cartao className="h-fit">
@@ -63,13 +76,55 @@ export async function OndeEstaACorrer() {
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">
-              Ida e volta à base de dados
+              Esta instância já serviu
+            </dt>
+            <dd className="font-medium">
+              {instancia.servidos === 1
+                ? 'este pedido — arrancou agora'
+                : `${instancia.servidos} pedidos, há ${instancia.idadeSegundos}s`}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              Ida e volta aos dados
             </dt>
             <dd className="tabular font-medium">
-              {idaEVolta === null ? '—' : `${idaEVolta} ms`}
+              {dados === null ? '—' : `${dados} ms`}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              Ida e volta à autenticação
+            </dt>
+            <dd className="tabular font-medium">
+              {autenticacao === null ? '—' : `${autenticacao} ms`}
+              {sessaoLocal !== null ? (
+                <span className="font-normal text-muted-foreground">
+                  {' '}· sessão em {sessaoLocal} ms
+                </span>
+              ) : null}
             </dd>
           </div>
         </dl>
+
+        {instancia.servidos === 1 ? (
+          <Aviso tom="atencao">
+            <strong>Este pedido apanhou a função a arrancar.</strong> Quando
+            ninguém entra na aplicação durante uns minutos, o servidor é criado
+            de novo no pedido seguinte, e essa primeira página é sempre a mais
+            lenta. Se vir isto sempre que abre, é esta a razão de «lenta a
+            abrir» — e não a base de dados.
+          </Aviso>
+        ) : null}
+
+        {autenticacao !== null && !chavesAssimetricas ? (
+          <Aviso tom="atencao">
+            <strong>A sessão ainda é verificada pelo servidor do Supabase</strong>{' '}
+            ({autenticacao} ms), e isso acontece duas vezes por navegação. Com
+            as chaves assimétricas ligadas em Authentication → JWT Keys, passa
+            a ser verificada aqui mesmo e deixa de custar rede.
+          </Aviso>
+        ) : null}
 
         {regiao.veredicto === 'diferente' ? (
           <Aviso tom="atencao">
@@ -93,10 +148,11 @@ export async function OndeEstaACorrer() {
         )}
 
         <p className="text-xs text-muted-foreground">
-          Com o servidor e a base na mesma região, uma ida e volta anda pelos
-          poucos milissegundos. Muito acima disso, ou estão em regiões
-          diferentes, ou é a função a arrancar fria — e isso nota-se sobretudo
-          na primeira página depois de um tempo sem ninguém lá entrar.
+          Como ler isto: na mesma região, os <strong>dados</strong> andam pelos
+          poucos milissegundos. A <strong>autenticação</strong> é outro serviço
+          e costuma custar mais — e está no caminho de cada navegação, duas
+          vezes. E se <strong>«arrancou agora»</strong> aparecer sempre que
+          abre a aplicação, a lentidão de abrir é o arranque, não a rede.
         </p>
       </ConteudoCartao>
     </Cartao>
