@@ -84,11 +84,22 @@ export function estadoDaRegiao(): EstadoDaRegiao {
 const NASCIDA_EM = Date.now()
 let pedidosServidos = 0
 
+/**
+ * Uma instância com poucos segundos de vida nasceu neste acesso: o que se
+ * sentiu foi o arranque. O contador sozinho engana — uma página pode render
+ * duas vezes no mesmo acesso e mostrar «2 pedidos» numa instância acabada de
+ * criar. **É a idade que diz a verdade.**
+ */
+const SEGUNDOS_PARA_SER_NOVA = 30
+
 export function estadoDaInstancia() {
   pedidosServidos += 1
+  const idadeSegundos = Math.round((Date.now() - NASCIDA_EM) / 1000)
+
   return {
     servidos: pedidosServidos,
-    idadeSegundos: Math.round((Date.now() - NASCIDA_EM) / 1000),
+    idadeSegundos,
+    acabouDeArrancar: idadeSegundos <= SEGUNDOS_PARA_SER_NOVA,
   }
 }
 

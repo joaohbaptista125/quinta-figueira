@@ -83,8 +83,8 @@ export async function OndeEstaACorrer() {
               Esta instância já serviu
             </dt>
             <dd className="font-medium">
-              {instancia.servidos === 1
-                ? 'este pedido — arrancou agora'
+              {instancia.acabouDeArrancar
+                ? `acabou de arrancar — tem ${instancia.idadeSegundos}s`
                 : `${instancia.servidos} pedidos, há ${instancia.idadeSegundos}s`}
             </dd>
           </div>
@@ -113,13 +113,14 @@ export async function OndeEstaACorrer() {
           </div>
         </dl>
 
-        {instancia.servidos === 1 ? (
+        {instancia.acabouDeArrancar ? (
           <Aviso tom="atencao">
-            <strong>Este pedido apanhou a função a arrancar.</strong> Quando
+            <strong>Este acesso apanhou a função a arrancar.</strong> Quando
             ninguém entra na aplicação durante uns minutos, o servidor é criado
-            de novo no pedido seguinte, e essa primeira página é sempre a mais
-            lenta. Se vir isto sempre que abre, é esta a razão de «lenta a
-            abrir» — e não a base de dados.
+            de novo no acesso seguinte, e essa primeira página é sempre a mais
+            lenta — os números aqui em cima já são de um servidor a trabalhar.
+            Se vir isto quase sempre que abre a aplicação, é esta a razão de
+            «lenta a abrir», e não a base de dados.
           </Aviso>
         ) : null}
 
@@ -157,8 +158,9 @@ export async function OndeEstaACorrer() {
           Como ler isto: na mesma região, os <strong>dados</strong> andam pelos
           poucos milissegundos. A <strong>autenticação</strong> é outro serviço
           e costuma custar mais — e está no caminho de cada navegação, duas
-          vezes. E se <strong>«arrancou agora»</strong> aparecer sempre que
-          abre a aplicação, a lentidão de abrir é o arranque, não a rede.
+          vezes. E se <strong>«acabou de arrancar»</strong> aparecer quase
+          sempre que abre a aplicação, a lentidão de abrir é o arranque, e não
+          a rede.
         </p>
       </ConteudoCartao>
     </Cartao>

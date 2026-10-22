@@ -3,5 +3,6 @@
   "regions": [
     "dub1"
   ],
+  "fluid": true,
   "framework": "nextjs"
 }

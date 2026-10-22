@@ -504,13 +504,25 @@ o número de idas e voltas é o que se sente ao clicar.
   Em segurança não se perde nada: quem decide o que cada um vê é a RLS, e a
   página volta a verificar a sessão. O middleware só encaminha.
 - `vercel.json` fixa a região das funções em `dub1` (Dublin), porque o projecto
-  Supabase está em West EU (Ireland), `eu-west-1`. **As duas têm de
-  corresponder**: por omissão a Vercel corre em Washington, e com o Supabase na
+  Supabase está em West EU (Ireland), `eu-west-1`. Confirmado em produção pelo
+  cartão de `/conta`: servidor em Dublin, ida e volta aos dados em 0–1 ms.
+  **As duas têm de corresponder**: por omissão a Vercel corre em Washington, e com o Supabase na
   Europa cada ida e volta custava ~180 ms. Se mudares a região do Supabase, muda
   aqui também — Frankfurt `fra1`, Londres `lhr1`, Paris `cdg1`, Estocolmo `arn1`.
 - `app/(painel)/loading.tsx` é o que o Next mostra enquanto gera a página, e
   também o que pré-carrega ao passar por cima das ligações. Sem ele o clique
   parece não ter sido registado.
+- **O que sobra é o arranque a frio, e está medido.** Com o servidor e a base
+  na mesma região, os dados a 0 ms e a sessão verificada localmente, o que
+  resta a explicar «lenta a abrir» é a função ser criada de novo quando
+  ninguém entra na aplicação há uns minutos — numa casa com ~80 pessoas a
+  entrar aos bocados, é quase sempre. `vercel.json` traz `"fluid": true`
+  explícito por causa disto: é o que faz a Vercel reaproveitar instâncias em
+  vez de criar uma por pedido. Vem ligado de origem nos projectos novos, mas
+  escrito à mão não deixa dúvida nem depende de um valor por omissão mudar.
+- **Não há como manter a aplicação quente no plano Hobby**: o cron do Hobby
+  corre uma vez por dia. Um serviço externo a bater no site de cinco em cinco
+  minutos resolve, e é o caminho barato; o plano Pro resolve de outra maneira.
 - **`/conta` mostra à gestão porque é que a aplicação parece lenta** —
   `<OndeEstaACorrer>`, sobre `lib/diagnostico.ts`. «Está lenta» não se resolve
   a adivinhar, e os logs da Vercel no plano Hobby só duram uma hora: quando se
