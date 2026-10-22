@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useId, useRef } from 'react'
+import { useActionState, useId } from 'react'
+import { useFormularioDeAccao } from '@/components/usar-formulario'
 import { useFormStatus } from 'react-dom'
 import { MessageSquare, Trash2 } from 'lucide-react'
 import { apagarNota, escreverNota } from '@/lib/accoes/notas'
@@ -131,18 +132,13 @@ function FormularioNota({
   cavaloId: string
   souDaEquipa: boolean
 }) {
-  const [resultado, executar] = useActionState(escreverNota, SEM_RESULTADO)
+  const { resultado, executar, formulario } = useFormularioDeAccao(escreverNota)
   const id = useId()
-  const campo = useRef<HTMLTextAreaElement>(null)
 
   return (
     <form
-      action={async (dados: FormData) => {
-        await executar(dados)
-        // Limpar à mão: o formulário não é recriado, e deixar lá o texto
-        // enviado convida a enviá-lo outra vez.
-        if (campo.current) campo.current.value = ''
-      }}
+      ref={formulario}
+      action={executar}
       className="space-y-2 border-t border-border pt-3"
     >
       <input type="hidden" name="cavalo_id" value={cavaloId} />
@@ -152,7 +148,6 @@ function FormularioNota({
       </label>
       <AreaTexto
         id={id}
-        ref={campo}
         name="texto"
         rows={3}
         maxLength={2000}

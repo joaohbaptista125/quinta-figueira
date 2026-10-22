@@ -1,10 +1,10 @@
 'use client'
 
-import { useActionState, useId } from 'react'
+import { useId } from 'react'
+import { useFormularioDeAccao } from '@/components/usar-formulario'
 import { useFormStatus } from 'react-dom'
 import { Hammer } from 'lucide-react'
 import { guardarFerracao } from '@/lib/accoes/ferracoes'
-import { SEM_RESULTADO } from '@/lib/accoes/resultado'
 import { Botao } from '@/components/ui/botao'
 import { Campo, AreaTexto, Caixa, Entrada, Selector } from '@/components/ui/campos'
 import {
@@ -191,7 +191,7 @@ function FormularioFerracao({
   ultima: LinhaFerracao | null
   temProprietario: boolean
 }) {
-  const [resultado, executar] = useActionState(guardarFerracao, SEM_RESULTADO)
+  const { resultado, executar, formulario } = useFormularioDeAccao(guardarFerracao)
   const prefixo = useId()
   const dia = hoje()
 
@@ -201,7 +201,11 @@ function FormularioFerracao({
         Registar ferração
       </summary>
 
-      <form action={executar} className="space-y-3 border-t border-border p-3">
+      <form
+        ref={formulario}
+        action={executar}
+        className="space-y-3 border-t border-border p-3"
+      >
         <input type="hidden" name="cavalo_id" value={cavaloId} />
 
         <div className="grid gap-3 sm:grid-cols-2">

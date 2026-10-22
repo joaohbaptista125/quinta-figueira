@@ -108,14 +108,14 @@ export async function guardarCavalo(
   revalidatePath(`/cavalos/${resultado.id}`)
 
   if (querContinuar(dados)) return resultado
-  // Criar volta à listagem; editar fica na ficha, que é de onde se veio.
-  // Cair na ficha depois de criar dava a sensação de que nada tinha
-  // acontecido: a ficha é o mesmo formulário, com os mesmos valores.
-  redirect(
-    id
-      ? comConfirmacao(`/cavalos/${resultado.id}`, 'guardado')
-      : comConfirmacao('/cavalos', 'criado'),
-  )
+  // Gravar volta sempre à listagem, ao criar e ao editar.
+  //
+  // Ficar na ficha depois de gravar era a decisão anterior, e era ela que dava
+  // a sensação de que nada tinha acontecido: a ficha destas duas entidades é
+  // o mesmo formulário, com os mesmos vinte campos e os mesmos valores. A
+  // listagem é de onde se veio, mostra a alteração na linha, e o aviso de
+  // «Alterações guardadas» aparece por cima.
+  redirect(comConfirmacao('/cavalos', id ? 'guardado' : 'criado'))
 }
 
 /**

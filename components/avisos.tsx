@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { useFormularioDeAccao } from '@/components/usar-formulario'
 import { useFormStatus } from 'react-dom'
 import { apagarAviso, guardarAviso } from '@/lib/accoes/eventos'
 import { SEM_RESULTADO } from '@/lib/accoes/resultado'
@@ -45,7 +46,7 @@ export function Avisos({
   voltar: string
   podeEscrever: boolean
 }) {
-  const [resultado, executar] = useActionState(guardarAviso, SEM_RESULTADO)
+  const { resultado, executar, formulario } = useFormularioDeAccao(guardarAviso)
 
   return (
     <div className="space-y-3">
@@ -79,7 +80,7 @@ export function Avisos({
       )}
 
       {podeEscrever ? (
-        <form action={executar} className="space-y-2">
+        <form ref={formulario} action={executar} className="space-y-2">
           {eventoId ? (
             <input type="hidden" name="evento_id" value={eventoId} />
           ) : null}

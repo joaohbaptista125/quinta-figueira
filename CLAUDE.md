@@ -438,6 +438,7 @@ components/
   confirmar-pagamento.tsx  confirmar ou recusar, do lado de quem recebe
   pagamentos-por-confirmar.tsx  o que está à espera de decisão
   escolha-metodo.tsx   método de pagamento em pastilhas, partilhado
+  usar-formulario.ts   o gancho que limpa um formulário depois de gravar
   (publico)/auth/ligar/  lê a sessão do fragmento do link de email
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
@@ -526,13 +527,36 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   isto, guardar uma edição levava de volta à mesma ficha sem nada mudar no
   ecrã. Viaja uma chave, nunca o texto da mensagem — senão qualquer pessoa
   punha a frase que quisesse no endereço de outra.
-- **Criar volta à listagem; editar fica na ficha.** Cair na ficha depois de
-  criar dava a sensação de que nada tinha acontecido — a ficha é o mesmo
-  formulário, com os mesmos valores. Excepção deliberada: um evento e uma
-  equipa abrem na ficha, porque o passo seguinte (a convocatória, os membros)
-  está lá e a ficha não se parece com o formulário de criação.
+- **Gravar volta à listagem, ao criar e ao editar.** A regra anterior era
+  «criar volta à listagem, editar fica na ficha», e era ela que dava a
+  sensação de que nada tinha acontecido: a ficha de uma pessoa ou de um cavalo
+  é o mesmo formulário, com os mesmos vinte campos e os mesmos valores, por
+  isso gravar deixava o ecrã exactamente igual. A listagem é de onde se veio,
+  mostra a alteração na linha, e o aviso de «Alterações guardadas» aparece por
+  cima. Na prática só `cavalos` e `pessoas` é que ficavam na ficha — as outras
+  entidades já voltavam todas à listagem.
+  **Excepção deliberada: um evento e uma equipa continuam a abrir na ficha**,
+  ao criar e ao editar. Aí a ficha **não** é o formulário: tem a convocatória,
+  os avisos e os membros, que é o passo seguinte de quem acabou de marcar. O
+  que se vê a seguir a gravar é diferente do que se preencheu, e é isso que
+  distingue este caso do outro.
 - Formulários longos dividem-se em `<SeccaoCampos>` com título. Os de pessoa e
   de cavalo eram vinte campos seguidos sem divisão nenhuma.
+- **Um formulário dentro da página limpa-se depois de gravar** —
+  `useFormularioDeAccao()` em `components/usar-formulario.ts`. Publicar um
+  aviso, convocar uma pessoa, registar uma ferração ou acrescentar uma raça
+  deixavam os campos preenchidos: para quem está do outro lado do ecrã isso
+  lê-se como «não aconteceu nada», e convida a carregar outra vez no botão com
+  o mesmo texto lá dentro. O gancho faz `reset()` e devolve o foco ao primeiro
+  campo — que é também o que traz a página de volta ao sítio onde se estava a
+  trabalhar. **Não o uses num bloco de caixas de visto que espelha o estado do
+  servidor** (as presenças): `reset()` devolveria as marcas ao que estavam
+  antes de gravar.
+- **Um erro de gravação é trazido ao ecrã**, não deixado no topo do
+  formulário. `<FormularioEntidade>` faz `scrollIntoView` da mensagem quando a
+  acção falha: o botão de guardar está vinte campos abaixo do sítio onde o
+  erro aparece, e quem carregava nele via a página ficar na mesma e concluía
+  que não tinha acontecido nada.
 - **Quem sai do centro desactiva-se; apagar é para o engano de digitação.**
   `<AccoesFicha>` põe as duas saídas lado a lado no cabeçalho da ficha de
   **pessoa**, **cavalo** e **contrato**; antes era um só botão «Apagar» no

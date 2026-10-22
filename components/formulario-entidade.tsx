@@ -69,11 +69,14 @@ export function FormularioEntidade({
   const [resultado, executar] = useActionState(accao, SEM_RESULTADO)
   const [chave, setChave] = React.useState(0)
   const referenciaFormulario = React.useRef<HTMLFormElement>(null)
+  const referenciaAviso = React.useRef<HTMLDivElement>(null)
 
-  // Depois de "guardar e criar outro", limpa o formulário e devolve o foco ao
-  // primeiro campo para se poder continuar a escrever sem tocar no rato.
   React.useEffect(() => {
-    if (resultado.ok && resultado.mensagem) {
+    if (!resultado.mensagem) return
+
+    if (resultado.ok) {
+      // Depois de «guardar e criar outro»: limpa o formulário e devolve o foco
+      // ao primeiro campo, para se continuar a escrever sem tocar no rato.
       setChave((anterior) => anterior + 1)
       // Os `file` ficam de fora: o de importar contactos está escondido e
       // aparece antes do nome, e o foco ia parar a um campo que não se vê.
@@ -82,18 +85,33 @@ export function FormularioEntidade({
           'input:not([type=hidden]):not([type=file]), select, textarea',
         )
       primeiro?.focus()
+      return
     }
+
+    /*
+     * O erro aparece no topo do formulário, e o botão de guardar está vinte
+     * campos abaixo: quem carregava nele via a página ficar exactamente na
+     * mesma e concluía que não tinha acontecido nada. Trazer a mensagem ao
+     * ecrã é o que transforma isso num «falta-te aqui uma coisa».
+     */
+    referenciaAviso.current?.scrollIntoView({
+      block: 'center',
+      behavior: 'smooth',
+    })
   }, [resultado])
 
   return (
     <form ref={referenciaFormulario} action={executar} className="space-y-5">
       {id ? <input type="hidden" name="id" value={id} /> : null}
 
-      {resultado.ok && resultado.mensagem ? (
-        <Aviso tom="sucesso">{resultado.mensagem}</Aviso>
-      ) : null}
-      {!resultado.ok && resultado.mensagem ? (
-        <Aviso tom="erro">{resultado.mensagem}</Aviso>
+      {/* Só existe quando há mensagem: um `div` vazio permanente acrescentava
+          um espaço a mais no topo de todos os formulários. */}
+      {resultado.mensagem ? (
+        <div ref={referenciaAviso}>
+          <Aviso tom={resultado.ok ? 'sucesso' : 'erro'}>
+            {resultado.mensagem}
+          </Aviso>
+        </div>
       ) : null}
 
       <div key={chave} className="space-y-5">

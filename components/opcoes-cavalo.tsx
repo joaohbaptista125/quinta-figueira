@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useId, useState } from 'react'
+import { useFormularioDeAccao } from '@/components/usar-formulario'
 import { useFormStatus } from 'react-dom'
 import { Plus, RotateCcw, X } from 'lucide-react'
 import {
@@ -114,11 +115,12 @@ export function LinhaOpcao({ opcao }: { opcao: Opcao }) {
 
 /** Acrescenta uma opção à lista sem ter de passar pela ficha de um cavalo. */
 export function AdicionarOpcao({ tipo }: { tipo: TipoOpcaoCavalo }) {
-  const [resultado, criar] = useActionState(criarOpcaoCavalo, SEM_RESULTADO)
+  const { resultado, executar: criar, formulario } =
+    useFormularioDeAccao(criarOpcaoCavalo)
   const campo = useId()
 
   return (
-    <form action={criar} className="space-y-2">
+    <form ref={formulario} action={criar} className="space-y-2">
       <input type="hidden" name="tipo" value={tipo} />
       <div className="flex flex-wrap items-center gap-2">
         <Entrada
@@ -129,8 +131,6 @@ export function AdicionarOpcao({ tipo }: { tipo: TipoOpcaoCavalo }) {
           className="max-w-xs"
           autoComplete="off"
           required
-          // Depois de gravar, o formulário é limpo pela chave do React abaixo.
-          key={resultado.ok && resultado.mensagem ? resultado.mensagem : 'campo'}
         />
         <BotaoSubmeter>
           <Plus className="size-4" aria-hidden />

@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useRef } from 'react'
+import { useFormularioDeAccao } from '@/components/usar-formulario'
 import {
   guardarParticipante,
   marcarPresencas,
@@ -181,7 +182,8 @@ function Convocar({
   porConvocar: Opcao[]
   cavalos: Opcao[]
 }) {
-  const [resultado, executar] = useActionState(guardarParticipante, SEM_RESULTADO)
+  const { resultado, executar, formulario } =
+    useFormularioDeAccao(guardarParticipante)
 
   if (porConvocar.length === 0) {
     return (
@@ -192,7 +194,7 @@ function Convocar({
   }
 
   return (
-    <form action={executar} className="space-y-2">
+    <form ref={formulario} action={executar} className="space-y-2">
       <input type="hidden" name="evento_id" value={eventoId} />
       <input type="hidden" name="estado" value="convocado" />
 
