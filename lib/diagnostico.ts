@@ -93,12 +93,46 @@ export function estadoDaInstancia() {
 }
 
 /**
+ * Como é que o Supabase assina os tokens deste projecto.
+ *
+ * Isto substitui uma comparação de tempos que não servia: quando tudo dá 0 ms,
+ * comparar 0 com 1 não diz nada, e o cartão chegou a avisar que a sessão ia à
+ * rede logo a seguir a dizer que demorava 0 ms. O algoritmo está escrito no
+ * cabeçalho do próprio token e não precisa de ser adivinhado.
+ *
+ * `HS*` é o segredo partilhado antigo — `getClaims()` não o pode verificar
+ * sozinho e cai para `getUser()`, que é um pedido de rede. `RS*`/`ES*` são as
+ * chaves assimétricas, e aí a verificação é local.
+ */
+export type AssinaturaDoToken = 'simetrica' | 'assimetrica' | null
+
+export function lerAssinatura(token: string | null | undefined): AssinaturaDoToken {
+  if (!token) return null
+  try {
+    const [cabecalho] = token.split('.')
+    const { alg } = JSON.parse(
+      Buffer.from(cabecalho, 'base64url').toString('utf8'),
+    ) as { alg?: string }
+    if (!alg) return null
+    return alg.startsWith('HS') ? 'simetrica' : 'assimetrica'
+  } catch {
+    return null
+  }
+}
+
+/**
  * Quanto demora uma ida e volta ao Supabase, medida agora.
  *
  * Uma consulta de contagem sobre uma tabela pequena, que não devolve linhas
  * nenhumas: o que se mede é a viagem, não o trabalho da base. Três medições e
  * fica-se com a **melhor** — a pior de três diz mais sobre o momento do que
  * sobre a distância, e o que interessa saber aqui é o chão.
+ *
+ * **Quem chama tem de criar um cliente novo a cada medição quando o que se
+ * mede é a autenticação.** O cliente do Supabase guarda o utilizador em
+ * memória depois da primeira pergunta, e reutilizá-lo media a memória em vez
+ * da rede — foi assim que a autenticação apareceu a 0 ms quando ninguém sabia
+ * quanto custava de verdade.
  */
 export async function medirIdaEVolta(
   consultar: () => PromiseLike<unknown>,

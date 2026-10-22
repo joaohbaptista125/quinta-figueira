@@ -3,6 +3,7 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import {
   estadoDaInstancia,
   estadoDaRegiao,
+  lerAssinatura,
   medirIdaEVolta,
   nomeDaRegiao,
 } from '@/lib/diagnostico'
@@ -42,14 +43,17 @@ export async function OndeEstaACorrer() {
   const dados = await medirIdaEVolta(() =>
     supabase.from('contas').select('id', { head: true, count: 'exact' }),
   )
-  const autenticacao = await medirIdaEVolta(() => supabase.auth.getUser())
-  const sessaoLocal = await medirIdaEVolta(() => supabase.auth.getClaims())
+  // Cliente novo a cada medição, de propósito: reutilizar o mesmo media a
+  // memória dele e não a rede. Era por isso que a autenticação dizia 0 ms.
+  const autenticacao = await medirIdaEVolta(async () => {
+    const cliente = await criarClienteServidor()
+    return cliente.auth.getUser()
+  })
 
-  // `getClaims()` verifica o token localmente quando o projecto usa chaves
-  // assimétricas; sem elas cai para `getUser()` e custa o mesmo. A diferença
-  // entre os dois números é a resposta a «já liguei as chaves?».
-  const chavesAssimetricas =
-    autenticacao !== null && sessaoLocal !== null && sessaoLocal < autenticacao / 2
+  // Como o projecto assina os tokens, lido do cabeçalho do próprio token. É
+  // um facto, não uma comparação de tempos.
+  const { data: sessao } = await supabase.auth.getSession()
+  const assinatura = lerAssinatura(sessao.session?.access_token)
 
   return (
     <Cartao className="h-fit">
@@ -98,11 +102,13 @@ export async function OndeEstaACorrer() {
             </dt>
             <dd className="tabular font-medium">
               {autenticacao === null ? '—' : `${autenticacao} ms`}
-              {sessaoLocal !== null ? (
-                <span className="font-normal text-muted-foreground">
-                  {' '}· sessão em {sessaoLocal} ms
-                </span>
-              ) : null}
+              <span className="font-normal text-muted-foreground">
+                {assinatura === 'assimetrica'
+                  ? ' · verificada aqui'
+                  : assinatura === 'simetrica'
+                    ? ' · verificada lá'
+                    : ''}
+              </span>
             </dd>
           </div>
         </dl>
@@ -117,12 +123,12 @@ export async function OndeEstaACorrer() {
           </Aviso>
         ) : null}
 
-        {autenticacao !== null && !chavesAssimetricas ? (
+        {assinatura === 'simetrica' ? (
           <Aviso tom="atencao">
-            <strong>A sessão ainda é verificada pelo servidor do Supabase</strong>{' '}
-            ({autenticacao} ms), e isso acontece duas vezes por navegação. Com
-            as chaves assimétricas ligadas em Authentication → JWT Keys, passa
-            a ser verificada aqui mesmo e deixa de custar rede.
+            <strong>A sessão é verificada pelo servidor do Supabase</strong>, e
+            isso acontece duas vezes por navegação — custe o que custar o número
+            acima. Com as chaves assimétricas ligadas em Authentication → JWT
+            Keys, passa a ser verificada aqui mesmo, sem rede.
           </Aviso>
         ) : null}
 

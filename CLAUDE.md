@@ -520,9 +520,16 @@ o número de idas e voltas é o que se sente ao clicar.
     `head: true` — não devolve linhas, mede a viagem e não o trabalho da base.
   - **A ida e volta à autenticação**, que é **outro serviço**. Medir só o
     Postgres e julgar que se mediu o caminho da sessão foi um engano real
-    desta investigação: os dados davam 1 ms e a sessão não passa por lá. A
-    diferença entre `getUser()` e `getClaims()` no cartão diz se as chaves
-    assimétricas já estão ligadas.
+    desta investigação: os dados davam 1 ms e a sessão não passa por lá.
+    **Cada medição cria um cliente novo**, porque o cliente do Supabase guarda
+    o utilizador em memória depois da primeira pergunta — reutilizá-lo media a
+    memória e dava 0 ms, que foi o segundo engano.
+  - **Se as chaves assimétricas estão ligadas**, por `lerAssinatura()`: o
+    algoritmo está escrito no cabeçalho do token (`HS*` = segredo partilhado,
+    `RS*`/`ES*` = assimétrica). Isto substituiu uma comparação de tempos que,
+    com tudo a 0 ms, chegou a avisar que a sessão ia à rede logo a seguir a
+    dizer que demorava 0 ms. **Um facto lido não se discute; dois tempos
+    parecidos discutem-se sempre.**
   - **O arranque a frio**, por um contador no topo de `lib/diagnostico.ts` —
     criado uma vez por **instância** da função, não por pedido. Ver sempre
     «arrancou agora» ao abrir a aplicação é a resposta a «porque é que a
