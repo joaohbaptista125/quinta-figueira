@@ -493,6 +493,12 @@ o número de idas e voltas é o que se sente ao clicar.
   A renovação do cookie mantém-se (passa por `getSession()`). **Ligar as
   chaves assimétricas em Authentication → JWT Keys é o que transforma isto
   numa ida e volta a menos por clique.**
+- **`obterUtilizador()` também usa `getClaims()`**, e devolve só `{ id }` —
+  é tudo o que a aplicação usa dele. Com isso, `obterPessoaSessao()` passa a
+  ser a **primeira e única** ida à rede do caminho da sessão: de três em fila
+  para uma. As Server Actions continuam a chamar `supabase.auth.getUser()`
+  directamente para o `criado_por`; aí é uma vez por acção da pessoa, não por
+  renderização, e não vale a pena mexer.
   Em segurança não se perde nada: quem decide o que cada um vê é a RLS, e a
   página volta a verificar a sessão. O middleware só encaminha.
 - `vercel.json` fixa a região das funções em `dub1` (Dublin), porque o projecto

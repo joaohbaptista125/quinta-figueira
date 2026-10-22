@@ -27,23 +27,38 @@ export async function obterOrigem() {
 }
 
 /**
- * Utilizador autenticado, ou null.
+ * Quem está autenticado, ou null. Só o `id` — é tudo o que a aplicação usa.
  *
- * Embrulhado em cache() do React: numa mesma renderização, o layout e a página
- * chamam isto várias vezes, e cada `getUser()` é um pedido à rede ao servidor
- * de autenticação do Supabase — não uma leitura local do cookie. Sem a cache,
- * uma navegação custava três desses pedidos em fila.
+ * **`getClaims()` e não `getUser()`**, e a diferença é uma ida e volta à rede
+ * em cada renderização. `getUser()` pergunta ao servidor de autenticação do
+ * Supabase quem é a pessoa; `getClaims()` verifica a assinatura do próprio
+ * token **localmente** quando o projecto usa chaves assimétricas. Com o
+ * segredo partilhado antigo (HS256) a biblioteca cai sozinha para `getUser()`,
+ * por isso isto nunca é mais lento do que era — mas só rende depois de as
+ * chaves assimétricas estarem ligadas no Supabase.
+ *
+ * Em segurança não se perde nada: a assinatura é verificada à mesma, e quem
+ * decide o que cada pessoa vê continua a ser a RLS, que lê o token do seu
+ * lado.
+ *
+ * Continua embrulhado em `cache()` do React: numa mesma renderização o layout
+ * e a página precisam ambos da sessão.
  */
-export const obterUtilizador = cache(async () => {
-  const supabase = await criarClienteServidor()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  return user
-})
+export const obterUtilizador = cache(
+  async (): Promise<{ id: string } | null> => {
+    const supabase = await criarClienteServidor()
+    const { data } = await supabase.auth.getClaims()
+    const sub = data?.claims?.sub
+    return sub ? { id: sub } : null
+  },
+)
 
 /**
  * Pessoa associada à sessão actual, ou null.
+ *
+ * Com `obterUtilizador()` a resolver-se localmente, isto passa a ser a
+ * **primeira e única** ida à rede do caminho da sessão: eram três em fila
+ * (middleware, página, e só então a consulta a `pessoas`).
  *
  * Devolve null tanto para quem não tem sessão como para quem tem conta em
  * auth.users mas ainda não está ligado a uma ficha de pessoa — nesse caso a
