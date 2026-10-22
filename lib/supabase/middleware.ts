@@ -51,9 +51,30 @@ export async function actualizarSessao(pedido: NextRequest) {
     },
   })
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  /*
+   * `getClaims()` e não `getUser()`, e isto vale uma ida e volta à rede em
+   * **cada pedido**.
+   *
+   * `getUser()` pergunta ao servidor de autenticação do Supabase quem é a
+   * pessoa — é um pedido de rede, não uma leitura do cookie. Como o middleware
+   * corre antes de tudo, a página nem começava a ser gerada enquanto essa
+   * resposta não chegasse; e a seguir a página fazia a mesma pergunta outra
+   * vez, porque a cache do React não atravessa invocações.
+   *
+   * `getClaims()` verifica a assinatura do próprio token **localmente**,
+   * quando o projecto usa chaves assimétricas — zero rede. Se o projecto
+   * ainda usar o segredo partilhado antigo (HS256), cai sozinho para
+   * `getUser()`, por isso isto nunca é mais lento do que era. A renovação do
+   * cookie continua a acontecer: `getClaims()` passa por `getSession()`, que
+   * renova o token quando está a expirar.
+   *
+   * Em termos de segurança não se perde nada: quem decide o que cada pessoa vê
+   * é a RLS, e a página volta a verificar a sessão por sua conta. O que o
+   * middleware faz é encaminhar quem não tem sessão para `/entrar`, que é
+   * conforto e não barreira.
+   */
+  const { data: credenciais } = await supabase.auth.getClaims()
+  const user = credenciais?.claims?.sub ? credenciais.claims : null
 
   const caminho = pedido.nextUrl.pathname
 

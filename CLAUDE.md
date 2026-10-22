@@ -479,6 +479,22 @@ o número de idas e voltas é o que se sente ao clicar.
   pedido de rede ao servidor de autenticação, não uma leitura do cookie, e o
   layout e a página precisam ambos da sessão — sem a cache seriam três pedidos
   por clique em vez de um.
+- **Conta as idas e voltas antes de culpar o servidor.** Uma navegação tinha
+  **três em fila** antes de a primeira consulta útil arrancar: o middleware a
+  perguntar quem é a pessoa, a página a perguntar o mesmo outra vez (a cache
+  do React não atravessa invocações — o middleware e a função são duas), e só
+  depois o `select` em `pessoas`. As duas primeiras eram a mesma pergunta.
+- **O middleware usa `getClaims()`, não `getUser()`.** `getUser()` é um pedido
+  de rede ao servidor de autenticação em **cada** pedido, e o middleware corre
+  antes de tudo: a página nem começava a ser gerada enquanto a resposta não
+  chegasse. `getClaims()` verifica a assinatura do token localmente **se o
+  projecto Supabase usar chaves assimétricas**; com o segredo partilhado
+  antigo (HS256) cai sozinho para `getUser()`, por isso nunca é mais lento.
+  A renovação do cookie mantém-se (passa por `getSession()`). **Ligar as
+  chaves assimétricas em Authentication → JWT Keys é o que transforma isto
+  numa ida e volta a menos por clique.**
+  Em segurança não se perde nada: quem decide o que cada um vê é a RLS, e a
+  página volta a verificar a sessão. O middleware só encaminha.
 - `vercel.json` fixa a região das funções em `dub1` (Dublin), porque o projecto
   Supabase está em West EU (Ireland), `eu-west-1`. **As duas têm de
   corresponder**: por omissão a Vercel corre em Washington, e com o Supabase na
