@@ -878,6 +878,25 @@ escritório. As duas coisas que mais custaram a acertar:
   existia antes era uma fila de doze pastilhas com deslize horizontal: viam-se
   três, e não havia como adivinhar que existiam mais nove. O `<main>` leva
   `pb-24` porque a barra é fixa.
+- **O telemóvel ampliava a página sozinho, e a culpa era dos campos.** O
+  Safari do iOS amplia sempre que o foco cai num campo com **menos de 16px** —
+  e todos os campos eram `text-sm`, ou seja 14px. Tocar num campo ampliava,
+  sair do campo deixava a página ampliada, e quem preenchia um formulário
+  passava o tempo a afastar com os dedos. `BASE_CAMPO` em
+  `components/ui/campos.tsx` leva por isso `text-sm pointer-coarse:text-base`:
+  16px nos ecrãs de toque, 14px no rato, e a altura `h-10` dá exactamente para
+  os dois. **Não baixes isto abaixo de 16px em ecrãs de toque.**
+- **`touch-action: manipulation` no `body`** tira ao toque duplo a função de
+  ampliar, e mais nada — dois toques seguidos num botão são um engano
+  frequente com luvas, e deixavam a página ampliada. De passagem tira o atraso
+  de ~300 ms que o browser impunha a cada toque.
+- **Ampliar com dois dedos continua a funcionar, e tem de continuar.** É como
+  se lê uma factura digitalizada ou a marca de um cavalo numa fotografia, e é
+  o que permite a quem vê mal usar isto. `user-scalable=no` seria pior do que
+  o problema — e **no iPhone nem sequer funcionaria**: o Safari ignora essa
+  definição desde o iOS 10, de propósito, por acessibilidade. A maneira certa
+  de não haver zoom acidental é a de cima: campos a 16px e o duplo toque
+  desarmado.
 - **As tabelas deixam de ser tabelas abaixo de `sm`.** Cada linha passa a
   cartão, com o nome da coluna à esquerda de cada valor. O nome da coluna vem
   do `rotulo` do `<Td>`: **numa listagem nova, todos os `<Td>` levam `rotulo`

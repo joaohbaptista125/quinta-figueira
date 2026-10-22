@@ -1,8 +1,22 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
+/**
+ * `pointer-coarse:text-base` não é estética: é o que impede o telemóvel de
+ * ampliar a página sozinho.
+ *
+ * O Safari do iOS amplia sempre que o foco cai num campo com menos de 16px —
+ * e todos os campos desta aplicação eram `text-sm`, ou seja 14px. Tocar num
+ * campo ampliava, sair do campo deixava a página ampliada, e a pessoa ficava
+ * a afastar com os dedos a cada formulário. Era essa a origem do «zoom
+ * sozinho», e não o gesto de ninguém.
+ *
+ * 16px nos ecrãs de toque, 14px no rato: a altura `h-10` dá exactamente para
+ * os dois (24px de linha + 16px de `py-2`).
+ */
 const BASE_CAMPO = cn(
-  'w-full rounded-md border border-input bg-card px-3 py-2 text-sm',
+  'w-full rounded-md border border-input bg-card px-3 py-2',
+  'text-sm pointer-coarse:text-base',
   'placeholder:text-muted-foreground',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring',
   'disabled:cursor-not-allowed disabled:opacity-50',

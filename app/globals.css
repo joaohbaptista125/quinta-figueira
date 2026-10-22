@@ -110,6 +110,24 @@
     background-color: var(--background);
     color: var(--foreground);
     -webkit-font-smoothing: antialiased;
+
+    /*
+     * Tirar ao toque duplo a função de ampliar, e mais nada.
+     *
+     * `manipulation` continua a deixar arrastar e a deixar ampliar com dois
+     * dedos — é só o duplo toque que deixa de ampliar. Numa aplicação que se
+     * usa com luvas dentro da cavalariça, dois toques seguidos num botão são
+     * um engano frequente, e o resultado era a página ficar ampliada sem que
+     * ninguém tivesse pedido. De passagem, tira também o atraso de ~300 ms
+     * que o browser impunha a cada toque à espera do segundo.
+     *
+     * **Ampliar com dois dedos tem de continuar a funcionar**: é como se lê
+     * uma factura digitalizada ou a marca de um cavalo numa fotografia, e é
+     * também o que permite a quem vê mal usar isto. Bloqueá-lo seria pior do
+     * que o problema — e no iPhone nem sequer funcionaria: o Safari ignora
+     * `user-scalable=no` desde o iOS 10, de propósito.
+     */
+    touch-action: manipulation;
   }
 
   /* Valores monetários alinhados em coluna. */
