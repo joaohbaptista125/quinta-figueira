@@ -439,6 +439,7 @@ components/
   pagamentos-por-confirmar.tsx  o que está à espera de decisão
   escolha-metodo.tsx   método de pagamento em pastilhas, partilhado
   usar-formulario.ts   o gancho que limpa um formulário depois de gravar
+  onde-esta-a-correr.tsx  região do servidor e distância à base, em /conta
   (publico)/auth/ligar/  lê a sessão do fragmento do link de email
   notificacao.tsx    confirmação depois de gravar e redireccionar
 lib/
@@ -452,6 +453,7 @@ lib/
   rotulos.ts      rótulos PT-PT dos enumerados
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
   origem.ts       o endereço público que vai nos links de email (+ testes)
+  regiao.ts       onde a função corre, e quanto custa falar com a base
   contas.ts       a conta onde o dinheiro entra, criada sozinha se faltar
   notificacoes/enviar.ts  o envio de avisos — o único sítio com a chave de serviço
   supabase/sem-sessao.ts  cliente sem cookies, para falar em nome de outra pessoa
@@ -509,6 +511,18 @@ o número de idas e voltas é o que se sente ao clicar.
 - `app/(painel)/loading.tsx` é o que o Next mostra enquanto gera a página, e
   também o que pré-carrega ao passar por cima das ligações. Sem ele o clique
   parece não ter sido registado.
+- **`/conta` mostra à gestão onde o servidor está a correr e a que distância
+  está a base** — `<OndeEstaACorrer>`, sobre `lib/regiao.ts`. «A aplicação
+  está lenta» é uma frase que não se resolve a adivinhar, e os logs da Vercel
+  no plano Hobby só duram uma hora. O cartão diz a região da função, compara-a
+  com `REGIAO_ESPERADA` e **mede a ida e volta ao Supabase no momento**: uma
+  contagem sobre `contas` com `head: true`, que não devolve linhas nenhumas —
+  mede-se a viagem, não o trabalho da base. Três medições e fica a melhor, que
+  a pior de três diz mais sobre o instante do que sobre a distância.
+  `REGIAO_ESPERADA` está repetida em `lib/regiao.ts` de propósito:
+  `vercel.json` não entra no pacote da função, e lê-lo com `fs` em produção
+  daria errado — a mesma armadilha dos ficheiros de `public/`. **Se mudares a
+  região num, muda no outro.**
 
 ### Ficheiros em `public/`
 

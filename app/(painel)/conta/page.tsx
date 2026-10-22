@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { exigirPessoa, obterOrigem } from '@/lib/sessao'
+import { eGestao } from '@/lib/permissoes'
+import { OndeEstaACorrer } from '@/components/onde-esta-a-correr'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { SubscreverCalendario } from '@/components/subscrever-calendario'
@@ -125,6 +127,10 @@ export default async function PaginaConta() {
             />
           </ConteudoCartao>
         </Cartao>
+
+        {/* Diagnóstico de velocidade: à gestão interessa, a um cliente é
+            ruído. Mede a ida e volta à base no momento em que a página abre. */}
+        {eGestao(sessao.perfil) ? <OndeEstaACorrer /> : null}
       </div>
     </>
   )
