@@ -148,7 +148,7 @@ function Largar({
   return (
     <form action={executar} className="mt-auto flex flex-col gap-2 pt-1">
       <input type="hidden" name="paddock_id" value={paddockId} />
-      <Selector name="cavalo_id" defaultValue="" aria-label="Cavalo a largar">
+      <Selector name="cavalo_id" defaultValue="" required aria-label="Cavalo a largar">
         <option value="" disabled>
           Largar um cavalo…
         </option>
