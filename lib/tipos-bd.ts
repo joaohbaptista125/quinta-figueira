@@ -391,13 +391,25 @@ export type Evento = Carimbos & {
   criado_por: string | null
 }
 
+/** O que o atleta disse **antes**. Não confundir com `estado`. */
+export type ConfirmacaoParticipante = 'sem_resposta' | 'vai' | 'nao_vai'
+
 export type EventoParticipante = Carimbos & {
   id: string
   evento_id: string
   pessoa_id: string
   cavalo_id: string | null
+  /**
+   * O que aconteceu, escrito pela equipa depois. **Não é a resposta do
+   * atleta** — essa é `confirmacao`.
+   */
   estado: EstadoParticipacao
   notas: string | null
+  /** A resposta do atleta à convocatória. Só ele lhe mexe. */
+  confirmacao: ConfirmacaoParticipante
+  /** Carimbado por trigger quando a resposta muda — nunca escrever. */
+  confirmado_em: string | null
+  motivo_ausencia: string | null
   /** Mantido por trigger — nunca escrever. */
   periodo: string | null
 }
@@ -752,6 +764,7 @@ export type BaseDados = {
       tipo_opcao_cavalo: TipoOpcaoCavalo
       tipo_evento: TipoEvento
       estado_participacao: EstadoParticipacao
+      confirmacao_participante: ConfirmacaoParticipante
       estado_declaracao: EstadoDeclaracao
     }
     CompositeTypes: Record<string, never>

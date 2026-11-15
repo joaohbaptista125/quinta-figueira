@@ -23,7 +23,8 @@ import {
 import { apagarEvento, guardarEvento } from '@/lib/accoes/eventos'
 import { cavalosActivos, pessoasActivas } from '@/lib/consultas'
 import { ROTULOS_TIPO_EVENTO } from '@/lib/rotulos'
-import { formatarDiaPorExtenso, formatarIntervalo } from '@/lib/formatos'
+import { agoraLocal, formatarDiaPorExtenso, formatarIntervalo } from '@/lib/formatos'
+import { ResponderConvocatoria } from '@/components/responder-convocatoria'
 
 export const metadata: Metadata = { title: 'Evento' }
 
@@ -40,7 +41,7 @@ export default async function PaginaEvento({
     .from('eventos')
     .select(
       `*,
-       evento_participantes(id, estado, pessoas(id, nome), cavalos(id, nome)),
+       evento_participantes(id, estado, pessoa_id, confirmacao, confirmado_em, motivo_ausencia, pessoas(id, nome), cavalos(id, nome)),
        avisos(id, texto, criado_em, pessoas(nome))`,
     )
     .eq('id', id)
@@ -72,9 +73,21 @@ export default async function PaginaEvento({
   const convocados = (evento.evento_participantes ?? []).map((linha) => ({
     id: linha.id,
     estado: linha.estado,
+    confirmacao: linha.confirmacao,
     pessoa: linha.pessoas,
     cavalo: linha.cavalos,
   }))
+
+  // A linha de quem está a ver, se tiver sido convocado. É o que lhe dá o
+  // «vou»/«não vou» — e aparece a toda a gente, instrutores incluídos: também
+  // eles são convocados para competições.
+  const minhaLinha = (evento.evento_participantes ?? []).find(
+    (linha) => linha.pessoa_id === sessao.id,
+  )
+
+  // Depois da hora de início já não há nada a responder: o que interessa
+  // passa a ser a presença, e essa escreve-a a equipa.
+  const jaPassou = `${evento.data}T${evento.hora_inicio}` < agoraLocal()
 
   const avisos = (evento.avisos ?? []).map((aviso) => ({
     id: aviso.id,
@@ -105,6 +118,27 @@ export default async function PaginaEvento({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="space-y-4">
+          {minhaLinha && !evento.cancelado ? (
+            <Cartao>
+              <CabecalhoCartao>
+                <TituloCartao>Foi convocado</TituloCartao>
+                <DescricaoCartao>
+                  Isto não é a presença — é o que conta fazer, para quem
+                  organiza saber a tempo.
+                </DescricaoCartao>
+              </CabecalhoCartao>
+              <ConteudoCartao>
+                <ResponderConvocatoria
+                  eventoId={evento.id}
+                  confirmacao={minhaLinha.confirmacao}
+                  confirmadoEm={minhaLinha.confirmado_em}
+                  motivo={minhaLinha.motivo_ausencia}
+                  passou={jaPassou}
+                />
+              </ConteudoCartao>
+            </Cartao>
+          ) : null}
+
           <Cartao>
             <CabecalhoCartao>
               <TituloCartao>Convocatória</TituloCartao>

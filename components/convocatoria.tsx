@@ -12,11 +12,16 @@ import { Botao } from '@/components/ui/botao'
 import { Selector } from '@/components/ui/campos'
 import { Aviso, Distintivo, SemRegistos } from '@/components/ui/superficie'
 import { ROTULOS_ESTADO_PARTICIPACAO } from '@/lib/rotulos'
-import type { EstadoParticipacao } from '@/lib/tipos-bd'
+import type {
+  ConfirmacaoParticipante,
+  EstadoParticipacao,
+} from '@/lib/tipos-bd'
 
 export type Convocado = {
   id: string
   estado: EstadoParticipacao
+  /** O que o atleta respondeu antes. Não confundir com `estado`. */
+  confirmacao: ConfirmacaoParticipante
   pessoa: { id: string; nome: string } | null
   cavalo: { id: string; nome: string } | null
 }
@@ -45,6 +50,10 @@ export function Convocatoria({
 }) {
   const jaConvocados = new Set(convocados.map((c) => c.pessoa?.id))
   const porConvocar = pessoas.filter((p) => !jaConvocados.has(p.id))
+  const responderam = convocados.filter(
+    (c) => c.confirmacao !== 'sem_resposta',
+  ).length
+  const naoVao = convocados.filter((c) => c.confirmacao === 'nao_vai').length
 
   if (convocados.length === 0 && !podeEditar) {
     return <SemRegistos titulo="Ainda ninguém convocado" />
@@ -52,6 +61,16 @@ export function Convocatoria({
 
   return (
     <div className="space-y-4">
+      {podeEditar && convocados.length > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {responderam} de {convocados.length} responderam
+          {naoVao > 0
+            ? ` · ${naoVao} ${naoVao === 1 ? 'diz que não vai' : 'dizem que não vão'}`
+            : ''}
+          .
+        </p>
+      ) : null}
+
       {convocados.length > 0 ? (
         <ul className="divide-y divide-border rounded-md border border-border">
           {convocados.map((convocado) => (
@@ -72,6 +91,15 @@ export function Convocatoria({
                     {convocado.cavalo?.nome ?? 'sem cavalo'}
                   </span>
                 )}
+
+                {/* A resposta do atleta e a presença são duas colunas e dois
+                    distintivos: um diz o que ele contava fazer, o outro o que
+                    aconteceu. Misturá-los apagaria um dos dois. */}
+                {convocado.confirmacao === 'vai' ? (
+                  <Distintivo cor="sucesso">Vai</Distintivo>
+                ) : convocado.confirmacao === 'nao_vai' ? (
+                  <Distintivo cor="aviso">Não vai</Distintivo>
+                ) : null}
 
                 <Distintivo cor={COR_ESTADO[convocado.estado]}>
                   {ROTULOS_ESTADO_PARTICIPACAO[convocado.estado]}

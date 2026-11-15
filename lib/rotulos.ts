@@ -4,6 +4,7 @@
  */
 
 import type {
+  ConfirmacaoParticipante,
   EstadoEncargo,
   EstadoFerracao,
   EstadoMensalidade,
@@ -91,6 +92,13 @@ export const ROTULOS_ESTADO_PARTICIPACAO: Record<EstadoParticipacao, string> = {
   presente: 'Presente',
   faltou: 'Faltou',
   dispensado: 'Dispensado',
+}
+
+/** O que o atleta respondeu à convocatória. */
+export const ROTULOS_CONFIRMACAO: Record<ConfirmacaoParticipante, string> = {
+  sem_resposta: 'Sem resposta',
+  vai: 'Vai',
+  nao_vai: 'Não vai',
 }
 
 /** Taxas de IVA em vigor no continente. */

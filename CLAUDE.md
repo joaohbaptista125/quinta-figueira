@@ -68,6 +68,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261015180000_subscricoes_push.sql` | `subscricoes_push` |
 | `…20261021090000_serie_de_eventos.sql` | `eventos.serie_id` |
 | `…20261021110000_pagamentos_declarados.sql` | `pagamentos_declarados` + `confirmar_pagamento_declarado` + `v_pagamentos_por_confirmar` |
+| `…20261115100000_confirmacao_de_presenca.sql` | `evento_participantes.confirmacao` + trigger de carimbo |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -210,6 +211,34 @@ atribuem-se depois, na ficha, que é onde se vêem os pares.
 Seis pessoas em oito terças seriam quarenta e oito notificações, e uma
 aplicação que faz isso ensina a desligá-las. `avisarDaMarcacao()` manda um
 aviso sobre a primeira marcação, a dizer quantas semanas são.
+
+**Confirmar não é estar presente, e as duas coisas não partilham coluna.**
+`evento_participantes.estado` (convocado/presente/faltou/dispensado) é o que a
+equipa regista **depois**, e é o registo de assiduidade do centro.
+`confirmacao` (sem_resposta/vai/nao_vai) é o que o atleta diz **antes**, e é
+uma intenção. Juntá-las daria ao atleta a caneta para escrever a própria
+presença e, do outro lado, faria desaparecer a resposta dele no momento em que
+a equipa marcasse as presenças. É o desenho de `pagamentos_declarados`: o que
+a pessoa afirma vive ao lado do que o centro regista, nunca por cima.
+`supabase/tests/10_confirmacao_presenca.sql` prova as duas direcções.
+
+- **A RLS decide linhas, não colunas.** Deixar o atleta responder deixava-o
+  também pôr-se a `presente` e trocar de cavalo, porque é a mesma linha. Quem
+  o limita é a trigger `carimbar_confirmacao_do_participante`, que repõe tudo
+  o que não seja a resposta — e carimba `confirmado_em`.
+- **`pg_trigger_depth() = 1` nessa trigger não é adorno.** Sem isso o travão
+  apanhava também as cascatas: cancelar um evento faz
+  `propagar_janela_do_evento` anular a janela dos participantes, e o travão
+  desfazia-o — o cavalo nunca mais ficava livre. Foi o
+  `supabase/tests/02_eventos.sql` que o apanhou.
+- **O atleta só tem `update`.** Convocar e desconvocar continuam a ser de quem
+  planeia: um atleta que se desconvocasse a si próprio desaparecia da lista
+  que o instrutor leva para o picadeiro, e «não vou» tem de ficar à vista.
+- **Dizer «não vou» não liberta o cavalo nem cancela nada.** Quem decide se a
+  sessão se faz, e com que par aluno↔cavalo, é quem a dá. Isto é informação a
+  chegar a tempo, não uma desmarcação automática.
+- **Um «não vou» avisa o responsável do evento** (ou a gestão, se não houver):
+  é esse o ponto todo. Um «vou» é o esperado e não interrompe ninguém.
 
 **Um cavalo não pode estar em dois eventos sobrepostos.** A restrição tem de
 comparar horas que vivem em `eventos` com linhas de `evento_participantes`, e
@@ -438,6 +467,8 @@ components/
   lista-eventos.tsx    a linha de um evento, partilhada por todas as vistas
   cartao-evento.tsx    o evento em grande, com convocados e avisos
   serie-evento.tsx     a repetição semanal vista de dentro de uma marcação
+  responder-convocatoria.tsx  «vou»/«não vou», do lado de quem foi convocado
+  formularios/escolher-convocados.tsx  quem fica convocado, ao marcar
   convite-acesso.tsx   estado de acesso de uma pessoa, e o convite
   accoes-ficha.tsx     desactivar/terminar e apagar, no topo de uma ficha
   ferracao-cavalo.tsx  quando foi ferrado, e quando volta a ser
@@ -477,7 +508,8 @@ supabase/
   seed.sql        dados de demonstração (só desenvolvimento)
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
                   03 ferração, 04 contratos, 05 cavalos, 06 encargos,
-                  07 notas, 08 subscrições, 09 pagamentos declarados)
+                  07 notas, 08 subscrições, 09 pagamentos declarados,
+                  10 confirmação de presença)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor

@@ -73,6 +73,31 @@ export function hoje() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: FUSO }).format(new Date())
 }
 
+/**
+ * Agora, em Lisboa, como 'AAAA-MM-DDTHH:MM:SS'.
+ *
+ * Serve para comparar com `${data}T${hora}` vindos do Postgres **como texto**,
+ * que é a regra desta casa: uma data do Postgres que passe por `new Date()`
+ * salta um dia conforme o fuso do browser.
+ */
+export function agoraLocal() {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: FUSO,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date())
+
+  const obter = (tipo: Intl.DateTimeFormatPartTypes) =>
+    partes.find((parte) => parte.type === tipo)?.value ?? '00'
+
+  return `${obter('year')}-${obter('month')}-${obter('day')}T${obter('hour')}:${obter('minute')}:${obter('second')}`
+}
+
 /** Primeiro dia do mês de uma data ISO (ou de hoje). */
 export function primeiroDiaDoMes(iso?: string) {
   const base = (iso ?? hoje()).slice(0, 10)

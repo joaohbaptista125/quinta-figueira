@@ -9,7 +9,8 @@ import {
   ROTULOS_TIPO_EVENTO_CURTO,
 } from '@/lib/rotulos'
 import { deslocarDias, formatarDiaCurto, formatarHora } from '@/lib/formatos'
-import { avisar } from '@/lib/notificacoes/enviar'
+import { avisar, pessoasDaGestao } from '@/lib/notificacoes/enviar'
+import { exigirPessoa } from '@/lib/sessao'
 import type { EstadoParticipacao, TipoEvento } from '@/lib/tipos-bd'
 import {
   apagar,
@@ -488,6 +489,90 @@ async function avisarConvocado(eventoId: string, pessoaId: string) {
     texto: evento.local ? `${quando} · ${evento.local}` : quando,
     caminho: `/agenda/${eventoId}`,
     agrupar: `evento-${eventoId}`,
+  })
+}
+
+/**
+ * O atleta responde à convocatória: «vou» ou «não vou».
+ *
+ * **Não mexe em `estado`.** A presença continua a ser escrita pela equipa
+ * depois, e a trigger `evento_participantes_carimbar_confirmacao` garante-o
+ * mesmo que alguém aqui se engane: a aplicação não é o travão, é a
+ * conveniência.
+ *
+ * Um «não vou» tem de chegar a alguém a tempo — é esse o ponto todo —, por
+ * isso avisa quem é responsável pelo evento. Um «vou» é o esperado e não
+ * interrompe ninguém.
+ */
+export async function responderConvocatoria(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const eventoId = texto(dados, 'evento_id')
+  const resposta = texto(dados, 'confirmacao')
+  if (!eventoId) return { ok: false, mensagem: 'Registo inválido.' }
+  if (resposta !== 'vai' && resposta !== 'nao_vai') {
+    return { ok: false, mensagem: 'Resposta inválida.' }
+  }
+
+  const motivo = resposta === 'nao_vai' ? textoOuNulo(dados, 'motivo') : null
+  if (motivo && motivo.length > 200) {
+    return { ok: false, mensagem: 'O motivo é demasiado longo (máximo 200 caracteres).' }
+  }
+
+  const sessao = await exigirPessoa()
+  const supabase = await criarClienteServidor()
+
+  const { error } = await supabase
+    .from('evento_participantes')
+    .update({ confirmacao: resposta, motivo_ausencia: motivo })
+    .eq('evento_id', eventoId)
+    .eq('pessoa_id', sessao.id)
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  for (const caminho of [...CAMINHOS, `/agenda/${eventoId}`]) revalidatePath(caminho)
+
+  if (resposta === 'nao_vai') {
+    await avisarDaAusencia(eventoId, sessao.nome, motivo)
+  }
+
+  return {
+    ok: true,
+    mensagem: resposta === 'vai' ? 'Confirmado — até lá.' : 'Obrigado por avisar.',
+  }
+}
+
+/** Diz a quem planeia o dia que falta alguém, a tempo de reorganizar. */
+async function avisarDaAusencia(
+  eventoId: string,
+  nome: string,
+  motivo: string | null,
+) {
+  const supabase = await criarClienteServidor()
+  const { data: evento } = await supabase
+    .from('eventos')
+    .select('tipo, titulo, data, hora_inicio, responsavel_id, cancelado')
+    .eq('id', eventoId)
+    .maybeSingle()
+
+  if (!evento || evento.cancelado) return
+
+  // Ao responsável do evento, se o houver; senão à gestão, que é quem
+  // reorganiza. Sem isto, um «não vou» ficava à espera de ser descoberto.
+  const destinos = evento.responsavel_id
+    ? [evento.responsavel_id]
+    : await pessoasDaGestao()
+
+  const quando = `${formatarDiaCurto(evento.data)} às ${formatarHora(evento.hora_inicio)}`
+
+  await avisar(destinos, {
+    titulo: `${nome.split(' ')[0]} não vai`,
+    texto: motivo
+      ? `${ROTULOS_TIPO_EVENTO_CURTO[evento.tipo]} de ${quando} · ${motivo}`
+      : `${ROTULOS_TIPO_EVENTO_CURTO[evento.tipo]} de ${quando}`,
+    caminho: `/agenda/${eventoId}`,
+    agrupar: `ausencias-${eventoId}`,
   })
 }
 
