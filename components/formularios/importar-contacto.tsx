@@ -24,6 +24,12 @@ import { lerVCards, type ContactoLido } from '@/lib/vcard'
  * O botão do selector só aparece onde funciona — mostrar um botão que não faz
  * nada é pior do que não o ter.
  *
+ * **No iPhone o botão abre os Ficheiros, e isso apanhou quem o usou pela
+ * primeira vez.** Não é defeito: nenhum site consegue abrir os Contactos no
+ * iOS. O que se arranjou foi a ordem do ecrã — os dois passos ficam **antes**
+ * do botão e o botão diz para onde vai, em vez de a explicação estar por
+ * baixo, onde já ninguém a lê depois de ter carregado.
+ *
  * Nada é escrito por cima: só se preenchem os campos que estão vazios. Quem
  * já escreveu o nome à mão não o quer ver trocado por outro.
  */
@@ -172,6 +178,22 @@ export function ImportarContacto() {
         <span className="text-sm font-medium">Já tem o contacto no telemóvel?</span>
       </div>
 
+      {!temSelector ? (
+        <div className="mt-1.5 text-xs text-muted-foreground">
+          <p>
+            Nenhum site consegue abrir os Contactos do iPhone — nem este. Em
+            vez disso, exporte a pessoa e escolha aqui esse ficheiro:
+          </p>
+          <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+            <li>
+              Nos <strong>Contactos</strong>, abra a pessoa e toque em{' '}
+              <strong>Partilhar contacto → Guardar em Ficheiros</strong>.
+            </li>
+            <li>Volte aqui e escolha esse ficheiro no botão abaixo.</li>
+          </ol>
+        </div>
+      ) : null}
+
       <div className="mt-2 flex flex-wrap gap-2">
         {temSelector ? (
           <Botao
@@ -188,7 +210,7 @@ export function ImportarContacto() {
           tamanho="pequeno"
           onClick={() => ficheiro.current?.click()}
         >
-          Abrir cartão de contacto
+          {temSelector ? 'Abrir cartão de contacto' : 'Abrir os Ficheiros'}
         </Botao>
 
         <input
@@ -204,13 +226,6 @@ export function ImportarContacto() {
           }}
         />
       </div>
-
-      {!temSelector ? (
-        <p className="mt-2 text-xs text-muted-foreground">
-          No iPhone: Contactos → a pessoa → <strong>Partilhar contacto</strong> →
-          Guardar em Ficheiros. Depois escolha aqui esse ficheiro.
-        </p>
-      ) : null}
 
       {estado.fase === 'a-ler' ? (
         <p className="mt-2 text-xs text-muted-foreground">A ler o cartão…</p>

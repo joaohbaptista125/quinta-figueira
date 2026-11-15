@@ -26,10 +26,10 @@ export function traduzirErro(erro: {
       return 'Já existe um cavalo com este número de passaporte.'
     if (texto.includes('microchip'))
       return 'Já existe um cavalo com este microchip.'
-    if (texto.includes('identificacao'))
-      return 'Já existe uma box com esta identificação.'
-    if (texto.includes('cavalo_id'))
-      return 'Esse cavalo já está atribuído a outra box.'
+    if (texto.includes('paddock_ocupacao_cavalo_por_dia'))
+      return 'Esse cavalo já está noutro paddock hoje. Recolha-o primeiro.'
+    if (texto.includes('paddocks_numero'))
+      return 'Já existe um paddock com esse número.'
     if (texto.includes('contrato_periodo'))
       return 'Já existe uma mensalidade deste contrato para o período indicado.'
     return 'Já existe um registo igual.'

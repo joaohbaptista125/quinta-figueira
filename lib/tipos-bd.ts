@@ -268,13 +268,27 @@ export type OpcaoCavalo = Carimbos & {
   activa: boolean
 }
 
-export type Box = Carimbos & {
+/** Um campo de largada. São oito, numerados — ver a migração dos paddocks. */
+export type Paddock = Carimbos & {
   id: string
-  identificacao: string
-  zona: string | null
-  cavalo_id: string | null
-  activa: boolean
+  numero: number
+  nome: string | null
+  activo: boolean
   notas: string | null
+}
+
+/**
+ * Um cavalo largado num paddock, num dia.
+ *
+ * Não tem `actualizado_em`: uma linha destas nasce e morre, não se edita.
+ */
+export type PaddockOcupacao = {
+  id: string
+  paddock_id: string
+  cavalo_id: string
+  data: string
+  notas: string | null
+  criado_em: string
 }
 
 export type ContratoPenso = Carimbos & {
@@ -555,10 +569,11 @@ export type BaseDados = {
         Partial<Omit<Cavalo, SoLeitura>> & { nome: string; regime: RegimeCavalo },
         [Relacao<'proprietario_id', 'pessoas'>]
       >
-      boxes: Tabela<
-        Box,
-        Partial<Omit<Box, SoLeitura>> & { identificacao: string },
-        [Relacao<'cavalo_id', 'cavalos', true>]
+      paddocks: Tabela<Paddock, Partial<Omit<Paddock, SoLeitura>> & { numero: number }>
+      paddock_ocupacao: Tabela<
+        PaddockOcupacao,
+        { paddock_id: string; cavalo_id: string; data?: string; notas?: string | null },
+        [Relacao<'paddock_id', 'paddocks'>, Relacao<'cavalo_id', 'cavalos'>]
       >
       contratos_penso: Tabela<
         ContratoPenso,

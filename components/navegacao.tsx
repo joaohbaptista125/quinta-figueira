@@ -7,7 +7,7 @@ import {
   Banknote,
   CalendarDays,
   CircleUser,
-  DoorOpen,
+  Fence,
   Ellipsis,
   FileText,
   House,
@@ -75,10 +75,10 @@ export const SECCOES: { titulo: string; itens: ItemNavegacao[] }[] = [
         principal: true,
         visivel: (p) => eEquipa(p),
       },
-      // Boxes e contratos são trabalho de quem gere a cavalariça. A RLS já
-      // cortava o conteúdo ao que é de cada um, mas ao cliente sobravam duas
-      // entradas de menu que lhe abriam ecrãs quase vazios.
-      { href: '/boxes', rotulo: 'Boxes', Icone: DoorOpen, visivel: (p) => eEquipa(p) },
+      // Os paddocks são o quadro de quem trabalha na cavalariça; os contratos
+      // são da gestão. A RLS já cortava o conteúdo ao que é de cada um, mas ao
+      // cliente sobravam entradas de menu que lhe abriam ecrãs quase vazios.
+      { href: '/paddocks', rotulo: 'Paddocks', Icone: Fence, visivel: (p) => eEquipa(p) },
       {
         href: '/contratos',
         rotulo: 'Contratos de penso',

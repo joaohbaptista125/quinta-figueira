@@ -16,48 +16,6 @@ import {
 } from './comum'
 import { traduzirErro, type ResultadoAccao } from './resultado'
 
-// --- Boxes ------------------------------------------------------------------
-
-export async function guardarBox(
-  _anterior: ResultadoAccao,
-  dados: FormData,
-): Promise<ResultadoAccao> {
-  const id = textoOuNulo(dados, 'id')
-  const identificacao = texto(dados, 'identificacao')
-  if (!identificacao) {
-    return { ok: false, mensagem: 'A identificação da box é obrigatória.' }
-  }
-
-  const resultado = await gravar({
-    tabela: 'boxes',
-    id,
-    valores: {
-      identificacao,
-      zona: textoOuNulo(dados, 'zona'),
-      cavalo_id: textoOuNulo(dados, 'cavalo_id'),
-      activa: booleano(dados, 'activa'),
-      notas: textoOuNulo(dados, 'notas'),
-    },
-    revalidar: ['/boxes', '/cavalos'],
-    mensagemCriado: `Box ${identificacao} criada. Pode continuar a introduzir boxes.`,
-  })
-
-  if (!resultado.ok) return resultado
-  if (querContinuar(dados)) return resultado
-  redirect(comConfirmacao('/boxes', id ? 'guardado' : 'criado'))
-}
-
-export async function apagarBox(
-  _anterior: ResultadoAccao,
-  dados: FormData,
-): Promise<ResultadoAccao> {
-  const id = texto(dados, 'id')
-  if (!id) return { ok: false, mensagem: 'Registo inválido.' }
-  const resultado = await apagar({ tabela: 'boxes', id, revalidar: ['/boxes'] })
-  if (!resultado.ok) return resultado
-  redirect(comConfirmacao('/boxes', 'apagado'))
-}
-
 // --- Contratos de penso -----------------------------------------------------
 
 export async function guardarContrato(

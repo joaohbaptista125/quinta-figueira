@@ -159,8 +159,9 @@ async function registarOpcao(tipo: TipoOpcaoCavalo, valor: string | null) {
  *   ferracoes                    `cascade`  — o histórico de ferração morre
  *                                 com ele
  *
- * A box não entra na conta: `boxes.cavalo_id` fica a `null` e a box fica
- * livre, que é precisamente o que se quer quando um cavalo sai.
+ * A largada no paddock não entra na conta: `paddock_ocupacao` é `cascade`,
+ * mas é o quadro de hoje e não histórico — o cavalo que sai do centro sai do
+ * campo, que é precisamente o que se quer.
  */
 async function oQuePrendeCavalo(id: string) {
   const supabase = await criarClienteServidor()
@@ -269,38 +270,6 @@ export async function alternarActivoCavalo(
       ? `${cavalo.nome} voltou às listas.`
       : `${cavalo.nome} ficou inactivo. Sai das listas, e o histórico fica.`,
   }
-}
-
-/** Atribui (ou liberta) a box de um cavalo a partir da ficha do cavalo. */
-export async function atribuirBox(
-  _anterior: ResultadoAccao,
-  dados: FormData,
-): Promise<ResultadoAccao> {
-  const cavaloId = texto(dados, 'cavalo_id')
-  const boxId = textoOuNulo(dados, 'box_id')
-  if (!cavaloId) return { ok: false, mensagem: 'Registo inválido.' }
-
-  const supabase = await criarClienteServidor()
-
-  // Uma box só tem um cavalo: liberta primeiro a box anterior deste cavalo.
-  const { error: erroLibertar } = await supabase
-    .from('boxes')
-    .update({ cavalo_id: null })
-    .eq('cavalo_id', cavaloId)
-
-  if (erroLibertar) return { ok: false, mensagem: traduzirErro(erroLibertar) }
-
-  if (boxId) {
-    const { error } = await supabase
-      .from('boxes')
-      .update({ cavalo_id: cavaloId })
-      .eq('id', boxId)
-    if (error) return { ok: false, mensagem: traduzirErro(error) }
-  }
-
-  revalidatePath('/boxes')
-  revalidatePath(`/cavalos/${cavaloId}`)
-  return { ok: true, mensagem: 'Box actualizada.' }
 }
 
 // --- Raças e pelagens -------------------------------------------------------

@@ -19,7 +19,7 @@ import { formatarDiaPorExtenso, hoje } from '@/lib/formatos'
 export async function PainelEquipa({ nome }: { nome: string }) {
   const supabase = await criarClienteServidor()
 
-  const [cavalos, boxes, pessoas] = await Promise.all([
+  const [cavalos, largados, pessoas] = await Promise.all([
     supabase
       .from('cavalos')
       .select('id, nome, regime, raca', { count: 'exact' })
@@ -27,16 +27,14 @@ export async function PainelEquipa({ nome }: { nome: string }) {
       .order('nome')
       .limit(12),
     supabase
-      .from('boxes')
-      .select('id, identificacao, zona, cavalo_id', { count: 'exact' })
-      .eq('activa', true),
+      .from('paddock_ocupacao')
+      .select('id', { count: 'exact', head: true })
+      .eq('data', hoje()),
     supabase
       .from('pessoas')
       .select('id', { count: 'exact', head: true })
       .eq('activo', true),
   ])
-
-  const ocupadas = (boxes.data ?? []).filter((box) => box.cavalo_id).length
 
   return (
     <>
@@ -55,8 +53,8 @@ export async function PainelEquipa({ nome }: { nome: string }) {
           valor={String(cavalos.count ?? 0)}
         />
         <Indicador
-          rotulo="Boxes ocupadas"
-          valor={`${ocupadas} / ${boxes.count ?? 0}`}
+          rotulo="Nos paddocks hoje"
+          valor={String(largados.count ?? 0)}
         />
         <Indicador rotulo="Pessoas activas" valor={String(pessoas.count ?? 0)} />
       </div>

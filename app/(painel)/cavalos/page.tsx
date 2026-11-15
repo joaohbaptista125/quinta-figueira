@@ -38,7 +38,7 @@ export default async function PaginaCavalos({
   let consulta = supabase
     .from('cavalos')
     .select(
-      'id, nome, data_nascimento, sexo, raca, pelagem, regime, activo, pessoas(id, nome), boxes(identificacao)',
+      'id, nome, data_nascimento, sexo, raca, pelagem, regime, activo, pessoas(id, nome)',
     )
     .order('nome')
 
@@ -126,7 +126,6 @@ export default async function PaginaCavalos({
                 {daCavalarica ? <Th>Proprietário</Th> : null}
                 <Th>Raça / pelagem</Th>
                 <Th>Idade</Th>
-                <Th>Box</Th>
                 {daCavalarica ? <Th>Ferração</Th> : null}
               </Linha>
             </Cabecalho>
@@ -168,9 +167,6 @@ export default async function PaginaCavalos({
                     </Td>
                     <Td rotulo="Idade" className="text-muted-foreground">
                       {idade != null ? `${idade} anos` : '—'}
-                    </Td>
-                    <Td rotulo="Box" className="text-muted-foreground">
-                      {cavalo.boxes?.identificacao ?? '—'}
                     </Td>
                     {daCavalarica ? (
                       <Td rotulo="Ferração">

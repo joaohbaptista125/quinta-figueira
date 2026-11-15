@@ -11,7 +11,6 @@ import { CamposCavalo } from '@/components/formularios/campos-cavalo'
 import { FotoCavalo } from '@/components/foto-cavalo'
 import { FerracaoCavalo } from '@/components/ferracao-cavalo'
 import { NotasCavalo } from '@/components/notas-cavalo'
-import { AtribuicaoBox } from '@/components/atribuicao-box'
 import {
   Cartao,
   CabecalhoCartao,
@@ -29,7 +28,7 @@ import {
 } from '@/lib/accoes/cavalos'
 import { AccoesFicha } from '@/components/accoes-ficha'
 import { ROTULOS_REGIME, ROTULOS_SEXO } from '@/lib/rotulos'
-import { formatarData, formatarEuros, idadeEmAnos } from '@/lib/formatos'
+import { formatarData, formatarEuros, hoje, idadeEmAnos } from '@/lib/formatos'
 import { opcoesDeCavalo } from '@/lib/consultas'
 
 export const metadata: Metadata = { title: 'Ficha de cavalo' }
@@ -58,8 +57,7 @@ export default async function PaginaCavalo({
   const [
     proprietarios,
     opcoes,
-    boxAtribuida,
-    boxesLivres,
+    noPaddock,
     contratos,
     despesas,
     ferracoes,
@@ -69,15 +67,14 @@ export default async function PaginaCavalo({
         ? supabase.from('pessoas').select('id, nome').eq('activo', true).order('nome')
         : Promise.resolve({ data: null }),
       opcoesDeCavalo(supabase),
-      supabase.from('boxes').select('id, identificacao, zona').eq('cavalo_id', id).maybeSingle(),
-      podeEditar
-        ? supabase
-            .from('boxes')
-            .select('id, identificacao, zona')
-            .is('cavalo_id', null)
-            .eq('activa', true)
-            .order('identificacao')
-        : Promise.resolve({ data: null }),
+      // O quadro dos paddocks é em `/paddocks`; aqui basta dizer se o cavalo
+      // saiu hoje, que é o que o dono vem ver.
+      supabase
+        .from('paddock_ocupacao')
+        .select('paddocks(numero, nome)')
+        .eq('cavalo_id', id)
+        .eq('data', hoje())
+        .maybeSingle(),
       podeEditar
         ? supabase
             .from('contratos_penso')
@@ -122,8 +119,10 @@ export default async function PaginaCavalo({
             </Distintivo>
             {cavalo.sexo ? <Distintivo>{ROTULOS_SEXO[cavalo.sexo]}</Distintivo> : null}
             {idade != null ? <Distintivo>{idade} anos</Distintivo> : null}
-            {boxAtribuida.data ? (
-              <Distintivo>Box {boxAtribuida.data.identificacao}</Distintivo>
+            {noPaddock.data?.paddocks ? (
+              <Distintivo cor="informacao">
+                Hoje no paddock {noPaddock.data.paddocks.numero}
+              </Distintivo>
             ) : null}
             {!cavalo.activo ? <Distintivo cor="aviso">Inactivo</Distintivo> : null}
           </span>
@@ -224,24 +223,6 @@ export default async function PaginaCavalo({
             podeApagar={podeEditar}
             souDaEquipa={eEquipa(sessao.perfil)}
           />
-
-          {podeEditar ? (
-            <Cartao>
-              <CabecalhoCartao>
-                <TituloCartao>Box</TituloCartao>
-                <DescricaoCartao>
-                  Cada box aloja um cavalo de cada vez.
-                </DescricaoCartao>
-              </CabecalhoCartao>
-              <ConteudoCartao>
-                <AtribuicaoBox
-                  cavaloId={cavalo.id}
-                  boxActual={boxAtribuida.data ?? null}
-                  boxesLivres={boxesLivres.data ?? []}
-                />
-              </ConteudoCartao>
-            </Cartao>
-          ) : null}
 
           {podeEditar ? (
             <>

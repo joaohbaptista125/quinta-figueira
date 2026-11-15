@@ -1,7 +1,7 @@
 # Quinta da Figueira
 
 Aplicação de gestão do centro hípico Quinta da Figueira: cavalos, pessoas,
-boxes, contratos de penso, despesas, recebimentos e pensos do mês.
+paddocks, contratos de penso, despesas, recebimentos e pensos do mês.
 
 Next.js (App Router) + Supabase + Vercel. Interface toda em português de
 Portugal, moeda EUR, datas DD/MM/AAAA. Instalável como PWA.

@@ -53,7 +53,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | Ficheiro | Conteúdo |
 |---|---|
 | `…090000_base_tipos_e_utilitarios.sql` | extensão `btree_gist`, tipos enumerados, trigger `tocar_actualizado_em` |
-| `…090100_fase1_cadastro.sql` | `pessoas`, `pessoa_papeis`, `cavalos`, `boxes`, `contratos_penso` |
+| `…090100_fase1_cadastro.sql` | `pessoas`, `pessoa_papeis`, `cavalos`, `boxes` (removida depois), `contratos_penso` |
 | `…090200_fase2_financeiro.sql` | `contas`, `categorias_despesa` (+ seed), `fornecedores`, `despesas`, `mensalidades_penso`, `recebimentos` |
 | `…090300_seguranca_rls.sql` | funções auxiliares, RLS de todas as tabelas, buckets de Storage |
 | `…090400_funcoes_e_vistas.sql` | `gerar_mensalidades`, sincronização de mensalidades, as 4 vistas |
@@ -70,6 +70,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261021110000_pagamentos_declarados.sql` | `pagamentos_declarados` + `confirmar_pagamento_declarado` + `v_pagamentos_por_confirmar` |
 | `…20261115100000_confirmacao_de_presenca.sql` | `evento_participantes.confirmacao` + trigger de carimbo |
 | `…20261115110000_quem_paga_o_ferrador.sql` | `cavalos.ferrador_pago_por` + `ferracoes.pago_em` |
+| `…20261116090000_paddocks.sql` | `paddocks`, `paddock_ocupacao`, e `drop table boxes` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -141,10 +142,36 @@ Não mexas em `estado` à mão no código da aplicação.
 `contratos_penso_sem_sobreposicao` (`btree_gist`) impede dois contratos do mesmo
 cavalo com intervalos de datas a cruzarem-se.
 
-**A box conhece o cavalo, não o contrário.** `boxes.cavalo_id` é único e
-anulável (em Postgres vários NULL não colidem, por isso há muitas boxes vazias).
-Atribuir uma box liberta primeiro a anterior — ver `atribuirBox` em
-`lib/accoes/cavalos.ts`.
+**As boxes saíram e os paddocks entraram, e isso apagou dados de propósito.**
+Pedido explícito do centro: a secção das boxes não era usada, e a pergunta
+real de quem chega de manhã à cavalariça é outra — **quem já saiu, e para
+onde**. `drop table public.boxes` está na migração dos paddocks; o que lá
+estivesse escrito perdeu-se, e fica registado que foi decisão e não descuido.
+
+**Um paddock leva vários cavalos, e por isso a ocupação é uma tabela.** É o
+contrário da box, em que `boxes.cavalo_id` era único porque só cabia um.
+`paddock_ocupacao` (paddock × cavalo × dia) é o que sustenta o quadro.
+
+- **A ocupação vive à parte de `cavalos`.** `cavalos` só se edita com
+  `e_gestao()`, e quem larga os cavalos é o tratador. Uma coluna em `cavalos`
+  obrigava a abrir a tabela inteira à equipa, ou a mais uma trigger a travar
+  colunas. **Escrever é de `e_equipa()`**, como a ferração e pela mesma razão.
+- **Só interessa hoje, e a `data` existe para isso.** Foi o que o centro
+  pediu, e não há ecrã nenhum de histórico. A data serve para o quadro **se
+  esvaziar sozinho à meia-noite**: sem ela, a largada de ontem ficava no ecrã
+  até alguém a apagar à mão, e um quadro que mente de manhã é pior do que não
+  haver quadro. Não há selector de datas em lado nenhum — convidaria a
+  escrever no dia errado.
+- **Um cavalo num paddock de cada vez, por dia** (`unique (cavalo_id, data)`).
+  Não é regra de gestão, é aritmética. Por isso o selector de «largar» só
+  oferece os cavalos que ainda não saíram: oferecer os outros era dar um botão
+  que só sabe dar erro.
+- **Largar avisa o dono; recolher não avisa ninguém.** O dono já soube que o
+  cavalo saiu, e um segundo aviso a dizer que voltou é a maneira certa de
+  estes avisos passarem a ser ignorados. O `agrupar` leva o cavalo e o dia,
+  para uma mudança de campo substituir a notificação em vez de empilhar duas.
+- `supabase/tests/12_paddocks.sql` prova os cinco lados, incluindo que a
+  tabela `boxes` já não existe.
 
 **A aplicação não liga a nenhum banco, e não deve ligar.** `contas` é um
 livro de registo: saldo inicial mais os movimentos que forem lançados à mão. O
@@ -251,6 +278,11 @@ a pessoa afirma vive ao lado do que o centro regista, nunca por cima.
   chegar a tempo, não uma desmarcação automática.
 - **Um «não vou» avisa o responsável do evento** (ou a gestão, se não houver):
   é esse o ponto todo. Um «vou» é o esperado e não interrompe ninguém.
+- **O motivo da ausência aparece na convocatória, e não só na notificação.**
+  Ia na notificação e morria aí: quem abrisse a aplicação depois via «Não
+  vai» e mais nada, e tinha de ir perguntar. `<Convocatoria>` mostra-o por
+  baixo da linha da pessoa — o motivo só serve a quem está a decidir se a
+  sessão se faz.
 
 **Um cavalo não pode estar em dois eventos sobrepostos.** A restrição tem de
 comparar horas que vivem em `eventos` com linhas de `evento_participantes`, e
@@ -443,7 +475,7 @@ ignoram a RLS de `pessoas`, o que evita recursão dentro das próprias política
 
 Resumo do que cada perfil vê:
 
-| | pessoas / cavalos / boxes | contratos | financeiro |
+| | pessoas / cavalos / paddocks | contratos | financeiro |
 |---|---|---|---|
 | admin, gestor | tudo | tudo | tudo |
 | instrutor, tratador | tudo | **não** (têm valores) | **não** |
@@ -484,7 +516,8 @@ app/
     pagamentos/   a conta-corrente vista de quem paga (o cliente)
     pessoas/      ficha, e `pessoas/[id]/pensos` — a conta-corrente do cliente
     cavalos/      ficha, e `cavalos/opcoes` — as listas de raças e pelagens
-    boxes/  contratos/
+    paddocks/     o quadro dos campos de largada, hoje
+    contratos/
     financeiro/   resumo (page.tsx), por-receber/, despesas/, recebimentos/,
                   contas/ (caixa e bancos), definicoes/ → fornecedores/ e
                   categorias/
@@ -507,6 +540,7 @@ components/
   convite-acesso.tsx   estado de acesso de uma pessoa, e o convite
   accoes-ficha.tsx     desactivar/terminar e apagar, no topo de uma ficha
   ferracao-cavalo.tsx  quando foi ferrado, e quando volta a ser
+  quadro-paddocks.tsx  os oito campos de largada, e quem está em cada um
   notas-cavalo.tsx     a conversa de um cavalo, na ficha dele
   notas-por-responder.tsx  as perguntas por responder, no painel da equipa
   formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
@@ -544,7 +578,8 @@ supabase/
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
                   03 ferração, 04 contratos, 05 cavalos, 06 encargos,
                   07 notas, 08 subscrições, 09 pagamentos declarados,
-                  10 confirmação de presença, 11 quem paga o ferrador)
+                  10 confirmação de presença, 11 quem paga o ferrador,
+                  12 paddocks)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -722,10 +757,10 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   `evento_participantes.cavalo_id` são `set null` (a despesa fica sem saber de
   que cavalo era, a aula perde o par aluno↔cavalo) e `ferracoes` é `cascade`
   (o histórico morre com ele). Por isso `apagarCavalo` conta **antes** de
-  apagar e recusa — apagar é só para a ficha escrita por engano. A box não
-  entra na conta: ficar a `null` é precisamente o que se quer quando um cavalo
-  sai. `supabase/tests/05_cavalos.sql` prova cada um destes quatro
-  comportamentos.
+  apagar e recusa — apagar é só para a ficha escrita por engano. A largada no
+  paddock não entra na conta: `paddock_ocupacao` é `cascade`, mas é o quadro
+  de hoje e não histórico, e o cavalo que sai do centro sai do campo.
+  `supabase/tests/05_cavalos.sql` prova cada um destes quatro comportamentos.
 - **Apagar um contrato de penso é a operação perigosa da aplicação, e a base
   não trava.** `mensalidades_penso.contrato_id` é `on delete cascade` e
   `recebimentos.mensalidade_id` é `on delete set null`: apagar o contrato leva
@@ -900,8 +935,10 @@ deixa livre. `/financeiro/recebimentos` é só da gestão (`exigirGestao`).
 
 O resto do que saiu, e porquê:
 
-- **Boxes** passou a `e_equipa()` e **Contratos de penso** a `e_gestao()`: ao
-  cliente eram duas entradas de menu que abriam ecrãs quase vazios.
+- **Paddocks** (onde dantes estavam as boxes) é `e_equipa()` e **Contratos de
+  penso** `e_gestao()`: ao cliente eram duas entradas de menu que abriam ecrãs
+  quase vazios. O dono vê o paddock do cavalo dele na ficha dele, e recebe o
+  aviso quando ele é largado.
 - A listagem de cavalos esconde a coluna **Proprietário** (era o nome dele
   repetido em cada linha) e os filtros de regime (nunca lhe devolviam nada) a
   quem não é da cavalariça.

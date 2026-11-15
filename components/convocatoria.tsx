@@ -22,6 +22,8 @@ export type Convocado = {
   estado: EstadoParticipacao
   /** O que o atleta respondeu antes. Não confundir com `estado`. */
   confirmacao: ConfirmacaoParticipante
+  /** Porque é que não vai. Ia na notificação e não aparecia na app. */
+  motivo_ausencia: string | null
   pessoa: { id: string; nome: string } | null
   cavalo: { id: string; nome: string } | null
 }
@@ -109,6 +111,14 @@ export function Convocatoria({
                   <Remover eventoId={eventoId} id={convocado.id} />
                 ) : null}
               </div>
+
+              {/* O motivo ia na notificação e morria aí: quem abrisse a app
+                  depois via «Não vai» e mais nada. */}
+              {convocado.confirmacao === 'nao_vai' && convocado.motivo_ausencia ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {convocado.motivo_ausencia}
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>

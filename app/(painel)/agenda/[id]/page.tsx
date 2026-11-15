@@ -74,6 +74,7 @@ export default async function PaginaEvento({
     id: linha.id,
     estado: linha.estado,
     confirmacao: linha.confirmacao,
+    motivo_ausencia: linha.motivo_ausencia,
     pessoa: linha.pessoas,
     cavalo: linha.cavalos,
   }))

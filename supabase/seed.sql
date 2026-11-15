@@ -54,16 +54,17 @@ values
    'Lusitano', 'Baio', 'centro', null, 'Horseball')
 on conflict (id) do nothing;
 
--- --- Boxes ------------------------------------------------------------------
-insert into public.boxes (identificacao, zona, cavalo_id) values
-  ('A1', 'Cavalariça A', '33333333-0000-4000-8000-000000000001'),
-  ('A2', 'Cavalariça A', '33333333-0000-4000-8000-000000000002'),
-  ('A3', 'Cavalariça A', null),
-  ('B1', 'Cavalariça B', '33333333-0000-4000-8000-000000000003'),
-  ('B2', 'Cavalariça B', '33333333-0000-4000-8000-000000000004'),
-  ('B3', 'Cavalariça B', '33333333-0000-4000-8000-000000000005'),
-  ('B4', 'Cavalariça B', null)
-on conflict (identificacao) do nothing;
+-- --- Paddocks ---------------------------------------------------------------
+-- Os oito paddocks vêm da migração. Aqui largam-se dois cavalos hoje, para a
+-- demonstração ter o quadro com alguma coisa lá dentro.
+insert into public.paddock_ocupacao (paddock_id, cavalo_id)
+select p.id, c.cavalo
+  from public.paddocks p
+  join (values
+    (1::smallint, '33333333-0000-4000-8000-000000000001'::uuid),
+    (3::smallint, '33333333-0000-4000-8000-000000000003'::uuid)
+  ) as c(numero, cavalo) on c.numero = p.numero
+on conflict (cavalo_id, data) do nothing;
 
 -- --- Contratos de penso -----------------------------------------------------
 insert into public.contratos_penso

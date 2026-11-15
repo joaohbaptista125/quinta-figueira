@@ -290,8 +290,10 @@ begin
     'cliente vê apenas as suas mensalidades');
   perform pg_temp.afirmar((select count(*) from public.recebimentos) = 1,
     'cliente vê apenas o seu recebimento');
-  perform pg_temp.afirmar((select count(*) from public.boxes) = 2,
-    'cliente vê apenas as boxes dos seus cavalos');
+  perform pg_temp.afirmar((select count(*) from public.paddock_ocupacao) = 1,
+    'cliente vê apenas o cavalo dele que está largado hoje');
+  perform pg_temp.afirmar((select count(*) from public.paddocks) = 8,
+    'mas a lista dos oito paddocks é para toda a gente');
   perform pg_temp.afirmar((select count(*) from public.v_pensos_por_receber) = 2,
     'cliente vê apenas os seus pensos na vista');
 

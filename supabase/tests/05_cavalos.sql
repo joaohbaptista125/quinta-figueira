@@ -9,8 +9,9 @@
 -- para ninguém (`set null`) e as ferrações morrem com o cavalo (`cascade`).
 -- Nada disto dá erro, e o que se perde só dá por si meses depois.
 --
--- A box é o único caso em que ficar a `null` é o comportamento desejado: o
--- cavalo saiu, a box fica livre.
+-- A largada no paddock é o único caso em que desaparecer é o comportamento
+-- desejado: o cavalo saiu do centro, sai do campo. É quadro do dia e não
+-- histórico, por isso `paddock_ocupacao` é `cascade` sem pena nenhuma.
 
 \set ON_ERROR_STOP on
 set client_min_messages to notice;
@@ -38,7 +39,8 @@ begin
   insert into public.cavalos (nome, regime) values ('Fugaz', 'centro')
   returning id into v_cavalo;
 
-  insert into public.boxes (identificacao, cavalo_id) values ('Z-99', v_cavalo)
+  insert into public.paddock_ocupacao (paddock_id, cavalo_id)
+  values ((select id from public.paddocks where numero = 8), v_cavalo)
   returning id into v_box;
 
   insert into public.despesas
@@ -62,8 +64,8 @@ begin
   delete from public.cavalos where id = v_cavalo;
 
   perform pg_temp.afirmar(
-    (select cavalo_id is null from public.boxes where id = v_box),
-    'a box fica livre — o único destes que é o que se quer');
+    (select count(*) from public.paddock_ocupacao where id = v_box) = 0,
+    'o cavalo sai do paddock — o único destes que é o que se quer');
 
   perform pg_temp.afirmar(
     (select cavalo_id is null from public.despesas where id = v_despesa),
@@ -80,7 +82,6 @@ begin
   delete from public.evento_participantes where id = v_parte;
   delete from public.eventos where id = v_evento;
   delete from public.despesas where id = v_despesa;
-  delete from public.boxes where id = v_box;
 end $$;
 reset role;
 
