@@ -69,6 +69,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261021090000_serie_de_eventos.sql` | `eventos.serie_id` |
 | `…20261021110000_pagamentos_declarados.sql` | `pagamentos_declarados` + `confirmar_pagamento_declarado` + `v_pagamentos_por_confirmar` |
 | `…20261115100000_confirmacao_de_presenca.sql` | `evento_participantes.confirmacao` + trigger de carimbo |
+| `…20261115110000_quem_paga_o_ferrador.sql` | `cavalos.ferrador_pago_por` + `ferracoes.pago_em` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -263,6 +264,29 @@ não só da gestão** — quem recebe o ferrador na cavalariça é o tratador, e
 obrigá-lo a pedir à gestão era a maneira certa de o registo não existir. O
 custo que lá fica é nota do que foi combinado; a despesa lança-se no
 financeiro, imputada ao cavalo.
+
+**Quem paga o ferrador é do cavalo, e define-se uma vez.** Há dois arranjos
+na Quinta da Figueira: ou o centro paga ao ferrador e recobra, ou o dono trata
+directamente com ele e paga-lhe na hora. O segundo não tinha onde viver — e o
+centro pode nem saber que a visita aconteceu, porque quem a marca é o dono.
+`cavalos.ferrador_pago_por` ('centro' | 'proprietario') decide, e **não se
+pergunta a cada ferração**: foi decisão do cliente, e segue o que já estava
+escrito — depende do cliente, não depende do dia.
+
+- Num cavalo de `proprietario`, **o dono regista a ferração** (escreve o nome
+  do ferrador) e marca `pago_em`. É data e não booleano: «pagou a 12/11»
+  responde à pergunta seguinte sem custar um campo a mais, porque quem marca
+  está a marcar hoje.
+- Nesse caso **o visto de «pôr na conta do proprietário» não aparece**, e
+  `cobrarAoProprietario()` recusa mesmo que apareça: criar ali um encargo era
+  cobrar-lhe o que ele já pagou.
+- A escrita do dono é limitada pela RLS aos cavalos dele com esse arranjo.
+  **Sem `delete` para ele, de propósito**: a ferração também sustenta o
+  calendário do ferrador do centro, e apagá-la tirava ao tratador uma linha de
+  que ele depende. Um engano corrige-se editando.
+- `guardarCavalo` devolve o campo a `centro` quando não há proprietário ou o
+  regime não é penso — um cavalo sem dono não tem quem pague directamente.
+- `supabase/tests/11_quem_paga_o_ferrador.sql` prova os quatro lados.
 
 **Encargos avulsos são o que se cobra fora da mensalidade.** A ferração
 obrigou a isto: na Quinta da Figueira **depende do cliente** — uns pagam ao
@@ -509,7 +533,7 @@ supabase/
   tests/          arremedo do Supabase + testes de RLS (01 geral, 02 eventos,
                   03 ferração, 04 contratos, 05 cavalos, 06 encargos,
                   07 notas, 08 subscrições, 09 pagamentos declarados,
-                  10 confirmação de presença)
+                  10 confirmação de presença, 11 quem paga o ferrador)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -849,8 +873,10 @@ Security → Authorized IPs**.
 ### A visão de cliente
 
 A conta de cliente é quase toda de leitura, e é a RLS que a fecha: as consultas
-não levam filtro por pessoa em lado nenhum. O cliente escreve em dois sítios, e
-só nesses: as **notas do cavalo**, e o **«Já paguei»** — que é uma afirmação à
+não levam filtro por pessoa em lado nenhum. O cliente escreve em quatro sítios,
+e só nesses: as **notas do cavalo**, o **«Já paguei»**, a **resposta à
+convocatória** («vou»/«não vou», que não é presença) e a **ferração dos cavalos
+em que é ele que paga ao ferrador** — que é uma afirmação à
 espera de confirmação, não um lançamento (ver a decisão em cima). O que era preciso limar não era a
 segurança, era a linguagem — o cliente estava a ver as páginas da gestão com os
 dados dele lá dentro.

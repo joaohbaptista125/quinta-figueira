@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import type { TipoFerracao } from '@/lib/tipos-bd'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { ROTULOS_TIPO_FERRACAO } from '@/lib/rotulos'
-import { formatarData } from '@/lib/formatos'
+import { formatarData, hoje } from '@/lib/formatos'
 import {
   apagar,
   booleano,
@@ -13,7 +13,7 @@ import {
   textoOuNulo,
   valorOuNulo,
 } from './comum'
-import type { ResultadoAccao } from './resultado'
+import { traduzirErro, type ResultadoAccao } from './resultado'
 
 const TIPOS: TipoFerracao[] = ['completa', 'maos', 'pes', 'arranjo']
 
@@ -123,12 +123,19 @@ async function cobrarAoProprietario({
   const supabase = await criarClienteServidor()
   const { data: cavalo } = await supabase
     .from('cavalos')
-    .select('nome, proprietario_id')
+    .select('nome, proprietario_id, ferrador_pago_por')
     .eq('id', cavaloId)
     .maybeSingle()
 
   if (!cavalo?.proprietario_id) {
     return 'Não foi cobrada a ninguém: este cavalo não tem proprietário na ficha.'
+  }
+
+  // Neste cavalo é o dono que paga ao ferrador: não há dinheiro do centro a
+  // recobrar, e um encargo aqui seria cobrar-lhe o que ele já pagou. O visto
+  // nem aparece na ficha — isto é o travão para quando aparecer por engano.
+  if (cavalo.ferrador_pago_por === 'proprietario') {
+    return 'Não foi cobrada: neste cavalo é o proprietário que paga ao ferrador.'
   }
 
   const { error } = await supabase.from('encargos').insert({
@@ -146,6 +153,38 @@ async function cobrarAoProprietario({
   }
 
   return null
+}
+
+/**
+ * O proprietário marca que pagou ao ferrador — ou desmarca, se se enganou.
+ *
+ * Só existe nos cavalos em que é ele que paga; nos outros o dinheiro vive em
+ * `encargos` e tem o seu próprio caminho. Quem o limita é a RLS: a política
+ * de `update` do proprietário só alcança os cavalos dele com
+ * `ferrador_pago_por = 'proprietario'`.
+ */
+export async function marcarFerracaoPaga(
+  _anterior: ResultadoAccao,
+  dados: FormData,
+): Promise<ResultadoAccao> {
+  const id = texto(dados, 'id')
+  const cavaloId = texto(dados, 'cavalo_id')
+  if (!id) return { ok: false, mensagem: 'Registo inválido.' }
+
+  const pago = booleano(dados, 'pago')
+
+  const supabase = await criarClienteServidor()
+  const { error } = await supabase
+    .from('ferracoes')
+    .update({ pago_em: pago ? hoje() : null })
+    .eq('id', id)
+
+  if (error) return { ok: false, mensagem: traduzirErro(error) }
+
+  revalidatePath(`/cavalos/${cavaloId}`)
+  revalidatePath('/cavalos')
+
+  return { ok: true, mensagem: pago ? 'Marcada como paga.' : 'Marcada como por pagar.' }
 }
 
 export async function apagarFerracao(

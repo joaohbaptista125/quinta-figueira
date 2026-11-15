@@ -3,7 +3,12 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
-import type { RegimeCavalo, SexoCavalo, TipoOpcaoCavalo } from '@/lib/tipos-bd'
+import type {
+  PagaFerrador,
+  RegimeCavalo,
+  SexoCavalo,
+  TipoOpcaoCavalo,
+} from '@/lib/tipos-bd'
 import { ROTULOS_REGIME, ROTULOS_SEXO } from '@/lib/rotulos'
 import { normalizarOpcao, VALOR_NOVA } from '@/lib/opcoes-cavalo'
 import {
@@ -67,6 +72,14 @@ export async function guardarCavalo(
     ? (sexoBruto as SexoCavalo)
     : null
 
+  // Sem proprietário não há quem pague directamente ao ferrador: o campo
+  // volta ao centro sozinho, em vez de ficar num estado que não se cumpre.
+  const pagaFerradorBruto = texto(dados, 'ferrador_pago_por')
+  const pagaFerrador: PagaFerrador =
+    pagaFerradorBruto === 'proprietario' && regime === 'penso' && proprietarioId
+      ? 'proprietario'
+      : 'centro'
+
   const raca = opcaoOuNova(dados, 'raca')
   const pelagem = opcaoOuNova(dados, 'pelagem')
 
@@ -89,6 +102,7 @@ export async function guardarCavalo(
       // Só cavalos a penso guardam proprietário; nos outros regimes o campo
       // fica a null mesmo que o formulário traga um valor antigo.
       proprietario_id: regime === 'penso' ? proprietarioId : null,
+      ferrador_pago_por: pagaFerrador,
       activo: booleano(dados, 'activo'),
       notas: textoOuNulo(dados, 'notas'),
       ...(fotoPath ? { foto_path: fotoPath } : {}),

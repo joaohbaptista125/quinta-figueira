@@ -5,6 +5,7 @@
 
 import type {
   ConfirmacaoParticipante,
+  PagaFerrador,
   EstadoEncargo,
   EstadoFerracao,
   EstadoMensalidade,
@@ -146,4 +147,10 @@ export const ROTULOS_ESTADO_ENCARGO: Record<EstadoEncargo, string> = {
   pendente: 'Por pagar',
   pago: 'Pago',
   anulado: 'Anulado',
+}
+
+/** Quem paga ao ferrador de um cavalo. */
+export const ROTULOS_PAGA_FERRADOR: Record<PagaFerrador, string> = {
+  centro: 'O centro, e cobra ao proprietário',
+  proprietario: 'O proprietário, directamente ao ferrador',
 }

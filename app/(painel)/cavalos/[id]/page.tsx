@@ -98,7 +98,7 @@ export default async function PaginaCavalo({
       // é a mesma dos dois lados.
       supabase
         .from('ferracoes')
-        .select('id, data, tipo, proxima_em, ferrador, custo, notas')
+        .select('id, data, tipo, proxima_em, ferrador, custo, notas, pago_em')
         .eq('cavalo_id', id)
         .order('data', { ascending: false })
         .limit(12),
@@ -199,8 +199,20 @@ export default async function PaginaCavalo({
           <FerracaoCavalo
             cavaloId={cavalo.id}
             ferracoes={ferracoes.data ?? []}
-            podeRegistar={eEquipa(sessao.perfil)}
+            /*
+             * Nos cavalos em que é o dono que paga ao ferrador, é ele que
+             * regista a visita: o centro pode nem saber que ela aconteceu.
+             * A RLS diz o mesmo — isto só evita mostrar um formulário que ia
+             * ser recusado.
+             */
+            podeRegistar={
+              eEquipa(sessao.perfil) ||
+              (cavalo.proprietario_id === sessao.id &&
+                cavalo.ferrador_pago_por === 'proprietario')
+            }
             temProprietario={Boolean(cavalo.proprietario_id)}
+            pagoPor={cavalo.ferrador_pago_por}
+            souOProprietario={cavalo.proprietario_id === sessao.id}
           />
 
           <NotasCavalo

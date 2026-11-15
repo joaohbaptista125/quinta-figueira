@@ -9,7 +9,12 @@ import {
 import { GrelhaCampos, SeccaoCampos } from '@/components/formulario-entidade'
 import { CampoFicheiro } from '@/components/campo-ficheiro'
 import { SelectorComOutro } from '@/components/formularios/selector-com-outro'
-import { ROTULOS_REGIME, ROTULOS_SEXO, paraOpcoes } from '@/lib/rotulos'
+import {
+  ROTULOS_PAGA_FERRADOR,
+  ROTULOS_REGIME,
+  ROTULOS_SEXO,
+  paraOpcoes,
+} from '@/lib/rotulos'
 import type { Cavalo } from '@/lib/tipos-bd'
 
 export type OpcaoPessoa = { id: string; nome: string }
@@ -75,6 +80,25 @@ export function CamposCavalo({
               {proprietarios.map((pessoa) => (
                 <option key={pessoa.id} value={pessoa.id}>
                   {pessoa.nome}
+                </option>
+              ))}
+            </Selector>
+          </Campo>
+
+          <Campo
+            etiqueta="Quem paga o ferrador"
+            htmlFor="ferrador_pago_por"
+            ajuda="Define-se uma vez por cavalo. Quando é o proprietário, é ele que regista a ferração e diz se pagou — e o «pôr na conta» deixa de aparecer, porque não há nada a recobrar."
+            className="sm:col-span-2"
+          >
+            <Selector
+              id="ferrador_pago_por"
+              name="ferrador_pago_por"
+              defaultValue={cavalo?.ferrador_pago_por ?? 'centro'}
+            >
+              {paraOpcoes(ROTULOS_PAGA_FERRADOR).map((opcao) => (
+                <option key={opcao.valor} value={opcao.valor}>
+                  {opcao.rotulo}
                 </option>
               ))}
             </Selector>

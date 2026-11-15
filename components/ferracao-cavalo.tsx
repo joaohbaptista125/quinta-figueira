@@ -1,10 +1,11 @@
 'use client'
 
-import { useId } from 'react'
+import { useActionState, useId } from 'react'
 import { useFormularioDeAccao } from '@/components/usar-formulario'
 import { useFormStatus } from 'react-dom'
 import { Hammer } from 'lucide-react'
-import { guardarFerracao } from '@/lib/accoes/ferracoes'
+import { guardarFerracao, marcarFerracaoPaga } from '@/lib/accoes/ferracoes'
+import { SEM_RESULTADO } from '@/lib/accoes/resultado'
 import { Botao } from '@/components/ui/botao'
 import { Campo, AreaTexto, Caixa, Entrada, Selector } from '@/components/ui/campos'
 import {
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/superficie'
 import { ROTULOS_TIPO_FERRACAO } from '@/lib/rotulos'
 import { deslocarDias, diasAte, formatarData, hoje } from '@/lib/formatos'
-import type { Ferracao, TipoFerracao } from '@/lib/tipos-bd'
+import type { Ferracao, PagaFerrador, TipoFerracao } from '@/lib/tipos-bd'
 
 /** Seis semanas é o intervalo normal, e é o que o ferrador combina à saída. */
 const SEMANAS_ATE_A_PROXIMA = 6
@@ -28,8 +29,77 @@ const TIPOS: TipoFerracao[] = ['completa', 'maos', 'pes', 'arranjo']
 
 type LinhaFerracao = Pick<
   Ferracao,
-  'id' | 'data' | 'tipo' | 'proxima_em' | 'ferrador' | 'custo' | 'notas'
+  | 'id'
+  | 'data'
+  | 'tipo'
+  | 'proxima_em'
+  | 'ferrador'
+  | 'custo'
+  | 'notas'
+  | 'pago_em'
 >
+
+/**
+ * Se já foi paga ao ferrador, nos cavalos em que é o dono que paga.
+ *
+ * Um botão e não um visto: isto não vive dentro de um formulário maior, e
+ * marcar que se pagou deve ser um toque só. Quem pode marcar é o dono — é o
+ * dinheiro dele — e também a equipa, que às vezes é quem está ao pé do
+ * ferrador quando o dinheiro muda de mãos.
+ */
+function EstadoDoPagamento({
+  ferracao,
+  cavaloId,
+  podeMarcar,
+}: {
+  ferracao: LinhaFerracao
+  cavaloId: string
+  podeMarcar: boolean
+}) {
+  const [resultado, executar] = useActionState(marcarFerracaoPaga, SEM_RESULTADO)
+  const pago = Boolean(ferracao.pago_em)
+
+  if (!podeMarcar) {
+    return (
+      <p className="mt-1">
+        <Distintivo cor={pago ? 'sucesso' : 'aviso'}>
+          {pago ? `Pago a ${formatarData(ferracao.pago_em!)}` : 'Por pagar'}
+        </Distintivo>
+      </p>
+    )
+  }
+
+  return (
+    <form action={executar} className="mt-1 flex flex-wrap items-center gap-2">
+      <input type="hidden" name="id" value={ferracao.id} />
+      <input type="hidden" name="cavalo_id" value={cavaloId} />
+      <input type="hidden" name="pago" value={pago ? 'false' : 'on'} />
+
+      <Distintivo cor={pago ? 'sucesso' : 'aviso'}>
+        {pago ? `Pago a ${formatarData(ferracao.pago_em!)}` : 'Por pagar'}
+      </Distintivo>
+
+      <BotaoPagamento pago={pago} />
+
+      {resultado.mensagem && !resultado.ok ? (
+        <span className="text-xs text-destructive">{resultado.mensagem}</span>
+      ) : null}
+    </form>
+  )
+}
+
+function BotaoPagamento({ pago }: { pago: boolean }) {
+  const { pending } = useFormStatus()
+  return (
+    <Botao type="submit" variante="fantasma" tamanho="pequeno" disabled={pending}>
+      {pending
+        ? 'Um instante…'
+        : pago
+          ? 'Afinal não paguei'
+          : 'Já paguei ao ferrador'}
+    </Botao>
+  )
+}
 
 /**
  * Ferração de um cavalo: quando foi, de que tipo, e quando volta a ser.
@@ -46,13 +116,27 @@ export function FerracaoCavalo({
   ferracoes,
   podeRegistar,
   temProprietario,
+  pagoPor,
+  souOProprietario,
 }: {
   cavaloId: string
   ferracoes: LinhaFerracao[]
   podeRegistar: boolean
   /** Sem dono na ficha não há a quem cobrar, e o visto não aparece. */
   temProprietario: boolean
+  /**
+   * Quem paga ao ferrador deste cavalo. Decide duas coisas: se o «pôr na
+   * conta do proprietário» faz sentido, e se o pagamento é coisa que se
+   * marque aqui.
+   */
+  pagoPor: PagaFerrador
+  souOProprietario: boolean
 }) {
+  // Nos cavalos que o dono paga, o pagamento é dele e marca-se nesta lista.
+  // Nos do centro o dinheiro vive em `encargos` e tem o seu próprio caminho,
+  // por isso aqui não se mostra nada sobre pagamentos.
+  const paganteEOProprietario = pagoPor === 'proprietario'
+  const podeMarcarPago = paganteEOProprietario && (podeRegistar || souOProprietario)
   const ultima = ferracoes[0] ?? null
 
   return (
@@ -68,11 +152,18 @@ export function FerracaoCavalo({
       </CabecalhoCartao>
 
       <ConteudoCartao className="space-y-3">
+        {paganteEOProprietario ? (
+          <p className="text-xs text-muted-foreground">
+            Neste cavalo é o proprietário que paga ao ferrador. O centro não
+            cobra nada por isto.
+          </p>
+        ) : null}
+
         {podeRegistar ? (
           <FormularioFerracao
             cavaloId={cavaloId}
             ultima={ultima}
-            temProprietario={temProprietario}
+            temProprietario={temProprietario && !paganteEOProprietario}
           />
         ) : null}
 
@@ -99,6 +190,14 @@ export function FerracaoCavalo({
                     {ferracao.proxima_em && ferracao.notas ? ' · ' : null}
                     {ferracao.notas}
                   </p>
+                ) : null}
+
+                {paganteEOProprietario ? (
+                  <EstadoDoPagamento
+                    ferracao={ferracao}
+                    cavaloId={cavaloId}
+                    podeMarcar={podeMarcarPago}
+                  />
                 ) : null}
               </li>
             ))}

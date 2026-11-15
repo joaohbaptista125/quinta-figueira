@@ -79,9 +79,17 @@ export type Cavalo = Carimbos & {
   foto_path: string | null
   regime: RegimeCavalo
   proprietario_id: string | null
+  /**
+   * Quem paga ao ferrador deste cavalo. `proprietario` deixa o dono registar
+   * a ferração e marcar que pagou, e esconde o «pôr na conta» — não há
+   * dinheiro do centro a recobrar.
+   */
+  ferrador_pago_por: PagaFerrador
   activo: boolean
   notas: string | null
 }
+
+export type PagaFerrador = 'centro' | 'proprietario'
 
 /**
  * Uma entrada da conversa de um cavalo. `autor_id` e `de_equipa` são
@@ -223,6 +231,11 @@ export type Ferracao = Carimbos & {
   proxima_em: string | null
   ferrador: string | null
   custo: number | null
+  /**
+   * Quando o proprietário pagou ao ferrador. Só faz sentido nos cavalos em
+   * que é ele que paga — nos outros o dinheiro vive em `encargos`.
+   */
+  pago_em: string | null
   notas: string | null
 }
 
@@ -762,6 +775,7 @@ export type BaseDados = {
       tipo_recebimento: TipoRecebimento
       estado_mensalidade: EstadoMensalidade
       tipo_opcao_cavalo: TipoOpcaoCavalo
+      paga_ferrador: PagaFerrador
       tipo_evento: TipoEvento
       estado_participacao: EstadoParticipacao
       confirmacao_participante: ConfirmacaoParticipante
