@@ -75,7 +75,16 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 actualiza `lib/tipos-bd.ts` na mesma alteração.
 
 **As migrações aplicam-se sozinhas** pelo workflow `.github/workflows/migracoes.yml`:
-entra uma migração no `main`, corre `supabase db push`. Fica em silêncio
+entra uma migração no `main`, corre `supabase db push --remote`.
+
+**O CLI está fixado numa versão, e isso custou uma avaria para se aprender.**
+Com `version: latest`, o salto do CLI para a v3 trocou o alvo por omissão dos
+comandos para a stack **local**: o `migration list` falhou a tentar ligar-se a
+127.0.0.1, o `db push` foi saltado por depender dele, e a Vercel publicou
+código novo contra uma base sem as colunas — exactamente a janela que este
+workflow existe para fechar. Daí o **`--remote` explícito** em todos os
+comandos e a versão presa. Actualiza-se à mão, a ver o que mudou, e não a
+meio de uma publicação. Fica em silêncio
 enquanto os segredos do repositório não estiverem configurados — as
 instruções estão no cabeçalho do ficheiro. Isto existe porque o caminho manual
 deixava uma janela em que a Vercel já tinha publicado o código novo e a base

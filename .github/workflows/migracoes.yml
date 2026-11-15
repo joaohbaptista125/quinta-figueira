@@ -20,6 +20,14 @@
 #
 # e colar o que sai no SQL Editor. Não altera o esquema, só declara o que já
 # foi feito.
+#
+# O CLI está FIXADO numa versão, e isso custou uma avaria para se aprender: com
+# `latest`, o salto do CLI para a v3 trocou o alvo por omissão dos comandos
+# para a stack **local**. O `migration list` falhou a tentar ligar-se a
+# 127.0.0.1, o `db push` foi saltado, e a Vercel publicou código novo contra
+# uma base sem as colunas — exactamente a janela que este workflow existe para
+# fechar. Daí o `--remote` explícito em todos os comandos e a versão presa:
+# actualiza-se à mão, a ver o que mudou, e não a meio de uma publicação.
 
 name: Migrações
 
@@ -60,16 +68,19 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.segredos.outputs.prontos == 'sim'
         with:
-          version: latest
+          # Presa de propósito — ver o cabeçalho deste ficheiro.
+          version: 3.1.0
 
       - name: Ligar ao projecto
         if: steps.segredos.outputs.prontos == 'sim'
         run: supabase link --project-ref "$REFERENCIA"
 
+      # `--remote` em todos: desde a v3 do CLI o alvo por omissão é a stack
+      # local, que num runner não existe.
       - name: O que falta aplicar
         if: steps.segredos.outputs.prontos == 'sim'
-        run: supabase migration list
+        run: supabase migration list --remote
 
       - name: Aplicar
         if: steps.segredos.outputs.prontos == 'sim'
-        run: supabase db push
+        run: supabase db push --remote
