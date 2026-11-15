@@ -62,6 +62,11 @@ export async function guardarEvento(
 
   const equipaId = textoOuNulo(dados, 'equipa_id')
 
+  // Quem já fica convocado, escolhido no próprio formulário de marcação.
+  // Numa edição não se lê: a convocatória vive na ficha, que é onde se lhe
+  // mexe com os cavalos à vista.
+  const convocados = id ? [] : listaTexto(dados, 'convocados')
+
   // Repetir só faz sentido ao marcar. Numa edição o campo nem aparece: mudar
   // a hora de uma aula não devia criar sete aulas novas.
   const semanas = id ? 1 : Math.min(Math.max(inteiroOuNulo(dados, 'semanas') ?? 1, 1), 52)
@@ -121,19 +126,28 @@ export async function guardarEvento(
     criados.push(...(seguintes ?? []).map((evento) => evento.id))
   }
 
-  // Marcar a equipa num evento novo convoca-a: é o atalho que evita escolher
-  // os mesmos oito jogadores todas as semanas. Com repetição, convoca em
-  // todas — senão a repetição só poupava metade do trabalho.
-  if (!id && equipaId) {
+  // Marcar a equipa num evento novo convoca-a, e o mesmo vale para quem foi
+  // escolhido à mão no formulário: é o atalho que evita escolher os mesmos
+  // oito jogadores todas as semanas. Com repetição, convoca em todas — senão
+  // a repetição só poupava metade do trabalho.
+  if (!id && (equipaId || convocados.length > 0)) {
     for (const eventoId of criados) {
-      const erro = await convocarMembrosDaEquipa(eventoId, equipaId)
-      if (erro) {
+      const erro = equipaId
+        ? await convocarMembrosDaEquipa(eventoId, equipaId)
+        : null
+      const erroPessoas = erro
+        ? null
+        : await convocarPessoas(eventoId, convocados)
+
+      if (erro || erroPessoas) {
         return {
           ok: true,
-          mensagem: `Marcações criadas, mas a convocatória falhou: ${erro}`,
+          mensagem: `Marcações criadas, mas a convocatória falhou: ${erro ?? erroPessoas}`,
         }
       }
     }
+
+    await avisarDaMarcacao(resultado.id, criados.length)
   }
 
   for (const eventoId of criados) revalidatePath(`/agenda/${eventoId}`)
@@ -274,6 +288,64 @@ export async function cancelarSeguintesDaSerie(
         ? '1 marcação seguinte cancelada.'
         : `${quantas} marcações seguintes canceladas.`,
   }
+}
+
+/** Convoca estas pessoas, sem duplicar quem já lá estiver. */
+async function convocarPessoas(eventoId: string, pessoaIds: string[]) {
+  if (pessoaIds.length === 0) return null
+
+  const supabase = await criarClienteServidor()
+  const { error } = await supabase.from('evento_participantes').upsert(
+    pessoaIds.map((pessoa_id) => ({ evento_id: eventoId, pessoa_id })),
+    { onConflict: 'evento_id,pessoa_id', ignoreDuplicates: true },
+  )
+
+  return error ? traduzirErro(error) : null
+}
+
+/**
+ * Avisa quem acabou de ser convocado ao marcar — **uma vez, e não por
+ * marcação**.
+ *
+ * Convocar seis pessoas para oito terças são quarenta e oito avisos, e uma
+ * aplicação que faz isso ensina a desligar as notificações. Vai um aviso por
+ * pessoa, sobre a primeira marcação, a dizer quantas semanas são.
+ *
+ * `avisar()` aceita a lista toda e não lança: uma notificação que não sai não
+ * pode fazer falhar marcações que já estão gravadas.
+ */
+async function avisarDaMarcacao(eventoId: string, marcacoes: number) {
+  const supabase = await criarClienteServidor()
+
+  const [evento, participantes] = await Promise.all([
+    supabase
+      .from('eventos')
+      .select('tipo, titulo, data, hora_inicio, local, cancelado')
+      .eq('id', eventoId)
+      .maybeSingle(),
+    supabase
+      .from('evento_participantes')
+      .select('pessoa_id')
+      .eq('evento_id', eventoId),
+  ])
+
+  if (!evento.data || evento.data.cancelado) return
+
+  const quando = `${formatarDiaCurto(evento.data.data)} às ${formatarHora(evento.data.hora_inicio)}`
+  const onde = evento.data.local ? ` · ${evento.data.local}` : ''
+  const repete = marcacoes > 1 ? ` · e mais ${marcacoes - 1} semanas` : ''
+
+  await avisar(
+    (participantes.data ?? []).map((linha) => linha.pessoa_id),
+    {
+      titulo: evento.data.titulo
+        ? `${ROTULOS_TIPO_EVENTO_CURTO[evento.data.tipo]}: ${evento.data.titulo}`
+        : `Foi convocado para ${ROTULOS_TIPO_EVENTO_CURTO[evento.data.tipo].toLowerCase()}`,
+      texto: `${quando}${onde}${repete}`,
+      caminho: `/agenda/${eventoId}`,
+      agrupar: `evento-${eventoId}`,
+    },
+  )
 }
 
 /** Acrescenta ao evento quem ainda não estiver convocado. */

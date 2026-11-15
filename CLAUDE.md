@@ -196,6 +196,21 @@ numa edição, mudar a hora de uma aula não devia criar sete aulas novas. Com
 equipa escolhida, a convocatória da equipa entra em **todas** as marcações —
 senão a repetição poupava metade do trabalho.
 
+**Convoca-se no próprio formulário de marcação**, e não só depois na ficha.
+«Terça às 18:30, estes quatro» é uma coisa só na cabeça de quem marca, e eram
+três passos: marcar, entrar no evento, convocar um a um.
+`<EscolherConvocados>` é uma lista de caixas de visto com pesquisa — com ~80
+fichas, sem filtro não se usa num telemóvel. **Quem está marcado continua
+marcado quando o filtro o esconde** (viaja em campos escondidos): perder uma
+escolha já feita ao escrever na pesquisa seria pior do que não ter pesquisa.
+Como a equipa, entra em **todas** as marcações da série; os cavalos
+atribuem-se depois, na ficha, que é onde se vêem os pares.
+
+**O aviso de convocatória ao marcar é um por pessoa, não um por marcação.**
+Seis pessoas em oito terças seriam quarenta e oito notificações, e uma
+aplicação que faz isso ensina a desligá-las. `avisarDaMarcacao()` manda um
+aviso sobre a primeira marcação, a dizer quantas semanas são.
+
 **Um cavalo não pode estar em dois eventos sobrepostos.** A restrição tem de
 comparar horas que vivem em `eventos` com linhas de `evento_participantes`, e
 uma restrição de exclusão não olha para outra tabela. Por isso

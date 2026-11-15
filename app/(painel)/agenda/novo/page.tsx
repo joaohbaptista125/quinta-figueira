@@ -32,7 +32,7 @@ export default async function PaginaNovoEvento({
       <CabecalhoPagina
         voltar={{ href: '/agenda', rotulo: 'Agenda' }}
         titulo="Marcar evento"
-        descricao="Aula, treino de Horseball ou competição. A convocatória faz-se a seguir."
+        descricao="Aula, treino de Horseball ou competição. Pode convocar já quem participa."
       />
       <Cartao className="max-w-3xl">
         <ConteudoCartao className="pt-4 sm:pt-5">

@@ -1,5 +1,6 @@
 import { AreaTexto, Campo, Entrada, Etiqueta, Selector } from '@/components/ui/campos'
-import { GrelhaCampos } from '@/components/formulario-entidade'
+import { GrelhaCampos, SeccaoCampos } from '@/components/formulario-entidade'
+import { EscolherConvocados } from '@/components/formularios/escolher-convocados'
 import { ROTULOS_TIPO_EVENTO, paraOpcoes } from '@/lib/rotulos'
 import { hoje } from '@/lib/formatos'
 import type { Evento } from '@/lib/tipos-bd'
@@ -159,6 +160,21 @@ export function CamposEvento({
           </Selector>
         </Campo>
       </GrelhaCampos>
+
+      {/*
+        Convocar aqui, e não só depois na ficha: «terça às 18:30, estes
+        quatro» é uma coisa só na cabeça de quem marca, e eram três passos.
+        Só ao marcar — numa edição, a convocatória já vive na ficha, que é
+        onde se lhe mexe com os cavalos à vista.
+      */}
+      {evento ? null : (
+        <SeccaoCampos
+          titulo="Convocar"
+          descricao="Quem fica logo convocado. Pode deixar em branco e convocar depois, na ficha do evento."
+        >
+          <EscolherConvocados pessoas={responsaveis} />
+        </SeccaoCampos>
+      )}
 
       <div className="space-y-1.5">
         <Etiqueta htmlFor="notas">Notas</Etiqueta>
