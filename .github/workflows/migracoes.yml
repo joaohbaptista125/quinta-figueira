@@ -76,11 +76,13 @@ jobs:
         run: supabase link --project-ref "$REFERENCIA"
 
       # `--remote` em todos: desde a v3 do CLI o alvo por omissão é a stack
-      # local, que num runner não existe.
+      # local, que num runner não existe. E `--yes` no push, porque a v3 passou
+      # a pedir confirmação antes de tocar numa base de produção — sem terminal
+      # para responder, o comando recusa-se e não altera nada.
       - name: O que falta aplicar
         if: steps.segredos.outputs.prontos == 'sim'
         run: supabase migration list --remote
 
       - name: Aplicar
         if: steps.segredos.outputs.prontos == 'sim'
-        run: supabase db push --remote
+        run: supabase db push --remote --yes
