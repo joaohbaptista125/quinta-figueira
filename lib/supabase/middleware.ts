@@ -15,6 +15,9 @@ const CAMINHOS_PUBLICOS = [
   // sequer entrado: tem de abrir sem sessão.
   '/instalar',
   '/offline.html',
+  // Mantém a função acordada. Ver app/aquecer/route.ts — não lê nada de
+  // ninguém, e um serviço externo não tem como trazer sessão.
+  '/aquecer',
   // Subscrição de calendário: autentica-se pelo token no endereço, não por
   // sessão — uma aplicação de calendário não sabe iniciar sessão.
   '/calendario',

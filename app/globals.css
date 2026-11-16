@@ -151,7 +151,13 @@
  * último fotograma, que é `visibility: hidden`.
  */
 :root {
-  --abertura-duracao: 1.6s;
+  /*
+   * 0,6 s. Começou em 1,6 e foi encurtada depois de o centro dizer que a
+   * aplicação parecia lenta a reagir — metade dessa queixa era isto. Abaixo
+   * de meio segundo deixa de se ler como espera e passa a ler-se como
+   * transição, que é o que se queria.
+   */
+  --abertura-duracao: 0.6s;
 }
 
 #abertura {
@@ -165,8 +171,14 @@
   animation: abertura-sair var(--abertura-duracao) ease-in forwards;
 }
 
+/*
+ * A entrada da marca tem de **acabar antes** de a abertura começar a
+ * desvanecer, senão o logótipo ainda está a crescer enquanto o ecrã se vai
+ * embora — lê-se como um salto. Com 0,6 s de abertura, 0,32 s de entrada
+ * deixam-no quieto antes de os 70% do desvanecimento.
+ */
 #abertura > * {
-  animation: abertura-entrar 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation: abertura-entrar 0.32s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 
 @keyframes abertura-entrar {

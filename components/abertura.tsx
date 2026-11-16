@@ -7,9 +7,12 @@ import { Marca } from '@/components/marca'
  * **Isto custa tempo, e é bom saber quanto.** Não tapa o arranque a frio da
  * função na Vercel — esse acontece *antes*, enquanto o HTML não chega, e
  * nessa altura não há página nenhuma para mostrar a marca. O que a abertura
- * faz é somar **1,6 segundos ao entrar**, de propósito, para a aplicação
- * começar com a marca em vez de começar a meio. Foi uma escolha, não um
- * efeito secundário.
+ * faz é somar **0,6 segundos ao entrar**, de propósito, para a aplicação
+ * começar com a marca em vez de começar a meio.
+ *
+ * Esteve em 1,6 s e foi encurtada: o centro disse que a aplicação parecia
+ * lenta a reagir, e metade dessa queixa era este ecrã. Abaixo de meio
+ * segundo deixa de se ler como espera e lê-se como transição.
  *
  * O que a impede de ser um imposto é o resto deste ficheiro — e é por isso
  * que estas três coisas não se mexem sem pensar.

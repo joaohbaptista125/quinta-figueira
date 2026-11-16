@@ -682,9 +682,22 @@ o número de idas e voltas é o que se sente ao clicar.
   explícito por causa disto: é o que faz a Vercel reaproveitar instâncias em
   vez de criar uma por pedido. Vem ligado de origem nos projectos novos, mas
   escrito à mão não deixa dúvida nem depende de um valor por omissão mudar.
-- **Não há como manter a aplicação quente no plano Hobby**: o cron do Hobby
-  corre uma vez por dia. Um serviço externo a bater no site de cinco em cinco
-  minutos resolve, e é o caminho barato; o plano Pro resolve de outra maneira.
+- **`/aquecer` existe para manter a função acordada** — `app/aquecer/route.ts`.
+  Os registos da Vercel confirmaram o diagnóstico sem margem: **50 minutos a
+  meio da manhã sem um único pedido**. Numa casa de ~80 pessoas que entram aos
+  bocados, quase toda a gente apanha sempre um arranque a frio.
+  - **Não basta devolver `200`.** Uma rota que não fala com nada deixava fria
+    exactamente a parte que custa: carregar o cliente do Supabase e abrir a
+    ligação. Daí a contagem com `head: true`, que é a mais barata que há.
+  - **É público** (está nos `CAMINHOS_PUBLICOS`) e não tem nada a proteger:
+    corre com a chave anónima, a RLS devolve-lhe zero, não escreve nada.
+  - **No plano Hobby o cron da Vercel corre uma vez por dia**, o que não serve
+    para isto. Quem bate de cinco em cinco minutos é um serviço externo
+    gratuito (cron-job.org, UptimeRobot) apontado a
+    `https://quinta-figueira.vercel.app/aquecer`. Com o plano Pro passa a
+    haver um `crons` no `vercel.json` e o externo deixa de ser preciso.
+  - Isto **não torna a aplicação mais rápida**: mantém-na acordada, que é
+    outra coisa — e é a que faltava.
 - **`/conta` mostra à gestão porque é que a aplicação parece lenta** —
   `<OndeEstaACorrer>`, sobre `lib/diagnostico.ts`. «Está lenta» não se resolve
   a adivinhar, e os logs da Vercel no plano Hobby só duram uma hora: quando se
@@ -887,7 +900,10 @@ ou decidir — os pagamentos declarados e a aprovação de fichas.
 
 ### A abertura, e porque é que não é uma espera inventada
 
-`<Abertura>` mostra a marca ao entrar na aplicação, e **custa 1,6 segundos**.
+`<Abertura>` mostra a marca ao entrar na aplicação, e **custa 0,6 segundos**.
+Esteve em 1,6 s: o centro veio dizer que a aplicação parecia lenta a reagir, e
+metade dessa queixa era este ecrã. **Se voltar a crescer, é o primeiro sítio
+onde ir ver.**
 Vale a pena dizer o que ela não faz, para não se acreditar no contrário:
 **não tapa o arranque a frio** da função na Vercel. Esse acontece antes,
 enquanto o HTML não chega, e aí não há página nenhuma onde pôr a marca. A
