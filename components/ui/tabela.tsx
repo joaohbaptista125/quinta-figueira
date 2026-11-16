@@ -66,8 +66,10 @@ export function Linha({
       className={cn(
         // `relative` é o que permite a <LigacaoFicha> esticar-se por cima da
         // linha toda. Sem isto, só o texto do nome seria clicável.
+        // `active:` porque num ecrã de toque não há `hover`: sem ele, tocar
+        // numa linha não mostrava nada até a ficha abrir.
         'relative border-b border-border transition-colors hover:bg-muted/50',
-        'has-[a.ficha:focus-visible]:bg-muted/50',
+        'active:bg-muted has-[a.ficha:focus-visible]:bg-muted/50',
         'max-sm:flex max-sm:flex-col max-sm:gap-0.5 max-sm:px-3 max-sm:py-3',
         className,
       )}

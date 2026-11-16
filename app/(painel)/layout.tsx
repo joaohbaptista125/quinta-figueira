@@ -57,7 +57,19 @@ export default async function LayoutPainel({
         </aside>
 
         <div className="flex min-w-0 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:hidden">
+          {/*
+            * `safe-area-inset-top` porque o `viewport-fit: cover` do layout
+            * de raiz manda a página passar **por baixo** da barra de estado.
+            * No browser isso não se nota (a barra do Safari está lá em cima),
+            * mas na aplicação instalada — que é como a gestão a manda
+            * instalar em `/instalar` — o logótipo ficava meio tapado pelo
+            * relógio e pelo entalhe. A barra de baixo já fazia o mesmo com o
+            * `inset-bottom`; esta ficou para trás.
+            */}
+          <header
+            className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:hidden"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
             <div className="flex items-center justify-between gap-3 px-3 py-2.5">
               <Link href="/" className="flex items-center gap-2">
                 <Marca semTexto />

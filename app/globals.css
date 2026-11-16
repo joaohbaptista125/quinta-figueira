@@ -196,16 +196,37 @@
 }
 
 /*
- * Quem pediu menos movimento continua a ver a marca, mas sem o movimento e
- * por muito menos tempo: a abertura é um enfeite, e um enfeite não se impõe a
- * quem o desligou.
+ * Com «menos movimento» ligado, a regra global lá em baixo corta a duração de
+ * todas as animações — esta incluída. A abertura desaparece de imediato, o
+ * que é o comportamento certo: é um enfeite, e um enfeite não se impõe a quem
+ * o desligou. Fica aqui escrito para não se procurar a regra em dois sítios.
  */
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --abertura-duracao: 0.3s;
-  }
-
   #abertura > * {
     animation: none;
+  }
+}
+
+/*
+ * Quem pediu menos movimento, recebe menos movimento — em toda a aplicação e
+ * não só na abertura.
+ *
+ * `prefers-reduced-motion` não é só preferência estética: para quem tem
+ * sensibilidade vestibular, uma interface que desliza e salta provoca
+ * mal-estar a sério. Isto corta as animações e as transições a quem ligou a
+ * definição no sistema, sem tocar em mais nada. Fica aqui, uma vez, em vez de
+ * espalhado por cada componente que um dia venha a animar alguma coisa.
+ *
+ * `0.01ms` e não `0` de propósito: um `animationend` que nunca dispara deixa
+ * preso quem espera por ele.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

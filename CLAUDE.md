@@ -904,8 +904,10 @@ desenho à volta, e é por isso que estas três coisas não se mexem sem pensar:
   que não é um componente de cliente: não há nada para hidratar, e uma
   diferença entre o servidor e o browser dava um salto logo no primeiro
   instante.
-- **`prefers-reduced-motion` encolhe-a para 0,3 s.** Um enfeite não se impõe a
-  quem o desligou.
+- **Com «menos movimento» ligado, desaparece de imediato.** Quem o faz é a
+  regra global de `prefers-reduced-motion` no fim de `app/globals.css`, que
+  corta a duração de todas as animações da aplicação. Um enfeite não se impõe
+  a quem o desligou.
 - A duração está em `--abertura-duracao`, em `app/globals.css`, e é o único
   sítio onde se mexe nela.
 
@@ -1186,6 +1188,31 @@ escritório. As duas coisas que mais custaram a acertar:
   definição desde o iOS 10, de propósito, por acessibilidade. A maneira certa
   de não haver zoom acidental é a de cima: campos a 16px e o duplo toque
   desarmado.
+- **Um alvo de toque tem 44px, e é `pointer-coarse:` que o garante.** É a
+  mesma história do `text-base` nos campos: o que serve o rato não serve o
+  dedo. `tamanho="pequeno"` era `h-8`, ou seja 32px — e é o tamanho dos botões
+  que mais se tocam na cavalariça («Recolher» no quadro dos paddocks, «Já
+  paguei», «Aprovar»), muitas vezes com luvas. Em `components/ui/botao.tsx`
+  todos os tamanhos sobem ao mínimo nos ecrãs de toque e ficam como estavam no
+  computador. **Não ponhas um alvo abaixo de 44px em `pointer-coarse`.**
+- **Num ecrã de toque não há `hover`, e sem `active:` um toque não mostra
+  nada.** Os botões e as linhas das listagens só tinham estado de rato: quem
+  tocava ficava a olhar para um ecrã igual até a página seguinte chegar — e
+  com o arranque a frio isso são segundos. É a mesma queixa de «parece que não
+  aconteceu nada» que já tinha trazido o `<Notificacao>` e a limpeza dos
+  formulários. Numa variante nova de botão, o `active:` não é opcional.
+- **A barra de cima leva `safe-area-inset-top`, como a de baixo leva o
+  `inset-bottom`.** O `viewport-fit: cover` do layout de raiz manda a página
+  passar **por baixo** da barra de estado. No browser não se nota, porque a
+  barra do Safari está lá em cima; na aplicação instalada — que é como a
+  gestão a manda instalar em `/instalar` — o logótipo ficava meio tapado pelo
+  relógio e pelo entalhe. A barra de baixo já estava tratada; a de cima tinha
+  ficado para trás.
+- **`prefers-reduced-motion` corta as animações em toda a aplicação**, numa
+  regra só no fim de `app/globals.css`. Não é preferência estética: para quem
+  tem sensibilidade vestibular, uma interface que desliza provoca mal-estar a
+  sério. A duração fica em `0.01ms` e não em `0` de propósito — um
+  `animationend` que nunca dispara deixa preso quem espera por ele.
 - **As tabelas deixam de ser tabelas abaixo de `sm`.** Cada linha passa a
   cartão, com o nome da coluna à esquerda de cada valor. O nome da coluna vem
   do `rotulo` do `<Td>`: **numa listagem nova, todos os `<Td>` levam `rotulo`

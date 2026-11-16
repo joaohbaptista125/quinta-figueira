@@ -26,8 +26,9 @@ import { Marca } from '@/components/marca'
  * hidratar, e uma diferença entre o servidor e o browser dava um salto no
  * ecrã logo no primeiro instante.
  *
- * **Respeita quem pediu menos movimento**: com `prefers-reduced-motion` a
- * animação encolhe para quase nada.
+ * **Respeita quem pediu menos movimento**: a regra global de
+ * `prefers-reduced-motion` em `app/globals.css` corta a duração de todas as
+ * animações, e esta desaparece de imediato.
  *
  * Para mudar quanto tempo fica: `--abertura-duracao`, em `app/globals.css`.
  */
