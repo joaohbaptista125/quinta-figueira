@@ -1,39 +1,35 @@
-import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Indicador } from '@/components/indicador'
 import { QuadroDoDia } from '@/components/resumo-do-dia'
 import { NotasPorResponder } from '@/components/notas-por-responder'
-import {
-  Cartao,
-  CabecalhoCartao,
-  ConteudoCartao,
-  SemRegistos,
-  TituloCartao,
-} from '@/components/ui/superficie'
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
-import { ROTULOS_REGIME } from '@/lib/rotulos'
+import { AusenciasAnunciadas } from '@/components/ausencias-anunciadas'
+import { FerracaoAPrecisar } from '@/components/ferracao-a-precisar'
 import { formatarDiaPorExtenso, hoje } from '@/lib/formatos'
 
-/** Painel de instrutores e tratadores: cadastro, sem qualquer financeiro. */
+/**
+ * Painel de instrutores e tratadores: cadastro e o dia, sem financeiro nenhum.
+ *
+ * É o painel da gestão menos as duas coisas que a RLS não lhes deixa ver ou
+ * decidir — os pagamentos declarados e a aprovação de fichas de cavalo.
+ */
 export async function PainelEquipa({ nome }: { nome: string }) {
   const supabase = await criarClienteServidor()
 
-  const [cavalos, largados, pessoas] = await Promise.all([
+  const [cavalos, pessoas, largados] = await Promise.all([
     supabase
       .from('cavalos')
-      .select('id, nome, regime, raca', { count: 'exact' })
-      .eq('activo', true)
-      .order('nome')
-      .limit(12),
-    supabase
-      .from('paddock_ocupacao')
       .select('id', { count: 'exact', head: true })
-      .eq('data', hoje()),
+      .eq('activo', true)
+      .not('aprovado_em', 'is', null),
     supabase
       .from('pessoas')
       .select('id', { count: 'exact', head: true })
       .eq('activo', true),
+    supabase
+      .from('paddock_ocupacao')
+      .select('id', { count: 'exact', head: true })
+      .eq('data', hoje()),
   ])
 
   return (
@@ -46,55 +42,20 @@ export async function PainelEquipa({ nome }: { nome: string }) {
       <QuadroDoDia />
 
       <NotasPorResponder />
+      <AusenciasAnunciadas />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Indicador
-          rotulo="Cavalos activos"
-          valor={String(cavalos.count ?? 0)}
-        />
+        <Indicador rotulo="Cavalos no centro" valor={String(cavalos.count ?? 0)} />
+        <Indicador rotulo="Pessoas activas" valor={String(pessoas.count ?? 0)} />
         <Indicador
           rotulo="Nos paddocks hoje"
           valor={String(largados.count ?? 0)}
         />
-        <Indicador rotulo="Pessoas activas" valor={String(pessoas.count ?? 0)} />
       </div>
 
-      <Cartao className="mt-4">
-        <CabecalhoCartao>
-          <TituloCartao>Cavalos</TituloCartao>
-        </CabecalhoCartao>
-        <ConteudoCartao className="px-0 sm:px-0">
-          {cavalos.data && cavalos.data.length > 0 ? (
-            <Tabela>
-              <Cabecalho>
-                <Linha>
-                  <Th>Nome</Th>
-                  <Th>Raça</Th>
-                  <Th>Regime</Th>
-                </Linha>
-              </Cabecalho>
-              <Corpo>
-                {cavalos.data.map((cavalo) => (
-                  <Linha key={cavalo.id}>
-                    <Td>
-                      <Link
-                        href={`/cavalos/${cavalo.id}`}
-                        className="font-medium underline-offset-2 hover:underline"
-                      >
-                        {cavalo.nome}
-                      </Link>
-                    </Td>
-                    <Td rotulo="Raça" className="text-muted-foreground">{cavalo.raca ?? '—'}</Td>
-                    <Td rotulo="Regime">{ROTULOS_REGIME[cavalo.regime]}</Td>
-                  </Linha>
-                ))}
-              </Corpo>
-            </Tabela>
-          ) : (
-            <SemRegistos titulo="Ainda não há cavalos registados" />
-          )}
-        </ConteudoCartao>
-      </Cartao>
+      <div className="mt-4">
+        <FerracaoAPrecisar />
+      </div>
     </>
   )
 }

@@ -19,11 +19,22 @@ import type { Cavalo } from '@/lib/tipos-bd'
 
 export type OpcaoPessoa = { id: string; nome: string }
 
+/**
+ * Os campos de um cavalo, nos dois modos em que o formulário é usado.
+ *
+ * `proposta` é o cliente a inscrever o cavalo dele. Esconde **regime,
+ * proprietário, quem paga o ferrador e o estado activo** — não é timidez de
+ * interface: essas quatro coisas dizem de quem é o cavalo e o que o centro
+ * combinou com o dono, e quem as decide é a gestão. A trigger
+ * `carimbar_cavalo_proposto` escreve-as na base, aconteça o que acontecer ao
+ * formulário.
+ */
 export function CamposCavalo({
   cavalo,
   proprietarios,
   racas,
   pelagens,
+  modo = 'completo',
 }: {
   cavalo?: Cavalo | null
   proprietarios: OpcaoPessoa[]
@@ -31,12 +42,19 @@ export function CamposCavalo({
   racas: string[]
   /** Lista de pelagens activas, de `opcoes_cavalo`. */
   pelagens: string[]
+  modo?: 'completo' | 'proposta'
 }) {
+  const proposta = modo === 'proposta'
+
   return (
     <div className="space-y-6">
       <SeccaoCampos
         titulo="Identificação"
-        descricao="O mínimo para o cavalo poder ser usado no resto da aplicação."
+        descricao={
+          proposta
+            ? 'O nome chega para inscrever. O resto preenche-se depois.'
+            : 'O mínimo para o cavalo poder ser usado no resto da aplicação.'
+        }
       >
         <GrelhaCampos>
           <Campo etiqueta="Nome" htmlFor="nome" obrigatorio>
@@ -50,59 +68,63 @@ export function CamposCavalo({
             />
           </Campo>
 
-          <Campo etiqueta="Regime" htmlFor="regime" obrigatorio>
-            <Selector
-              id="regime"
-              name="regime"
-              defaultValue={cavalo?.regime ?? 'penso'}
-              required
-            >
-              {paraOpcoes(ROTULOS_REGIME).map((opcao) => (
-                <option key={opcao.valor} value={opcao.valor}>
-                  {opcao.rotulo}
-                </option>
-              ))}
-            </Selector>
-          </Campo>
+          {proposta ? null : (
+            <>
+            <Campo etiqueta="Regime" htmlFor="regime" obrigatorio>
+              <Selector
+                id="regime"
+                name="regime"
+                defaultValue={cavalo?.regime ?? 'penso'}
+                required
+              >
+                {paraOpcoes(ROTULOS_REGIME).map((opcao) => (
+                  <option key={opcao.valor} value={opcao.valor}>
+                    {opcao.rotulo}
+                  </option>
+                ))}
+              </Selector>
+            </Campo>
 
-          <Campo
-            etiqueta="Proprietário"
-            htmlFor="proprietario_id"
-            ajuda="Obrigatório para cavalos a penso. Ignorado nos outros regimes."
-            className="sm:col-span-2"
-          >
-            <Selector
-              id="proprietario_id"
-              name="proprietario_id"
-              defaultValue={cavalo?.proprietario_id ?? ''}
+            <Campo
+              etiqueta="Proprietário"
+              htmlFor="proprietario_id"
+              ajuda="Obrigatório para cavalos a penso. Ignorado nos outros regimes."
+              className="sm:col-span-2"
             >
-              <option value="">— Sem proprietário —</option>
-              {proprietarios.map((pessoa) => (
-                <option key={pessoa.id} value={pessoa.id}>
-                  {pessoa.nome}
-                </option>
-              ))}
-            </Selector>
-          </Campo>
+              <Selector
+                id="proprietario_id"
+                name="proprietario_id"
+                defaultValue={cavalo?.proprietario_id ?? ''}
+              >
+                <option value="">— Sem proprietário —</option>
+                {proprietarios.map((pessoa) => (
+                  <option key={pessoa.id} value={pessoa.id}>
+                    {pessoa.nome}
+                  </option>
+                ))}
+              </Selector>
+            </Campo>
 
-          <Campo
-            etiqueta="Quem paga o ferrador"
-            htmlFor="ferrador_pago_por"
-            ajuda="Define-se uma vez por cavalo. Quando é o proprietário, é ele que regista a ferração e diz se pagou — e o «pôr na conta» deixa de aparecer, porque não há nada a recobrar."
-            className="sm:col-span-2"
-          >
-            <Selector
-              id="ferrador_pago_por"
-              name="ferrador_pago_por"
-              defaultValue={cavalo?.ferrador_pago_por ?? 'centro'}
+            <Campo
+              etiqueta="Quem paga o ferrador"
+              htmlFor="ferrador_pago_por"
+              ajuda="Define-se uma vez por cavalo. Quando é o proprietário, é ele que regista a ferração e diz se pagou — e o «pôr na conta» deixa de aparecer, porque não há nada a recobrar."
+              className="sm:col-span-2"
             >
-              {paraOpcoes(ROTULOS_PAGA_FERRADOR).map((opcao) => (
-                <option key={opcao.valor} value={opcao.valor}>
-                  {opcao.rotulo}
-                </option>
-              ))}
-            </Selector>
-          </Campo>
+              <Selector
+                id="ferrador_pago_por"
+                name="ferrador_pago_por"
+                defaultValue={cavalo?.ferrador_pago_por ?? 'centro'}
+              >
+                {paraOpcoes(ROTULOS_PAGA_FERRADOR).map((opcao) => (
+                  <option key={opcao.valor} value={opcao.valor}>
+                    {opcao.rotulo}
+                  </option>
+                ))}
+              </Selector>
+            </Campo>
+            </>
+          )}
         </GrelhaCampos>
       </SeccaoCampos>
 
@@ -200,13 +222,15 @@ export function CamposCavalo({
         </GrelhaCampos>
       </SeccaoCampos>
 
-      <SeccaoCampos titulo="Estado e notas">
-        <Caixa
-          id="activo"
-          name="activo"
-          etiqueta="Cavalo activo"
-          defaultChecked={cavalo?.activo ?? true}
-        />
+      <SeccaoCampos titulo={proposta ? 'Notas' : 'Estado e notas'}>
+        {proposta ? null : (
+          <Caixa
+            id="activo"
+            name="activo"
+            etiqueta="Cavalo activo"
+            defaultChecked={cavalo?.activo ?? true}
+          />
+        )}
 
         <div className="space-y-1.5">
           <Etiqueta htmlFor="notas">Notas</Etiqueta>

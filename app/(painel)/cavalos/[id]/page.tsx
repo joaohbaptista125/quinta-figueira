@@ -11,6 +11,7 @@ import { CamposCavalo } from '@/components/formularios/campos-cavalo'
 import { FotoCavalo } from '@/components/foto-cavalo'
 import { FerracaoCavalo } from '@/components/ferracao-cavalo'
 import { NotasCavalo } from '@/components/notas-cavalo'
+import { DecidirCavalo } from '@/components/decidir-cavalo'
 import {
   Cartao,
   CabecalhoCartao,
@@ -53,6 +54,14 @@ export default async function PaginaCavalo({
 
   const podeEditar = eGestao(sessao.perfil)
   const idade = idadeEmAnos(cavalo.data_nascimento)
+
+  // Uma proposta ainda por decidir é a única altura em que o dono escreve na
+  // ficha: enquanto ninguém decidiu, corrigir o que escreveu há dois minutos
+  // não devia obrigar a pedir a alguém. Depois de aprovada, a correcção é uma
+  // nota — que deixa rasto e é o caminho que já existia. A RLS diz o mesmo.
+  const porAprovar = cavalo.aprovado_em === null
+  const souODono = cavalo.proprietario_id === sessao.id
+  const podeCorrigirProposta = porAprovar && souODono
 
   const [
     proprietarios,
@@ -124,6 +133,9 @@ export default async function PaginaCavalo({
                 Hoje no paddock {noPaddock.data.paddocks.numero}
               </Distintivo>
             ) : null}
+            {porAprovar ? (
+              <Distintivo cor="aviso">Por aprovar</Distintivo>
+            ) : null}
             {!cavalo.activo ? <Distintivo cor="aviso">Inactivo</Distintivo> : null}
           </span>
         }
@@ -151,10 +163,12 @@ export default async function PaginaCavalo({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Cartao>
           <CabecalhoCartao>
-            <TituloCartao>{podeEditar ? 'Dados' : 'Ficha'}</TituloCartao>
+            <TituloCartao>
+              {podeEditar || podeCorrigirProposta ? 'Dados' : 'Ficha'}
+            </TituloCartao>
           </CabecalhoCartao>
           <ConteudoCartao>
-            {podeEditar ? (
+            {podeEditar || podeCorrigirProposta ? (
               <FormularioEntidade
                 accao={guardarCavalo}
                 id={cavalo.id}
@@ -165,6 +179,7 @@ export default async function PaginaCavalo({
                   proprietarios={proprietarios.data ?? []}
                   racas={opcoes.racas}
                   pelagens={opcoes.pelagens}
+                  modo={podeEditar ? 'completo' : 'proposta'}
                 />
               </FormularioEntidade>
             ) : (
@@ -193,6 +208,14 @@ export default async function PaginaCavalo({
         </Cartao>
 
         <div className="space-y-4">
+          {porAprovar && podeEditar ? (
+            <DecidirCavalo
+              cavaloId={cavalo.id}
+              nome={cavalo.nome}
+              proposto={cavalo.pessoas?.nome ?? null}
+            />
+          ) : null}
+
           <FotoCavalo caminho={cavalo.foto_path} nome={cavalo.nome} />
 
           <FerracaoCavalo

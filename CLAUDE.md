@@ -71,6 +71,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261115100000_confirmacao_de_presenca.sql` | `evento_participantes.confirmacao` + trigger de carimbo |
 | `…20261115110000_quem_paga_o_ferrador.sql` | `cavalos.ferrador_pago_por` + `ferracoes.pago_em` |
 | `…20261116090000_paddocks.sql` | `paddocks`, `paddock_ocupacao`, e `drop table boxes` |
+| `…20261116120000_cavalo_em_aprovacao.sql` | `cavalos.aprovado_em` + `carimbar_cavalo_proposto` + RLS da proposta |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -172,6 +173,43 @@ contrário da box, em que `boxes.cavalo_id` era único porque só cabia um.
   para uma mudança de campo substituir a notificação em vez de empilhar duas.
 - `supabase/tests/12_paddocks.sql` prova os cinco lados, incluindo que a
   tabela `boxes` já não existe.
+
+**O cliente inscreve o cavalo; a gestão aprova.** O acesso é dado muitas vezes
+antes de a ficha do cavalo existir — alguém chega ao centro, recebe o convite,
+entra, e não tem nada para ver. `cavalos.aprovado_em` resolve-o: o cliente
+escreve a ficha e ela fica **por aprovar** até a gestão lhe tocar.
+
+- **É uma data e não um estado.** Responde a «está aprovado?» e «desde
+  quando?» com uma coluna só. É o desenho de `pessoas.acesso_confirmado_em` e
+  de `ferracoes.pago_em`.
+- **Não há «recusado».** Recusar apaga a ficha e manda o motivo ao cliente —
+  por isso **o motivo é obrigatório**, como na recusa de um pagamento
+  declarado: é a única coisa que ele vai ler, e sem ela o cavalo que acabou de
+  inscrever desaparecia sem explicação. Guardar fichas recusadas enchia a
+  listagem de cavalos que não existem no centro.
+- **A RLS decide linhas, não colunas, e aqui era preciso travar colunas.** Um
+  cliente que pudesse escrever `aprovado_em` aprovava-se a si próprio; um que
+  escolhesse `proprietario_id` inscrevia um cavalo em nome de outro. Quem o
+  limita é a trigger `carimbar_cavalo_proposto`, que força proprietário,
+  regime (`penso`) e estado — e volta a forçá-los em cada correcção. Como nas
+  outras, tem o travão de `pg_trigger_depth() = 1`.
+- **Sem sessão nada disto se aplica**: o seed e as migrações correm sem
+  `pessoa_actual_id()`, e aí a ficha nasce aprovada — senão o seed partia
+  contra `cavalos_penso_exige_proprietario`.
+- **Qualquer pessoa pode propor um cavalo seu**, não só quem tem perfil de
+  cliente: um instrutor também pode ter um cavalo a penso. O que se mantém é
+  a garantia que interessava — ninguém de fora da gestão cria um cavalo **do
+  centro** nem mexe num que já existe. Os testes 01 e 13 provam as duas
+  coisas.
+- **Enquanto está pendente, o dono corrige o que escreveu**; depois de
+  aprovada, a correcção passa a ser uma nota na ficha, que deixa rasto e é o
+  caminho que já existia.
+- **Uma ficha por aprovar não é um cavalo do centro**: `cavalosActivos()` em
+  `lib/consultas.ts` filtra-a, por isso não aparece para contratos de penso,
+  despesas nem convocatórias.
+- O que substitui a notificação é `<CavalosPorAprovar>` no painel; o aviso a
+  `pessoasDaGestao()` é só o atalho.
+- `supabase/tests/13_cavalo_em_aprovacao.sql` prova cada um destes lados.
 
 **A aplicação não liga a nenhum banco, e não deve ligar.** `contas` é um
 livro de registo: saldo inicial mais os movimentos que forem lançados à mão. O
@@ -509,7 +547,7 @@ não cabe em nenhum dos dois — falhava com um erro que não explicava nada.
 app/
   (publico)/      entrar, recuperar-password, definir-password, primeiro-acesso
   (painel)/       aplicação autenticada — layout com navegação e sessão
-    page.tsx      dashboard, com uma variante por perfil
+    page.tsx      painel, com uma variante por perfil
     agenda/       quadro do dia, e a ficha de cada evento
     equipas/      grupos de Horseball
     conta/        perfil e subscrição de calendário
@@ -552,6 +590,11 @@ components/
   declarar-pagamento.tsx  «Já paguei», do lado de quem paga
   confirmar-pagamento.tsx  confirmar ou recusar, do lado de quem recebe
   pagamentos-por-confirmar.tsx  o que está à espera de decisão
+  cavalos-por-aprovar.tsx  as fichas que os clientes inscreveram
+  decidir-cavalo.tsx   aprovar ou recusar, na ficha do cavalo
+  ausencias-anunciadas.tsx  quem já disse que não vai
+  ferracao-a-precisar.tsx  os cavalos que esperam o ferrador
+  abertura.tsx       a marca enquanto a aplicação arranca
   escolha-metodo.tsx   método de pagamento em pastilhas, partilhado
   usar-formulario.ts   o gancho que limpa um formulário depois de gravar
   onde-esta-a-correr.tsx  o diagnóstico de velocidade, em /conta
@@ -579,7 +622,7 @@ supabase/
                   03 ferração, 04 contratos, 05 cavalos, 06 encargos,
                   07 notas, 08 subscrições, 09 pagamentos declarados,
                   10 confirmação de presença, 11 quem paga o ferrador,
-                  12 paddocks)
+                  12 paddocks, 13 aprovação de cavalos)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor
@@ -808,6 +851,64 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   `<CabecalhoPagina>`: no telemóvel não há barra lateral e a de baixo só tem
   as secções principais, por isso não havia caminho de volta à listagem.
 
+### O painel: o dia, e o que está à espera de uma decisão
+
+**O dinheiro saiu do painel de propósito.** Receitas, despesas, saldos e
+pensos por receber viviam na página de entrada **e** em `/financeiro`, que é
+onde se vai quando a pergunta é sobre dinheiro. Em duplicado, o painel passava
+a ser um relatório mensal — com selector de mês e tudo — em vez de ser o que
+se abre de manhã. Quem quer os números abre o Financeiro; a porta de lá é
+exactamente a mesma pergunta («quem me deve», «o que gastei») e com mais
+detalhe. **Não voltes a pôr dinheiro no painel.**
+
+O que ficou são duas coisas, por esta ordem:
+
+1. **O que alguém de fora pôs à espera de resposta.** São as coisas que um
+   cliente faz dentro desta aplicação, e cada uma fica parada até a gestão lhe
+   tocar: `<CavalosPorAprovar>`, `<PagamentosPorConfirmar>`,
+   `<NotasPorResponder>` e `<AusenciasAnunciadas>`. **Todos desaparecem quando
+   estão vazios** — num dia normal não há nenhum, e um cartão vazio todos os
+   dias ensina a não olhar para ele.
+2. **Os números de cadastro** — cavalos no centro, proprietários, pessoas
+   activas, cavalos nos paddocks hoje. Não mudam de um dia para o outro, e é
+   isso que os torna úteis: dizem a dimensão do centro, não são uma métrica a
+   vigiar. «Cavalos no centro» conta só os aprovados; «Proprietários» sai de
+   `pessoa_papeis`, porque é o papel que descreve o que a pessoa é no centro e
+   não o facto de ter um cavalo neste momento.
+
+`<FerracaoAPrecisar>` é a excepção à regra do cartão vazio: **aparece sempre**,
+mesmo sem nada a precisar. «Está tudo em dia» é informação, e a volta do
+ferrador marca-se com dias de antecedência.
+
+O painel da equipa é o mesmo menos as duas coisas que a RLS não lhes deixa ver
+ou decidir — os pagamentos declarados e a aprovação de fichas.
+
+### A abertura, e porque é que não é uma espera inventada
+
+`<Abertura>` mostra a marca ao entrar na aplicação, e **custa 1,6 segundos**.
+Vale a pena dizer o que ela não faz, para não se acreditar no contrário:
+**não tapa o arranque a frio** da função na Vercel. Esse acontece antes,
+enquanto o HTML não chega, e aí não há página nenhuma onde pôr a marca. A
+abertura soma-se a ele.
+
+Foi uma escolha, e não um efeito secundário: a aplicação passa a começar com
+a marca em vez de começar a meio. O que a impede de ser um imposto é o
+desenho à volta, e é por isso que estas três coisas não se mexem sem pensar:
+
+- **Uma vez por sessão do browser**, não a cada clique: um `script` inline
+  corre antes de o elemento ser pintado e tira-o do caminho se já não for a
+  primeira abertura. As navegações dentro da aplicação nem passam pelo layout.
+- **Quem a tira do ecrã é uma animação de CSS que acaba em
+  `visibility: hidden`**, e não JavaScript — não há estado de React nem
+  temporizador que possa ficar preso a tapar a aplicação. É também por isso
+  que não é um componente de cliente: não há nada para hidratar, e uma
+  diferença entre o servidor e o browser dava um salto logo no primeiro
+  instante.
+- **`prefers-reduced-motion` encolhe-a para 0,3 s.** Um enfeite não se impõe a
+  quem o desligou.
+- A duração está em `--abertura-duracao`, em `app/globals.css`, e é o único
+  sítio onde se mexe nela.
+
 ### A agenda: três vistas sobre os mesmos eventos
 
 `/agenda` abre no **mês**; `?vista=semana` e `?vista=dia` são as outras duas.
@@ -919,11 +1020,12 @@ Security → Authorized IPs**.
 ### A visão de cliente
 
 A conta de cliente é quase toda de leitura, e é a RLS que a fecha: as consultas
-não levam filtro por pessoa em lado nenhum. O cliente escreve em quatro sítios,
+não levam filtro por pessoa em lado nenhum. O cliente escreve em cinco sítios,
 e só nesses: as **notas do cavalo**, o **«Já paguei»**, a **resposta à
-convocatória** («vou»/«não vou», que não é presença) e a **ferração dos cavalos
+convocatória** («vou»/«não vou», que não é presença), a **ferração dos cavalos
 em que é ele que paga ao ferrador** — que é uma afirmação à
-espera de confirmação, não um lançamento (ver a decisão em cima). O que era preciso limar não era a
+espera de confirmação, não um lançamento (ver a decisão em cima) — e a
+**inscrição de um cavalo dele**, que fica por aprovar. O que era preciso limar não era a
 segurança, era a linguagem — o cliente estava a ver as páginas da gestão com os
 dados dele lá dentro.
 

@@ -15,16 +15,16 @@ import {
 } from '@/components/ui/superficie'
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th } from '@/components/ui/tabela'
 import { ROTULOS_REGIME } from '@/lib/rotulos'
-import { formatarEuros, formatarMesCapitalizado } from '@/lib/formatos'
+import { formatarEuros } from '@/lib/formatos'
 
 /**
  * Painel do cliente. Tudo o que aparece aqui é filtrado pela RLS: as consultas
  * não levam filtro por pessoa, é a base de dados que só devolve o que é dele.
  *
- * O detalhe do dinheiro vive em `/pagamentos`. Aqui fica só a pergunta —
- * quanto falta — e o caminho para a resposta: dizer «contacte a gestão» e mais
- * nada era um beco, e a lista dos últimos dez pagamentos repetia em miniatura
- * uma página inteira.
+ * O detalhe do dinheiro vive em `/pagamentos` e não se repete aqui: fica só a
+ * pergunta — quanto falta — e o caminho para a resposta. Dizer «contacte a
+ * gestão» e mais nada era um beco, e a lista dos meses em falta repetia em
+ * miniatura uma página inteira.
  */
 export async function PainelCliente({ nome }: { nome: string }) {
   const supabase = await criarClienteServidor()
@@ -32,14 +32,13 @@ export async function PainelCliente({ nome }: { nome: string }) {
   const [cavalos, pensos] = await Promise.all([
     supabase
       .from('cavalos')
-      .select('id, nome, regime, raca, activo')
+      .select('id, nome, regime, raca, aprovado_em')
       .eq('activo', true)
       .order('nome'),
     supabase
       .from('v_pensos_por_receber')
-      .select('*')
-      .neq('estado', 'paga')
-      .order('periodo', { ascending: false }),
+      .select('valor_em_falta')
+      .neq('estado', 'paga'),
   ])
 
   const emFalta = (pensos.data ?? []).reduce(
@@ -47,20 +46,24 @@ export async function PainelCliente({ nome }: { nome: string }) {
     0,
   )
 
+  const meus = cavalos.data ?? []
+
   return (
     <>
       <CabecalhoPagina
         titulo={`Olá, ${nome.split(' ')[0]}`}
         descricao="Os seus cavalos e pagamentos na Quinta da Figueira"
+        accoes={
+          <Link href="/cavalos/novo" className={classesBotao('contorno')}>
+            Inscrever cavalo
+          </Link>
+        }
       />
 
       <ProximasMarcacoes />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Indicador
-          rotulo="Os seus cavalos"
-          valor={String(cavalos.data?.length ?? 0)}
-        />
+        <Indicador rotulo="Os seus cavalos" valor={String(meus.length)} />
         <Indicador
           rotulo="Por pagar"
           valor={formatarEuros(emFalta)}
@@ -69,96 +72,70 @@ export async function PainelCliente({ nome }: { nome: string }) {
         />
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <Cartao>
-          <CabecalhoCartao>
+      <Cartao className="mt-4">
+        <CabecalhoCartao className="flex flex-row items-start justify-between gap-2">
+          <div>
             <TituloCartao>Os seus cavalos</TituloCartao>
-          </CabecalhoCartao>
-          <ConteudoCartao className="px-0 sm:px-0">
-            {cavalos.data && cavalos.data.length > 0 ? (
-              <Tabela>
-                <Cabecalho>
-                  <Linha>
-                    <Th>Nome</Th>
-                    <Th>Raça</Th>
-                    <Th>Regime</Th>
+            <DescricaoCartao>
+              Um cavalo que inscreva fica à espera de confirmação da gestão
+            </DescricaoCartao>
+          </div>
+          <Link
+            href="/pagamentos"
+            className={classesBotao('contorno', 'pequeno')}
+          >
+            Ver pagamentos
+          </Link>
+        </CabecalhoCartao>
+        <ConteudoCartao className="px-0 sm:px-0">
+          {meus.length > 0 ? (
+            <Tabela>
+              <Cabecalho>
+                <Linha>
+                  <Th>Nome</Th>
+                  <Th>Raça</Th>
+                  <Th>Regime</Th>
+                </Linha>
+              </Cabecalho>
+              <Corpo>
+                {meus.map((cavalo) => (
+                  <Linha key={cavalo.id}>
+                    <Td>
+                      <Link
+                        href={`/cavalos/${cavalo.id}`}
+                        className="font-medium underline-offset-2 hover:underline"
+                      >
+                        {cavalo.nome}
+                      </Link>
+                      {!cavalo.aprovado_em ? (
+                        <Distintivo cor="aviso" className="ml-2">
+                          A aguardar confirmação
+                        </Distintivo>
+                      ) : null}
+                    </Td>
+                    <Td rotulo="Raça" className="text-muted-foreground">
+                      {cavalo.raca ?? '—'}
+                    </Td>
+                    <Td rotulo="Regime">
+                      <Distintivo>{ROTULOS_REGIME[cavalo.regime]}</Distintivo>
+                    </Td>
                   </Linha>
-                </Cabecalho>
-                <Corpo>
-                  {cavalos.data.map((cavalo) => (
-                    <Linha key={cavalo.id}>
-                      <Td>
-                        <Link
-                          href={`/cavalos/${cavalo.id}`}
-                          className="font-medium underline-offset-2 hover:underline"
-                        >
-                          {cavalo.nome}
-                        </Link>
-                      </Td>
-                      <Td rotulo="Raça" className="text-muted-foreground">
-                        {cavalo.raca ?? '—'}
-                      </Td>
-                      <Td rotulo="Regime">
-                        <Distintivo>{ROTULOS_REGIME[cavalo.regime]}</Distintivo>
-                      </Td>
-                    </Linha>
-                  ))}
-                </Corpo>
-              </Tabela>
-            ) : (
-              <SemRegistos
-                titulo="Ainda não tem cavalos associados"
-                descricao="Se isto não está certo, fale com a gestão do centro."
-              />
-            )}
-          </ConteudoCartao>
-        </Cartao>
-
-        <Cartao>
-          <CabecalhoCartao className="flex flex-row items-start justify-between gap-2">
-            <div>
-              <TituloCartao>Mensalidades por pagar</TituloCartao>
-              <DescricaoCartao>
-                Meses de penso que o centro ainda não recebeu
-              </DescricaoCartao>
-            </div>
-            <Link
-              href="/pagamentos"
-              className={classesBotao('contorno', 'pequeno')}
-            >
-              Ver pagamentos
-            </Link>
-          </CabecalhoCartao>
-          <ConteudoCartao className="px-0 sm:px-0">
-            {pensos.data && pensos.data.length > 0 ? (
-              <Tabela>
-                <Cabecalho>
-                  <Linha>
-                    <Th>Mês</Th>
-                    <Th>Cavalo</Th>
-                    <Th numerico>Em falta</Th>
-                  </Linha>
-                </Cabecalho>
-                <Corpo>
-                  {pensos.data.map((linha) => (
-                    <Linha key={linha.mensalidade_id}>
-                      <Td>{formatarMesCapitalizado(linha.periodo)}</Td>
-                      <Td rotulo="Cavalo" className="text-muted-foreground">
-                        {linha.cavalo_nome}
-                      </Td>
-                      <Td rotulo="Em falta" numerico className="font-medium">
-                        {formatarEuros(linha.valor_em_falta)}
-                      </Td>
-                    </Linha>
-                  ))}
-                </Corpo>
-              </Tabela>
-            ) : (
-              <SemRegistos titulo="Não tem nada por pagar" />
-            )}
-          </ConteudoCartao>
-        </Cartao>
-      </div>
+                ))}
+              </Corpo>
+            </Tabela>
+          ) : (
+            <SemRegistos
+              titulo="Ainda não tem cavalos associados"
+              descricao="Inscreva o seu cavalo — a ficha fica à espera de confirmação da gestão."
+              accao={
+                <Link href="/cavalos/novo" className={classesBotao()}>
+                  Inscrever cavalo
+                </Link>
+              }
+            />
+          )}
+        </ConteudoCartao>
+      </Cartao>
     </>
   )
 }

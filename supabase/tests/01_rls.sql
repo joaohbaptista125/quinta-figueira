@@ -243,9 +243,23 @@ begin
     'instrutor NÃO vê contratos de penso (contêm valores)');
   perform pg_temp.afirmar((select count(*) from public.v_saldos_contas) = 0,
     'instrutor NÃO vê saldos através da vista');
-  perform pg_temp.afirmar_recusa(
-    $q$insert into public.cavalos (nome, regime) values ('Intruso', 'escola')$q$,
-    'instrutor não pode criar cavalos');
+  -- Desde a aprovação de cavalos, **qualquer pessoa pode propor um cavalo
+  -- seu** — é o que faz o cliente inscrever o dele, e um instrutor também
+  -- pode ter um cavalo a penso no centro. O que se mantém intacto é a
+  -- garantia que interessava: ninguém de fora da gestão cria um cavalo **do
+  -- centro**, nem mexe num que já existe. A trigger reescreve o que ele
+  -- tentou dizer, e a ficha nasce por aprovar.
+  insert into public.cavalos (nome, regime) values ('Intruso', 'escola');
+  perform pg_temp.afirmar(
+    (select aprovado_em is null and regime = 'penso'
+            and proprietario_id = public.pessoa_actual_id()
+       from public.cavalos where nome = 'Intruso'),
+    'o que o instrutor insere é uma proposta dele, a penso e por aprovar');
+  perform pg_temp.afirmar_sem_efeito(
+    $q$update public.cavalos set nome = 'Trocado'
+        where id = '33333333-0000-4000-8000-000000000001'$q$,
+    'instrutor não mexe num cavalo que já existe');
+  delete from public.cavalos where nome = 'Intruso';
 end $$;
 reset role;
 
@@ -306,9 +320,17 @@ begin
        (select categoria_id from pg_temp.ids_conhecidos),
        (select conta_id from pg_temp.ids_conhecidos)),
     'cliente não pode lançar despesas');
-  perform pg_temp.afirmar_recusa(
-    $q$insert into public.cavalos (nome, regime) values ('Intruso', 'escola')$q$,
-    'cliente não pode criar cavalos');
+  -- Inscrever um cavalo **seu** passou a ser um direito do cliente — é o
+  -- caso em que o acesso é dado antes de existir ficha nenhuma. O que ele
+  -- não pode é criar um cavalo do centro: a trigger reescreve o regime e o
+  -- dono, e a ficha nasce por aprovar. Ver 13_cavalo_em_aprovacao.sql.
+  insert into public.cavalos (nome, regime) values ('Intruso', 'escola');
+  perform pg_temp.afirmar(
+    (select aprovado_em is null and regime = 'penso'
+            and proprietario_id = public.pessoa_actual_id()
+       from public.cavalos where nome = 'Intruso'),
+    'o cliente inscreve um cavalo dele, a penso e por aprovar');
+  delete from public.cavalos where nome = 'Intruso';
 
   -- A RLS bloqueia estes casos sem erro, não encontrando as linhas.
   perform pg_temp.afirmar_sem_efeito(

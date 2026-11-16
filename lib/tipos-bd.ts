@@ -87,6 +87,20 @@ export type Cavalo = Carimbos & {
   ferrador_pago_por: PagaFerrador
   activo: boolean
   notas: string | null
+  /**
+   * Quando a gestão confirmou a ficha. A `null` é uma proposta do cliente,
+   * ainda por aprovar — ver a migração `…_cavalo_em_aprovacao.sql`.
+   */
+  aprovado_em: string | null
+  aprovado_por: string | null
+  /**
+   * Quem inscreveu o cavalo. É a quem chega o aviso da decisão.
+   *
+   * Este campo e `aprovado_por` não têm chave estrangeira para `pessoas` de
+   * propósito — ver a migração. Uma segunda referência tornava `pessoas(...)`
+   * ambíguo nos `select` aninhados do cavalo.
+   */
+  criado_por_id: string | null
 }
 
 export type PagaFerrador = 'centro' | 'proprietario'
@@ -566,7 +580,7 @@ export type BaseDados = {
       >
       cavalos: Tabela<
         Cavalo,
-        Partial<Omit<Cavalo, SoLeitura>> & { nome: string; regime: RegimeCavalo },
+        Partial<Omit<Cavalo, SoLeitura>> & { nome: string; regime?: RegimeCavalo },
         [Relacao<'proprietario_id', 'pessoas'>]
       >
       paddocks: Tabela<Paddock, Partial<Omit<Paddock, SoLeitura>> & { numero: number }>

@@ -38,7 +38,7 @@ export default async function PaginaCavalos({
   let consulta = supabase
     .from('cavalos')
     .select(
-      'id, nome, data_nascimento, sexo, raca, pelagem, regime, activo, pessoas(id, nome)',
+      'id, nome, data_nascimento, sexo, raca, pelagem, regime, activo, aprovado_em, pessoas(id, nome)',
     )
     .order('nome')
 
@@ -92,6 +92,11 @@ export default async function PaginaCavalos({
                 Novo cavalo
               </Link>
             </>
+          ) : sessao.perfil === 'cliente' ? (
+            // O cliente inscreve o cavalo dele e a ficha fica por aprovar.
+            <Link href="/cavalos/novo" className={classesBotao()}>
+              Inscrever cavalo
+            </Link>
           ) : null
         }
       />
@@ -136,6 +141,11 @@ export default async function PaginaCavalos({
                   <Linha key={cavalo.id}>
                     <Td>
                       <LigacaoFicha href={`/cavalos/${cavalo.id}`}>{cavalo.nome}</LigacaoFicha>
+                      {!cavalo.aprovado_em ? (
+                        <Distintivo cor="aviso" className="ml-2">
+                          Por aprovar
+                        </Distintivo>
+                      ) : null}
                       {!cavalo.activo ? (
                         <Distintivo className="ml-2">Inactivo</Distintivo>
                       ) : null}
@@ -181,10 +191,15 @@ export default async function PaginaCavalos({
         ) : (
           <SemRegistos
             titulo={q ? 'Nada encontrado' : 'Ainda não há cavalos'}
+            descricao={
+              sessao.perfil === 'cliente' && !q
+                ? 'Inscreva o seu cavalo — fica à espera de confirmação da gestão.'
+                : undefined
+            }
             accao={
-              eGestao(sessao.perfil) && !q ? (
+              !q && (eGestao(sessao.perfil) || sessao.perfil === 'cliente') ? (
                 <Link href="/cavalos/novo" className={classesBotao()}>
-                  Novo cavalo
+                  {eGestao(sessao.perfil) ? 'Novo cavalo' : 'Inscrever cavalo'}
                 </Link>
               ) : null
             }

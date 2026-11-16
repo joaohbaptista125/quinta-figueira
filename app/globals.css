@@ -142,3 +142,70 @@
     overscroll-behavior-y: none;
   }
 }
+
+/*
+ * O ecrã de abertura — ver components/abertura.tsx para o porquê.
+ *
+ * A animação é o que o tira do ecrã, e não o JavaScript: assim não há estado
+ * nenhum que possa ficar preso a tapar a aplicação. `forwards` segura o
+ * último fotograma, que é `visibility: hidden`.
+ */
+:root {
+  --abertura-duracao: 1.6s;
+}
+
+#abertura {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background);
+  animation: abertura-sair var(--abertura-duracao) ease-in forwards;
+}
+
+#abertura > * {
+  animation: abertura-entrar 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes abertura-entrar {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes abertura-sair {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  99% {
+    opacity: 0;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/*
+ * Quem pediu menos movimento continua a ver a marca, mas sem o movimento e
+ * por muito menos tempo: a abertura é um enfeite, e um enfeite não se impõe a
+ * quem o desligou.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --abertura-duracao: 0.3s;
+  }
+
+  #abertura > * {
+    animation: none;
+  }
+}

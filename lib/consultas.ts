@@ -13,12 +13,19 @@ export async function pessoasActivas(supabase: Cliente) {
   return data ?? []
 }
 
-/** Cavalos activos, para os selectores dos formulários. */
+/**
+ * Cavalos activos **e já aprovados**, para os selectores dos formulários.
+ *
+ * Uma ficha que o cliente inscreveu e que ninguém confirmou ainda não é um
+ * cavalo do centro: oferecê-la para um contrato de penso ou para uma
+ * convocatória era dar-lhe existência antes da decisão.
+ */
 export async function cavalosActivos(supabase: Cliente) {
   const { data } = await supabase
     .from('cavalos')
     .select('id, nome')
     .eq('activo', true)
+    .not('aprovado_em', 'is', null)
     .order('nome')
   return data ?? []
 }

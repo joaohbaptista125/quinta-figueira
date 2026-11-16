@@ -9,6 +9,7 @@ import { MenuUtilizador } from '@/components/menu-utilizador'
 import { IndicadorLigacao } from '@/components/indicador-ligacao'
 import { Notificacao } from '@/components/notificacao'
 import { Marca } from '@/components/marca'
+import { Abertura } from '@/components/abertura'
 import { ROTULOS_PERFIL } from '@/lib/rotulos'
 
 export default async function LayoutPainel({
@@ -37,6 +38,7 @@ export default async function LayoutPainel({
 
   return (
     <>
+      <Abertura />
       <IndicadorLigacao />
       <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
         <aside className="hidden border-r border-border bg-card lg:flex lg:h-dvh lg:flex-col lg:sticky lg:top-0">
