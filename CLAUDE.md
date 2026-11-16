@@ -564,6 +564,7 @@ app/
   manifest.ts     manifesto da PWA
 components/
   ui/             kit de base (botao, campos, superficie, tabela, ferradura)
+  ui/folha.tsx    a folha que sobe de baixo e se arrasta, sobre lib/mola.ts
   formularios/    campos de cada entidade, partilhados entre criar e editar
   navegacao.tsx   barra lateral, barra de separadores do telemóvel e «Mais»
   pagamento-penso.tsx  receber mensalidades sem sair da conta-corrente
@@ -607,6 +608,7 @@ lib/
   formatos.ts     euros, datas, horas, meses, leitura de valores escritos por pessoas
   fatura-qr.ts    leitura do QR das faturas portuguesas (+ testes)
   vcard.ts        leitura de cartões de contacto .vcf (+ testes)
+  mola.ts         molas, projecção de inércia e elástico de bordo (+ testes)
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
@@ -1213,6 +1215,44 @@ escritório. As duas coisas que mais custaram a acertar:
   tem sensibilidade vestibular, uma interface que desliza provoca mal-estar a
   sério. A duração fica em `0.01ms` e não em `0` de propósito — um
   `animationend` que nunca dispara deixa preso quem espera por ele.
+- **O painel «Mais» é uma folha que se agarra, e o movimento é uma mola.**
+  `components/ui/folha.tsx` sobre `lib/mola.ts`. Aparecia e desaparecia de
+  repente, e só saía acertando no «X». As decisões, porque custam a
+  reconstituir:
+  - **Mola e não `transition`.** Uma transição tem duração fixa e começa
+    sempre do mesmo sítio: agarrar o painel a meio obrigava a saltar para o
+    fim, e largar o dedo a 2000 px/s dava a mesma animação que largar parado.
+    Uma mola sabe de posição **e** de velocidade. Daí nada disto poder ser
+    CSS, e daí o `prefers-reduced-motion` ter de ser tratado em JavaScript —
+    a regra global de CSS não alcança um `requestAnimationFrame`.
+  - **A mola é resolvida analiticamente**, não integrada passo a passo. Num
+    telemóvel a engasgar um fotograma vale 100 ms, e é aí que um integrador
+    de Euler divergia. `lib/mola.test.ts` prova que um salto de 100 ms dá o
+    mesmo que dez de 10 ms.
+  - **A posição vive numa `ref` e vai directa ao `style`.** Passar por estado
+    de React a 60 fps punha um fotograma entre o dedo e a superfície.
+  - **O que decide ao largar é a projecção, não a posição.** Um puxão curto e
+    rápido para baixo é «fecha isto» mesmo com a folha quase toda no ecrã —
+    `repousoProjectado`.
+  - **Ressalto só quando o gesto o trouxe**: ζ=1 por omissão, ζ=0,8 acima de
+    600 px/s. O ressalto é a inércia da pessoa, não um enfeite da aplicação.
+  - **Arrasta-se pelo cabeçalho, não pelo conteúdo**, e é deliberado: para o
+    conteúdo também arrastar era preciso tirar ao browser o deslize nativo da
+    lista e reimplementá-lo. A pega existe para dizer onde é que se pega.
+  - **Os ouvintes do gesto estão na janela, não no elemento.** Com eles no
+    painel, arrastar **para cima** tirava o dedo de cima da folha antes de o
+    gesto começar e o elástico do bordo não existia. Capturar o ponteiro no
+    `pointerdown` resolvia o movimento mas entregava o `click` ao elemento
+    que capturou, e o «X» deixava de responder.
+  - **Largar sem chegar a arrastar tem de voltar a largar a mola.** Pousar o
+    dedo pára-a; sem este caso, tocar na pega a meio da abertura deixava a
+    folha encravada a meio do ecrã para sempre.
+  - **Escurecer e desfocar o fundo, em vez de pôr vidro sobre vidro.** As
+    duas barras já são translúcidas; uma terceira camada por cima delas dava
+    uma sopa. A folha é opaca e o fundo afasta-se.
+  - Os quatro comportamentos (seguir o dedo, projecção, elástico,
+    interrupção) foram conduzidos no browser com eventos de ponteiro a sério
+    — foi assim que apareceram os dois defeitos acima.
 - **As tabelas deixam de ser tabelas abaixo de `sm`.** Cada linha passa a
   cartão, com o nome da coluna à esquerda de cada valor. O nome da coluna vem
   do `rotulo` do `<Td>`: **numa listagem nova, todos os `<Td>` levam `rotulo`

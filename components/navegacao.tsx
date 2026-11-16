@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Folha } from '@/components/ui/folha'
 import { Ferradura } from '@/components/ui/ferradura'
 import { sair } from '@/lib/accoes/autenticacao'
 import type { PerfilAcesso } from '@/lib/tipos-bd'
@@ -231,6 +232,7 @@ export function BarraInferior({
 }) {
   const caminho = usePathname()
   const [aberto, setAberto] = React.useState(false)
+  const fechar = React.useCallback(() => setAberto(false), [])
 
   const visiveis = itensVisiveis(perfil)
   const naBarra = visiveis
@@ -260,15 +262,14 @@ export function BarraInferior({
 
   return (
     <>
-      {aberto ? (
-        <PainelMais
-          perfil={perfil}
-          nome={nome}
-          perfilRotulo={perfilRotulo}
-          excluir={hrefsNaBarra}
-          aoFechar={() => setAberto(false)}
-        />
-      ) : null}
+      <PainelMais
+        aberto={aberto}
+        perfil={perfil}
+        nome={nome}
+        perfilRotulo={perfilRotulo}
+        excluir={hrefsNaBarra}
+        aoFechar={fechar}
+      />
 
       <nav
         aria-label="Navegação principal"
@@ -305,8 +306,14 @@ export function BarraInferior({
           <li>
             <button
               type="button"
+              /*
+               * `onPointerDown` e nao `onClick`: a resposta e a descer o dedo.
+               * O `click` fica para o teclado, que nao passa por aqui.
+               */
+              onPointerDown={() => setAberto(true)}
               onClick={() => setAberto(true)}
               aria-expanded={aberto}
+              aria-haspopup="dialog"
               className={cn(
                 'flex min-h-14 w-full flex-col items-center justify-center gap-1 px-1 py-2 text-[0.7rem] leading-none transition-colors',
                 maisActivo ? 'font-medium text-primary' : 'text-muted-foreground',
@@ -323,12 +330,14 @@ export function BarraInferior({
 }
 
 function PainelMais({
+  aberto,
   perfil,
   nome,
   perfilRotulo,
   excluir,
   aoFechar,
 }: {
+  aberto: boolean
   perfil: PerfilAcesso | null
   nome: string
   perfilRotulo: string | null
@@ -338,16 +347,12 @@ function PainelMais({
   const caminho = usePathname()
 
   return (
-    <div className="fixed inset-0 z-40 lg:hidden">
-      <button
-        type="button"
-        aria-label="Fechar"
-        onClick={aoFechar}
-        className="absolute inset-0 bg-foreground/40"
-      />
-
-      <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-card pb-6 shadow-2xl">
-        <div className="sticky top-0 flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
+    <Folha
+      aberta={aberto}
+      aoFechar={aoFechar}
+      rotulo="Mais secções"
+      cabecalho={
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 pb-3 pt-1">
           <div className="min-w-0">
             <p className="truncate font-medium">{nome}</p>
             {perfilRotulo ? (
@@ -360,12 +365,13 @@ function PainelMais({
             type="button"
             onClick={aoFechar}
             aria-label="Fechar"
-            className="rounded-md p-2 text-muted-foreground hover:bg-accent"
+            className="-mr-1 flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:bg-accent"
           >
             <X className="size-5" />
           </button>
         </div>
-
+      }
+    >
         <div className="space-y-5 px-3 py-4">
           {SECCOES.map((seccao) => {
             const itens = seccao.itens.filter(
@@ -408,7 +414,6 @@ function PainelMais({
             </button>
           </form>
         </div>
-      </div>
-    </div>
+    </Folha>
   )
 }
