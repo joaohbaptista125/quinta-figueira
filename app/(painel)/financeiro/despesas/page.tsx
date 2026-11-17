@@ -4,6 +4,8 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirGestao } from '@/lib/sessao'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { SelectorMes } from '@/components/selector-mes'
+import { Pesquisa } from '@/components/pesquisa'
+import { FiltroPastilhas } from '@/components/filtros'
 import { Indicador } from '@/components/indicador'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
@@ -30,22 +32,53 @@ export const metadata: Metadata = { title: 'Despesas' }
 export default async function PaginaDespesas({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string; estado?: string }>
+  searchParams: Promise<{ mes?: string; estado?: string; q?: string }>
 }) {
   await exigirGestao()
-  const { mes, estado } = await searchParams
+  const { mes, estado, q } = await searchParams
   const periodo = mes ? primeiroDiaDoMes(`${mes}-01`) : primeiroDiaDoMes()
   const fim = deslocarMeses(periodo, 1)
   const supabase = await criarClienteServidor()
+
+  /*
+   * **Procurar sai do mês, e isso é a decisão que importa aqui.**
+   *
+   * Quem escreve «veterinário» na caixa não sabe de que mês era a factura —
+   * se soubesse, mudava o mês e olhava. Uma pesquisa presa ao mês escolhido
+   * respondia quase sempre «nada encontrado» sobre uma despesa que existe, e
+   * é a pior resposta que uma pesquisa pode dar. É o mesmo raciocínio de
+   * `/financeiro/por-receber`, que deixou de mostrar um mês de cada vez.
+   *
+   * O selector de mês continua lá, mas fica a dizer que não está a mandar.
+   */
+  const termo = q?.trim() ?? ''
+  const aProcurar = termo.length > 0
 
   let consulta = supabase
     .from('despesas')
     .select(
       'id, data, descricao, valor_total, valor_base, valor_iva, taxa_iva, metodo_pagamento, paga, anexo_path, categorias_despesa(nome), fornecedores(nome), contas(nome), cavalos(id, nome)',
     )
-    .gte('data', periodo)
-    .lt('data', fim)
     .order('data', { ascending: false })
+
+  if (aProcurar) {
+    // Um fornecedor é outra tabela: vão-se buscar os ids que batem certo e
+    // juntam-se à condição. Um `!inner` filtrava fora as despesas sem
+    // fornecedor, que são muitas (combustível, pequenas compras).
+    const { data: fornecedores } = await supabase
+      .from('fornecedores')
+      .select('id')
+      .ilike('nome', `%${termo}%`)
+
+    const ids = (fornecedores ?? []).map((linha) => linha.id)
+    const condicoes = [`descricao.ilike.%${termo}%`]
+    // `in.()` com a lista vazia é sintaxe inválida no PostgREST.
+    if (ids.length > 0) condicoes.push(`fornecedor_id.in.(${ids.join(',')})`)
+
+    consulta = consulta.or(condicoes.join(',')).limit(100)
+  } else {
+    consulta = consulta.gte('data', periodo).lt('data', fim)
+  }
 
   if (estado === 'por-pagar') consulta = consulta.eq('paga', false)
 
@@ -79,7 +112,11 @@ export default async function PaginaDespesas({
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Indicador rotulo="Total do mês" valor={formatarEuros(total)} />
+        {/* O rótulo muda a procurar — ver o mesmo em recebimentos. */}
+        <Indicador
+          rotulo={aProcurar ? 'Total encontrado' : 'Total do mês'}
+          valor={formatarEuros(total)}
+        />
         <Indicador
           rotulo="Por pagar"
           valor={formatarEuros(porPagar)}
@@ -88,28 +125,24 @@ export default async function PaginaDespesas({
         <Indicador rotulo="IVA suportado" valor={formatarEuros(iva)} />
       </div>
 
-      <div className="mb-4 flex gap-1.5 text-sm">
-        <Link
-          href={`/financeiro/despesas?mes=${periodo.slice(0, 7)}`}
-          className={
-            estado !== 'por-pagar'
-              ? 'rounded-full bg-primary px-3 py-1 text-primary-foreground'
-              : 'rounded-full bg-muted px-3 py-1 text-muted-foreground'
-          }
-        >
-          Todas
-        </Link>
-        <Link
-          href={`/financeiro/despesas?mes=${periodo.slice(0, 7)}&estado=por-pagar`}
-          className={
-            estado === 'por-pagar'
-              ? 'rounded-full bg-primary px-3 py-1 text-primary-foreground'
-              : 'rounded-full bg-muted px-3 py-1 text-muted-foreground'
-          }
-        >
-          Por pagar
-        </Link>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Pesquisa placeholder="Pesquisar por descrição ou fornecedor" />
+        <FiltroPastilhas
+          rotulo="Estado"
+          parametro="estado"
+          opcoes={[
+            { rotulo: 'Todas' },
+            { valor: 'por-pagar', rotulo: 'Por pagar' },
+          ]}
+        />
       </div>
+
+      {aProcurar ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          A procurar em <strong>todos os meses</strong>, e não só no mês
+          escolhido. Até 100 resultados, dos mais recentes para trás.
+        </p>
+      ) : null}
 
       <Cartao>
         {error ? (

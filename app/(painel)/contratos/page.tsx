@@ -4,6 +4,8 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
 import { eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
+import { Pesquisa } from '@/components/pesquisa'
+import { AlternarFiltro } from '@/components/filtros'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
 import {
@@ -22,10 +24,10 @@ export const metadata: Metadata = { title: 'Contratos de penso' }
 export default async function PaginaContratos({
   searchParams,
 }: {
-  searchParams: Promise<{ terminados?: string }>
+  searchParams: Promise<{ q?: string; terminados?: string }>
 }) {
   const sessao = await exigirPessoa()
-  const { terminados } = await searchParams
+  const { q, terminados } = await searchParams
   const supabase = await criarClienteServidor()
   const hojeIso = hoje()
 
@@ -38,8 +40,29 @@ export default async function PaginaContratos({
 
   if (terminados !== '1') consulta = consulta.or(`data_fim.is.null,data_fim.gte.${hojeIso}`)
 
-  const { data: contratos, error } = await consulta
+  const { data: todos, error } = await consulta
   const podeEditar = eGestao(sessao.perfil)
+
+  /*
+   * A pesquisa é feita aqui e não na base de dados de propósito: o que se
+   * procura é o **nome do cavalo ou do cliente**, que vivem noutras tabelas,
+   * e filtrá-los no PostgREST obrigava a um `!inner` que muda a forma do
+   * `select` aninhado. São ~60 contratos, já estão todos na mão, e comparar
+   * sessenta cadeias de texto não se mede.
+   *
+   * `localeCompare` não serve para isto; o que tira os acentos é a
+   * normalização, para «Fidalgo» aparecer a quem escreveu «fidalgo».
+   */
+  const semAcentos = (texto: string) =>
+    texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const termo = q ? semAcentos(q.trim()) : ''
+  const contratos = termo
+    ? (todos ?? []).filter((contrato) =>
+        semAcentos(
+          `${contrato.cavalos?.nome ?? ''} ${contrato.pessoas?.nome ?? ''}`,
+        ).includes(termo),
+      )
+    : todos
 
   const totalMensal = (contratos ?? [])
     .filter((contrato) => !contrato.data_fim || contrato.data_fim >= hojeIso)
@@ -63,13 +86,13 @@ export default async function PaginaContratos({
         }
       />
 
-      <div className="mb-4">
-        <Link
-          href={terminados === '1' ? '/contratos' : '/contratos?terminados=1'}
-          className="text-sm text-muted-foreground underline"
-        >
-          {terminados === '1' ? 'Mostrar só em vigor' : 'Incluir terminados'}
-        </Link>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Pesquisa placeholder="Pesquisar por cavalo ou cliente" />
+        <AlternarFiltro
+          parametro="terminados"
+          rotuloLigado="Mostrar só em vigor"
+          rotuloDesligado="Incluir terminados"
+        />
       </div>
 
       <Cartao>

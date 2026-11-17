@@ -5,6 +5,7 @@ import { exigirEquipa } from '@/lib/sessao'
 import { eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Pesquisa } from '@/components/pesquisa'
+import { AlternarFiltro, FiltroPastilhas } from '@/components/filtros'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
 import {
@@ -26,11 +27,29 @@ export const metadata: Metadata = { title: 'Pessoas' }
 export default async function PaginaPessoas({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; inactivos?: string }>
+  searchParams: Promise<{ q?: string; papel?: string; inactivos?: string }>
 }) {
   const sessao = await exigirEquipa()
-  const { q, inactivos } = await searchParams
+  const { q, papel, inactivos } = await searchParams
   const supabase = await criarClienteServidor()
+
+  /*
+   * Filtrar por papel é a pergunta que uma lista de oitenta fichas mais
+   * pede: «quem são os proprietários», «quem são os alunos». `pessoa_papeis`
+   * é N:N, por isso não dá para o pôr num `eq` sobre `pessoas` — vai-se
+   * primeiro buscar os ids. É mais uma ida à base, a 0–1 ms, e evita um
+   * `!inner` que mudava a forma do `select` aninhado.
+   *
+   * O parâmetro vem do endereço: só é aceite se for mesmo um dos papéis.
+   */
+  let idsComPapel: string[] | null = null
+  if (papel && papel in ROTULOS_PAPEL) {
+    const { data } = await supabase
+      .from('pessoa_papeis')
+      .select('pessoa_id')
+      .eq('papel', papel as PapelPessoa)
+    idsComPapel = (data ?? []).map((linha) => linha.pessoa_id)
+  }
 
   let consulta = supabase
     .from('pessoas')
@@ -38,6 +57,8 @@ export default async function PaginaPessoas({
     .order('nome')
 
   if (inactivos !== '1') consulta = consulta.eq('activo', true)
+  // Sem ninguém com esse papel, a lista é vazia — e não a lista toda.
+  if (idsComPapel) consulta = consulta.in('id', idsComPapel)
   if (q) {
     const termo = `%${q}%`
     consulta = consulta.or(
@@ -84,12 +105,23 @@ export default async function PaginaPessoas({
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Pesquisa placeholder="Pesquisar por nome, email, telefone ou NIF" />
-        <Link
-          href={inactivos === '1' ? '/pessoas' : '/pessoas?inactivos=1'}
-          className="text-sm text-muted-foreground underline"
-        >
-          {inactivos === '1' ? 'Mostrar só activos' : 'Incluir inactivos'}
-        </Link>
+        <FiltroPastilhas
+          rotulo="Papel"
+          parametro="papel"
+          opcoes={[
+            { rotulo: 'Todos' },
+            ...Object.entries(ROTULOS_PAPEL).map(([valor, rotulo]) => ({
+              valor,
+              // «Jogador de Horseball» não cabe numa pastilha de telemóvel.
+              rotulo: valor === 'jogador_horseball' ? 'Horseball' : rotulo,
+            })),
+          ]}
+        />
+        <AlternarFiltro
+          parametro="inactivos"
+          rotuloLigado="Mostrar só activos"
+          rotuloDesligado="Incluir inactivos"
+        />
       </div>
 
       <Cartao>

@@ -5,6 +5,7 @@ import { exigirPessoa } from '@/lib/sessao'
 import { eEquipa, eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { Pesquisa } from '@/components/pesquisa'
+import { AlternarFiltro, FiltroPastilhas } from '@/components/filtros'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
 import {
@@ -104,19 +105,22 @@ export default async function PaginaCavalos({
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Pesquisa placeholder="Pesquisar por nome, raça, passaporte ou chip" />
         {daCavalarica ? (
-          <div className="flex gap-1.5 text-sm">
-            <FiltroRegime activo={regime} valor={undefined} rotulo="Todos" />
-            <FiltroRegime activo={regime} valor="penso" rotulo="A penso" />
-            <FiltroRegime activo={regime} valor="escola" rotulo="Escola" />
-            <FiltroRegime activo={regime} valor="centro" rotulo="Centro" />
-          </div>
+          <FiltroPastilhas
+            rotulo="Regime"
+            parametro="regime"
+            opcoes={[
+              { rotulo: 'Todos' },
+              { valor: 'penso', rotulo: 'A penso' },
+              { valor: 'escola', rotulo: 'Escola' },
+              { valor: 'centro', rotulo: 'Centro' },
+            ]}
+          />
         ) : null}
-        <Link
-          href={inactivos === '1' ? '/cavalos' : '/cavalos?inactivos=1'}
-          className="text-sm text-muted-foreground underline"
-        >
-          {inactivos === '1' ? 'Mostrar só activos' : 'Incluir inactivos'}
-        </Link>
+        <AlternarFiltro
+          parametro="inactivos"
+          rotuloLigado="Mostrar só activos"
+          rotuloDesligado="Incluir inactivos"
+        />
       </div>
 
       <Cartao>
@@ -210,29 +214,6 @@ export default async function PaginaCavalos({
   )
 }
 
-function FiltroRegime({
-  activo,
-  valor,
-  rotulo,
-}: {
-  activo?: string
-  valor?: string
-  rotulo: string
-}) {
-  const seleccionado = activo === valor || (!activo && !valor)
-  return (
-    <Link
-      href={valor ? `/cavalos?regime=${valor}` : '/cavalos'}
-      className={
-        seleccionado
-          ? 'rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground'
-          : 'rounded-full bg-muted px-3.5 py-1.5 text-muted-foreground hover:bg-accent'
-      }
-    >
-      {rotulo}
-    </Link>
-  )
-}
 
 /**
  * O estado da ferração de um cavalo, numa pastilha.

@@ -565,6 +565,8 @@ app/
 components/
   ui/             kit de base (botao, campos, superficie, tabela, ferradura)
   ui/folha.tsx    a folha que sobe de baixo e se arrasta, sobre lib/mola.ts
+  filtros.tsx     pastilhas e interruptores de filtro, sobre lib/filtros.ts
+  pesquisa.tsx    a caixa de pesquisa que escreve ?q= com atraso
   formularios/    campos de cada entidade, partilhados entre criar e editar
   navegacao.tsx   barra lateral, barra de separadores do telemóvel e «Mais»
   pagamento-penso.tsx  receber mensalidades sem sair da conta-corrente
@@ -608,6 +610,7 @@ lib/
   formatos.ts     euros, datas, horas, meses, leitura de valores escritos por pessoas
   fatura-qr.ts    leitura do QR das faturas portuguesas (+ testes)
   vcard.ts        leitura de cartões de contacto .vcf (+ testes)
+  filtros.ts      o endereço de um filtro, sem apagar os outros (+ testes)
   mola.ts         molas, projecção de inércia e elástico de bordo (+ testes)
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
@@ -762,6 +765,38 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   passar o rato: num telemóvel era indescobrível, e parecia que editar não
   funcionava.
 - Nas listagens, os `<Td>` levam `rotulo` — ver «Interface no telemóvel».
+- **Um filtro copia os parâmetros do endereço, nunca os reconstrói.** Cada
+  listagem escrevia os seus à mão (`/cavalos?regime=penso`), e o efeito era
+  que escolher um regime **apagava a pesquisa** e ligar «incluir inactivos»
+  apagava o regime: quem procurava «Lusitano» e depois filtrava via a
+  pesquisa desaparecer sem perceber porquê. `<FiltroPastilhas>` e
+  `<AlternarFiltro>` em `components/filtros.tsx` são a saída única, sobre
+  `enderecoComFiltro()` em `lib/filtros.ts` — que vive fora do componente
+  **para poder ser testado**, e é testado porque foi isto que esteve errado.
+  São `<Link>` e não botões: funcionam sem JavaScript, abrem em separador
+  novo e o Next pré-carrega-os.
+- **Procurar nas despesas e nos recebimentos sai do mês escolhido.** Quem
+  escreve «veterinário» não sabe de que mês era a factura — se soubesse,
+  mudava o mês e olhava. Presa ao mês, a pesquisa respondia «nada
+  encontrado» sobre uma despesa que existe, que é a pior resposta que uma
+  pesquisa pode dar. É o mesmo raciocínio que tirou `/financeiro/por-receber`
+  do mês a mês. O selector de mês fica, mas a página diz que não está a
+  mandar, e **os rótulos dos indicadores mudam** («Total encontrado» em vez
+  de «Total do mês»): um número certo com um nome errado é pior do que não
+  ter número.
+  - O nome do fornecedor e o da pessoa vivem noutra tabela. Vão-se buscar os
+    ids que batem certo e juntam-se à condição com `in.(…)`, em vez de um
+    `!inner` — que filtrava fora as despesas **sem** fornecedor, e essas são
+    muitas. `in.()` com a lista vazia é sintaxe inválida, por isso a condição
+    só entra quando há ids.
+  - Nos **contratos** a pesquisa é feita em memória: o que se procura é o
+    nome do cavalo ou do cliente, são ~60 linhas já carregadas, e filtrá-los
+    no PostgREST obrigava ao mesmo `!inner`. A comparação tira os acentos,
+    para «fidalgo» encontrar «Fidalgo».
+- **Onde não há pesquisa, é por a lista ser curta**: equipas (duas),
+  categorias de despesa (uma dúzia), paddocks (um quadro de oito) e
+  `/financeiro/por-receber` (uma linha por cliente com dívida). Acrescentar
+  uma caixa de pesquisa a uma lista que cabe no ecrã é ruído.
 - **Uma acção que redirecciona confirma-se com `comConfirmacao()`**, de
   `lib/accoes/comum.ts`: acrescenta `?feito=criado|guardado|apagado` ao
   destino e `<Notificacao>` (no layout do painel) mostra e limpa a marca. Sem

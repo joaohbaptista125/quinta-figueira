@@ -4,6 +4,7 @@ import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirGestao } from '@/lib/sessao'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { SelectorMes } from '@/components/selector-mes'
+import { Pesquisa } from '@/components/pesquisa'
 import { Indicador } from '@/components/indicador'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
@@ -29,24 +30,47 @@ export const metadata: Metadata = { title: 'Recebimentos' }
 export default async function PaginaRecebimentos({
   searchParams,
 }: {
-  searchParams: Promise<{ mes?: string }>
+  searchParams: Promise<{ mes?: string; q?: string }>
 }) {
   // Página da gestão. O cliente tem a dele em `/pagamentos`, com a conta
   // corrente mês a mês em vez do mês corrente de toda a gente.
   await exigirGestao()
-  const { mes } = await searchParams
+  const { mes, q } = await searchParams
   const periodo = mes ? primeiroDiaDoMes(`${mes}-01`) : primeiroDiaDoMes()
   const fim = deslocarMeses(periodo, 1)
   const supabase = await criarClienteServidor()
 
-  const { data: recebimentos, error } = await supabase
+  // Procurar sai do mês, pela mesma razão das despesas: quem escreve um nome
+  // não sabe de que mês era o pagamento. Ver o comentário longo lá.
+  const termo = q?.trim() ?? ''
+  const aProcurar = termo.length > 0
+
+  let consulta = supabase
     .from('recebimentos')
     .select(
       'id, data, valor, tipo, metodo_pagamento, periodo, descricao, documento_fiscal_ref, pessoas(id, nome), contas(nome)',
     )
-    .gte('data', periodo)
-    .lt('data', fim)
     .order('data', { ascending: false })
+
+  if (aProcurar) {
+    const { data: pessoas } = await supabase
+      .from('pessoas')
+      .select('id')
+      .ilike('nome', `%${termo}%`)
+
+    const ids = (pessoas ?? []).map((linha) => linha.id)
+    const condicoes = [
+      `descricao.ilike.%${termo}%`,
+      `documento_fiscal_ref.ilike.%${termo}%`,
+    ]
+    if (ids.length > 0) condicoes.push(`pessoa_id.in.(${ids.join(',')})`)
+
+    consulta = consulta.or(condicoes.join(',')).limit(100)
+  } else {
+    consulta = consulta.gte('data', periodo).lt('data', fim)
+  }
+
+  const { data: recebimentos, error } = await consulta
 
   const total = (recebimentos ?? []).reduce(
     (soma, recebimento) => soma + Number(recebimento.valor),
@@ -71,8 +95,28 @@ export default async function PaginaRecebimentos({
         }
       />
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Pesquisa placeholder="Pesquisar por pessoa, descrição ou nº do documento" />
+      </div>
+
+      {aProcurar ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          A procurar em <strong>todos os meses</strong>, e não só no mês
+          escolhido. Até 100 resultados, dos mais recentes para trás.
+        </p>
+      ) : null}
+
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Indicador rotulo="Total do mês" valor={formatarEuros(total)} tom="positivo" />
+        {/*
+          * Os rótulos mudam a procurar: «Total do mês» sobre resultados de
+          * todos os meses seria um número certo com um nome errado, que é
+          * pior do que não ter número nenhum.
+          */}
+        <Indicador
+          rotulo={aProcurar ? 'Total encontrado' : 'Total do mês'}
+          valor={formatarEuros(total)}
+          tom="positivo"
+        />
         <Indicador rotulo="De pensos" valor={formatarEuros(dePenso)} />
         <Indicador rotulo="Outros" valor={formatarEuros(total - dePenso)} />
       </div>
