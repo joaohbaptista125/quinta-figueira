@@ -8,16 +8,40 @@ export type ResultadoAccao = {
 export const SEM_RESULTADO: ResultadoAccao = { ok: false }
 
 /**
+ * O `details` (e o `hint`) de um erro **nem sempre é texto**, e acreditar que
+ * era custou duas horas.
+ *
+ * No PGRST201 — embed ambíguo — o PostgREST devolve em `details` uma **lista
+ * de objectos** `{cardinality, embedding, relationship}`, um por cada caminho
+ * que encontrou. O `<ErroConsulta>` desenhava esse valor directamente, e o
+ * React recusa-se a desenhar um objecto: em vez do cartão de erro com o
+ * código à vista, aparecia «Alguma coisa correu mal» — ou seja, **o ecrã que
+ * existe para explicar a falha era ele próprio a segunda falha**, e escondia
+ * a primeira.
+ *
+ * Tudo o que vem do PostgREST passa por aqui antes de chegar ao ecrã.
+ */
+export function textoDoDetalhe(valor: unknown): string | null {
+  if (valor === null || valor === undefined) return null
+  if (typeof valor === 'string') return valor.trim() === '' ? null : valor
+  try {
+    return JSON.stringify(valor)
+  } catch {
+    return String(valor)
+  }
+}
+
+/**
  * Traduz erros do PostgREST/Postgres para mensagens em português.
  * Os códigos vêm do Postgres; a mensagem crua é técnica e em inglês.
  */
 export function traduzirErro(erro: {
   code?: string
   message?: string
-  details?: string | null
+  details?: unknown
 }): string {
   const codigo = erro.code ?? ''
-  const texto = `${erro.message ?? ''} ${erro.details ?? ''}`
+  const texto = `${erro.message ?? ''} ${textoDoDetalhe(erro.details) ?? ''}`
 
   if (codigo === '23505') {
     if (texto.includes('nif')) return 'Já existe um registo com este NIF.'

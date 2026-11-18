@@ -4,13 +4,19 @@ import {
   Cartao,
   ConteudoCartao,
 } from '@/components/ui/superficie'
-import { traduzirErro } from '@/lib/accoes/resultado'
+import { textoDoDetalhe, traduzirErro } from '@/lib/accoes/resultado'
 
 type ErroPostgrest = {
   message: string
   code?: string
-  details?: string | null
-  hint?: string | null
+  /*
+   * `unknown` e não `string`: no PGRST201 o PostgREST manda aqui uma **lista
+   * de objectos**, e desenhá-la directamente fazia o React atirar — o ecrã
+   * que existe para explicar a falha passava a ser ele próprio a falha. Tudo
+   * o que vem daqui passa por `textoDoDetalhe`.
+   */
+  details?: unknown
+  hint?: unknown
 }
 
 /**
@@ -28,6 +34,9 @@ export function ErroConsulta({
   erro: ErroPostgrest
   contexto: string
 }) {
+  const detalhes = textoDoDetalhe(erro.details)
+  const sugestao = textoDoDetalhe(erro.hint)
+
   return (
     <>
       <CabecalhoPagina
@@ -47,10 +56,8 @@ export function ErroConsulta({
                 <Linha rotulo="Código" valor={erro.code} />
               ) : null}
               <Linha rotulo="Mensagem" valor={erro.message} />
-              {erro.details ? (
-                <Linha rotulo="Detalhes" valor={erro.details} />
-              ) : null}
-              {erro.hint ? <Linha rotulo="Sugestão" valor={erro.hint} /> : null}
+              {detalhes ? <Linha rotulo="Detalhes" valor={detalhes} /> : null}
+              {sugestao ? <Linha rotulo="Sugestão" valor={sugestao} /> : null}
             </dl>
           </details>
 

@@ -41,7 +41,7 @@ export default async function PaginaEquipa({
     .select(
       `*,
        equipa_membros(pessoa_id, pessoas(id, nome)),
-       avisos(id, texto, criado_em, pessoas(nome))`,
+       avisos(id, texto, criado_em, pessoas!avisos_autor_id_fkey(nome))`,
     )
     .eq('id', id)
     .maybeSingle()

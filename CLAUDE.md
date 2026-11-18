@@ -578,6 +578,22 @@ notificações** no telemóvel de toda a gente.
 - **São só do chat**, e isso é escolha: a RLS deixa reagir a qualquer mensagem
   legível, mas num aviso de evento uma fila de emojis não acrescenta nada a
   quem lê o quadro do dia. Oferecê-las lá é passar `meuNome` também nesse ecrã.
+- **A tabela tornou ambíguo um embed que funcionava há meses, e foi isso que
+  partiu a ficha da equipa e a do evento.** `aviso_reaccoes` tem chave
+  primária `(aviso_id, pessoa_id, emoji)` e chaves estrangeiras para `avisos`
+  e para `pessoas` — e o PostgREST lê isso como uma **tabela de junção**, ou
+  seja um segundo caminho entre `avisos` e `pessoas`, a par do `autor_id`. A
+  partir do momento em que a migração entrou, `avisos(..., pessoas(nome))`
+  passou a devolver **PGRST201** — sem nada ter mudado nesses `select`.
+  Por isso o autor de um aviso aponta-se **sempre** à mão:
+  `pessoas!avisos_autor_id_fkey(nome)`. **Criar uma tabela com chave primária
+  composta por duas chaves estrangeiras cria um caminho novo entre essas duas
+  tabelas** — se já houver outro, todos os embeds entre elas passam a precisar
+  de dica.
+- **`Relacao` em `lib/tipos-bd.ts` leva o nome verdadeiro da restrição** nos
+  casos com dica. Com `foreignKeyName: string` genérico, o supabase-js não
+  casa a dica com a relação e tipa o resultado como lista quando a resposta é
+  um objecto.
 - **Vêm numa consulta à parte, e nunca aninhadas nos avisos.** Estiveram
   aninhadas, e o preço só se viu quando correu mal: um erro nas reacções não
   dava «as reacções falharam», dava a **ficha da equipa inteira em erro** —
@@ -1023,6 +1039,15 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   servidor** — a ficha da equipa dava «Alguma coisa correu mal» e os registos
   da Vercel estavam vazios, o que manda procurar no sítio errado. Uma linha
   que leve um botão de acção não é um parágrafo.
+- **O `details` de um erro do PostgREST nem sempre é texto**, e acreditar que
+  era escondeu a causa de uma avaria durante duas horas. No PGRST201 vem uma
+  **lista de objectos** `{cardinality, embedding, relationship}`, e o
+  `<ErroConsulta>` desenhava-a directamente — o React recusa-se a desenhar um
+  objecto, por isso em vez do cartão com o código à vista aparecia «Alguma
+  coisa correu mal». **O ecrã que existe para explicar a falha era ele próprio
+  a segunda falha, e escondia a primeira.** Tudo o que venha do PostgREST
+  passa agora por `textoDoDetalhe()` em `lib/accoes/resultado.ts` (com
+  testes).
 - **O ecrã de erro mostra o erro, não só uma referência** (`app/error.tsx`).
   Mostrava só o `digest`, que serve para procurar nos registos do servidor —
   e esses duram uma hora no plano Hobby e **não existem de todo** quando o

@@ -42,7 +42,7 @@ export default async function PaginaEvento({
     .select(
       `*,
        evento_participantes(id, estado, pessoa_id, confirmacao, confirmado_em, motivo_ausencia, pessoas(id, nome), cavalos(id, nome)),
-       avisos(id, texto, criado_em, pessoas(nome))`,
+       avisos(id, texto, criado_em, pessoas!avisos_autor_id_fkey(nome))`,
     )
     .eq('id', id)
     .maybeSingle()

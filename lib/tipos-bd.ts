@@ -566,12 +566,25 @@ type Insercao<T, Obrigatorios extends keyof T = never> = Omit<T, SoLeitura> &
   Partial<Pick<T, Extract<SoLeitura, keyof T>>> &
   Required<Pick<T, Obrigatorios>>
 
+/**
+ * `Nome` é o nome verdadeiro da restrição na base, e **não é adorno**.
+ *
+ * Com `foreignKeyName: string` genérico, o supabase-js não consegue casar
+ * uma dica de embed (`pessoas!avisos_autor_id_fkey(nome)`) com a relação, e
+ * cai para «lista» quando a resposta é um objecto. As dicas passam a ser
+ * precisas sempre que duas tabelas tenham mais do que um caminho entre si —
+ * ver `avisos`.
+ *
+ * Só se preenche onde faz falta; o que fica por nomear continua a funcionar
+ * como antes.
+ */
 type Relacao<
   Coluna extends string,
   Destino extends string,
   UmParaUm extends boolean = false,
+  Nome extends string = string,
 > = {
-  foreignKeyName: string
+  foreignKeyName: Nome
   columns: [Coluna]
   isOneToOne: UmParaUm
   referencedRelation: Destino
@@ -782,15 +795,34 @@ export type BaseDados = {
         [
           Relacao<'evento_id', 'eventos'>,
           Relacao<'equipa_id', 'equipas'>,
-          Relacao<'autor_id', 'pessoas'>,
+          // Nomeada porque **tem de ser apontada à mão nos `select`**: desde
+          // que `aviso_reaccoes` existe há dois caminhos entre `avisos` e
+          // `pessoas` — este, e a junção pelas reacções. Ver o comentário na
+          // tabela das reacções.
+          Relacao<'autor_id', 'pessoas', false, 'avisos_autor_id_fkey'>,
         ]
       >
+      /*
+       * **Esta tabela tornou ambíguo um embed que funcionava há meses.**
+       * Tem chave primária `(aviso_id, pessoa_id, emoji)` e chaves
+       * estrangeiras para `avisos` e para `pessoas` — e o PostgREST lê isso
+       * como uma **tabela de junção**, ou seja um segundo caminho entre
+       * `avisos` e `pessoas`, a par do `autor_id`. A partir daí,
+       * `avisos(..., pessoas(nome))` passou a devolver PGRST201 e a partir a
+       * ficha da equipa e a do evento.
+       *
+       * Por isso o autor de um aviso aponta-se sempre à mão:
+       * `pessoas!avisos_autor_id_fkey(nome)`.
+       */
       aviso_reaccoes: Tabela<
         AvisoReaccao,
         // `pessoa_id` é opcional de propósito: quem reagiu é carimbado pela
         // trigger `carimbar_autor_da_reaccao`, como o autor do aviso.
         { aviso_id: string; emoji: string; pessoa_id?: string },
-        [Relacao<'aviso_id', 'avisos'>, Relacao<'pessoa_id', 'pessoas'>]
+        [
+          Relacao<'aviso_id', 'avisos', false, 'aviso_reaccoes_aviso_id_fkey'>,
+          Relacao<'pessoa_id', 'pessoas', false, 'aviso_reaccoes_pessoa_id_fkey'>,
+        ]
       >
       calendarios: Tabela<
         Calendario,
