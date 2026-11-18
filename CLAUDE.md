@@ -1011,6 +1011,24 @@ compilação, dá as dimensões ao `next/image` e falha o build se faltarem.
   trabalhar. **Não o uses num bloco de caixas de visto que espelha o estado do
   servidor** (as presenças): `reset()` devolveria as marcas ao que estavam
   antes de gravar.
+- **Nada de `<form>` nem de `<div>` dentro de um `<p>`, e isto já custou uma
+  página inteira.** A linha do autor de uma mensagem do chat era um `<p>` com
+  o botão «apagar» lá dentro — que é um `<form>`. Pelas regras de parsing do
+  HTML **um `<form>` fecha um `<p>` aberto**, por isso o browser construía
+  `<p>…</p><form>…</form>` onde o React tinha mandado `<p>…<form/></p>`.
+  Enquanto o `<form>` era o **último** filho, o React tolerava a diferença e
+  ninguém dava por nada. No dia em que se pôs alguma coisa a seguir — as
+  reacções — a diferença passou a ser estrutural: a hidratação aborta e atira.
+  **O erro é do lado do browser, por isso não deixa um único registo no
+  servidor** — a ficha da equipa dava «Alguma coisa correu mal» e os registos
+  da Vercel estavam vazios, o que manda procurar no sítio errado. Uma linha
+  que leve um botão de acção não é um parágrafo.
+- **O ecrã de erro mostra o erro, não só uma referência** (`app/error.tsx`).
+  Mostrava só o `digest`, que serve para procurar nos registos do servidor —
+  e esses duram uma hora no plano Hobby e **não existem de todo** quando o
+  erro é do browser. Em produção o Next apaga a mensagem dos erros do
+  servidor, por isso o que lá aparecer já diz de que lado foi: mensagem
+  verdadeira é do browser; a frase genérica do Next é do servidor.
 - **Um erro de gravação é trazido ao ecrã**, não deixado no topo do
   formulário. `<FormularioEntidade>` faz `scrollIntoView` da mensagem quando a
   acção falha: o botão de guardar está vinte campos abaixo do sítio onde o

@@ -94,13 +94,32 @@ export function Avisos({
               className="rounded-md border-l-[3px] border-primary bg-primary/8 px-3 py-2"
             >
               <p className="whitespace-pre-wrap text-sm">{aviso.texto}</p>
-              <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              {/*
+                * **Isto é uma `div` e não um `p`, e a razão não é estética.**
+                * O botão «apagar» é um `<form>`, e pelas regras de parsing do
+                * HTML um `<form>` **fecha um `<p>` aberto**. O browser ficava
+                * com `<p>…</p><form>…</form>` onde o React tinha mandado
+                * `<p>…<form/></p>`.
+                *
+                * Enquanto o `<form>` era o último filho, o React tolerava a
+                * diferença. No dia em que se pôs alguma coisa **a seguir** —
+                * as reacções — a diferença passou a ser estrutural: a
+                * hidratação aborta e atira, **no browser**, onde não há
+                * registo nenhum do lado do servidor para explicar porquê. A
+                * ficha da equipa ficava em «Alguma coisa correu mal» sem
+                * deixar rasto.
+                *
+                * Regra geral: **nada de `<form>` nem de `<div>` dentro de um
+                * `<p>`.** Uma linha que leve um botão de acção não é um
+                * parágrafo.
+                */}
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>
                   {aviso.autor?.nome ?? 'Quinta da Figueira'} ·{' '}
                   {formatarDataHora(aviso.criado_em)}
                 </span>
                 {apaga ? <Apagar id={aviso.id} voltar={voltar} /> : null}
-              </p>
+              </div>
               {reage ? (
                 <Reaccoes
                   avisoId={aviso.id}
