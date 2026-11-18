@@ -54,9 +54,6 @@ export async function guardarPessoa(
       nome,
       email: textoOuNulo(dados, 'email'),
       telefone: textoOuNulo(dados, 'telefone'),
-      nif,
-      morada: textoOuNulo(dados, 'morada'),
-      notas: textoOuNulo(dados, 'notas'),
       activo: booleano(dados, 'activo'),
       perfil,
     },
@@ -65,6 +62,13 @@ export async function guardarPessoa(
   })
 
   if (!resultado.ok || !resultado.id) return resultado
+
+  const erroReservado = await guardarReservado(resultado.id, {
+    nif,
+    morada: textoOuNulo(dados, 'morada'),
+    notas: textoOuNulo(dados, 'notas'),
+  })
+  if (erroReservado) return { ok: false, mensagem: erroReservado }
 
   const erroPapeis = await sincronizarPapeis(
     resultado.id,
@@ -89,6 +93,34 @@ export async function guardarPessoa(
 }
 
 /** Substitui o conjunto de papéis da pessoa pelo indicado no formulário. */
+/**
+ * Grava o que da ficha é só da gestão: NIF, morada e notas internas.
+ *
+ * Vive numa tabela à parte — ver a migração `…_dados_reservados_da_pessoa.sql`.
+ * Só se cria linha para quem tem mesmo alguma coisa, e a linha apaga-se
+ * quando os três campos ficam vazios: uma linha vazia por cada ficha não
+ * serve nada e fazia a contagem de «quem tem notas» mentir.
+ *
+ * **Uma falha aqui é um erro e não um silêncio.** A pessoa já foi gravada,
+ * mas se o NIF não entrou quem o escreveu tem de saber — ao contrário dos
+ * avisos, isto não é acessório.
+ */
+async function guardarReservado(
+  pessoaId: string,
+  campos: { nif: string | null; morada: string | null; notas: string | null },
+): Promise<string | null> {
+  const supabase = await criarClienteServidor()
+  const vazio = !campos.nif && !campos.morada && !campos.notas
+
+  const { error } = vazio
+    ? await supabase.from('pessoas_reservado').delete().eq('pessoa_id', pessoaId)
+    : await supabase
+        .from('pessoas_reservado')
+        .upsert({ pessoa_id: pessoaId, ...campos }, { onConflict: 'pessoa_id' })
+
+  return error ? traduzirErro(error) : null
+}
+
 async function sincronizarPapeis(pessoaId: string, papeis: PapelPessoa[]) {
   const supabase = await criarClienteServidor()
 

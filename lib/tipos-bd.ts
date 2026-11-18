@@ -46,9 +46,6 @@ export type Pessoa = Carimbos & {
   nome: string
   email: string | null
   telefone: string | null
-  nif: string | null
-  morada: string | null
-  notas: string | null
   activo: boolean
   auth_user_id: string | null
   perfil: PerfilAcesso | null
@@ -59,6 +56,20 @@ export type Pessoa = Carimbos & {
    * criada, e isso acontece logo no envio do convite.
    */
   acesso_confirmado_em: string | null
+}
+
+/**
+ * O que da ficha de uma pessoa é só da gestão.
+ *
+ * Vive à parte de `pessoas` porque a RLS filtra linhas e não colunas, e a
+ * equipa lê `pessoas` inteira — ver a migração. É a mesma razão de
+ * `calendarios`.
+ */
+export type PessoaReservado = Carimbos & {
+  pessoa_id: string
+  nif: string | null
+  morada: string | null
+  notas: string | null
 }
 
 export type PessoaPapel = {
@@ -573,6 +584,13 @@ export type BaseDados = {
   public: {
     Tables: {
       pessoas: Tabela<Pessoa, Partial<Omit<Pessoa, SoLeitura>> & { nome: string }>
+      pessoas_reservado: Tabela<
+        PessoaReservado,
+        Partial<Omit<PessoaReservado, 'criado_em' | 'actualizado_em'>> & {
+          pessoa_id: string
+        },
+        [Relacao<'pessoa_id', 'pessoas'>]
+      >
       pessoa_papeis: Tabela<
         PessoaPapel,
         { pessoa_id: string; papel: PapelPessoa },

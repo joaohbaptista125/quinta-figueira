@@ -56,7 +56,18 @@ export default async function PaginaPessoa({
   )
   const podeEditar = eGestao(sessao.perfil)
 
-  const [cavalos, contratos, recebimentos] = await Promise.all([
+  const [reservado, cavalos, contratos, recebimentos] = await Promise.all([
+    /*
+     * NIF, morada e notas vivem à parte, e a RLS devolve-os só à gestão (e a
+     * cada um os seus). Sem esta consulta o formulário abria com os campos
+     * vazios e **gravar apagava-os** — que é o que acontecia enquanto
+     * `CamposPessoa` os lia de `pessoa`.
+     */
+    supabase
+      .from('pessoas_reservado')
+      .select('nif, morada, notas')
+      .eq('pessoa_id', id)
+      .maybeSingle(),
     supabase
       .from('cavalos')
       .select('id, nome, regime, activo')
@@ -123,6 +134,7 @@ export default async function PaginaPessoa({
               >
                 <CamposPessoa
                   pessoa={pessoa}
+                  reservado={reservado.data}
                   papeis={papeis}
                   temLogin={Boolean(pessoa.auth_user_id)}
                 />

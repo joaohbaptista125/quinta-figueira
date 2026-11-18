@@ -254,4 +254,79 @@ begin
 end $$;
 reset role;
 
+\echo '== O NIF, a morada e as notas não se lêem de fora da gestão'
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000b';
+set role authenticated;
+do $$
+begin
+  perform pg_temp.afirmar(public.e_equipa() and not public.e_gestao(),
+    'o Rui é instrutor: equipa, mas não gestão');
+
+  perform pg_temp.afirmar(
+    (select count(*) from public.pessoas) >= 5,
+    'continua a ver as fichas todas, que é o que precisa');
+
+  -- É isto que a mudança de tabela comprou. Enquanto estas colunas viviam em
+  -- `pessoas`, vinham no mesmo pedido que o nome.
+  perform pg_temp.afirmar(
+    (select count(*) from public.pessoas_reservado
+      where pessoa_id <> public.pessoa_actual_id()) = 0,
+    'mas não lê o NIF, a morada nem as notas de mais ninguém');
+
+  perform pg_temp.afirmar_recusa(
+    $q$insert into public.pessoas_reservado (pessoa_id, nif)
+       values ('22222222-0000-4000-8000-000000000003', '123456789')$q$,
+    'nem escreve lá');
+end $$;
+reset role;
+
+\echo '== Cada um vê o que é seu, e a gestão vê tudo'
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000c';
+set role authenticated;
+do $$
+begin
+  perform pg_temp.afirmar(
+    (select nif from public.pessoas_reservado
+      where pessoa_id = public.pessoa_actual_id()) = '210000003',
+    'a cliente lê o seu próprio NIF');
+
+  perform pg_temp.afirmar(
+    (select count(*) from public.pessoas_reservado) = 1,
+    'e só o seu');
+end $$;
+reset role;
+
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000a';
+set role authenticated;
+do $$
+begin
+  perform pg_temp.afirmar(
+    (select count(*) from public.pessoas_reservado) >= 4,
+    'a gestão lê os de toda a gente');
+
+  update public.pessoas_reservado set morada = 'Rua do Picadeiro, 1'
+   where pessoa_id = '22222222-0000-4000-8000-000000000003';
+  perform pg_temp.afirmar(
+    (select morada from public.pessoas_reservado
+      where pessoa_id = '22222222-0000-4000-8000-000000000003')
+      = 'Rua do Picadeiro, 1',
+    'e escreve-os');
+end $$;
+reset role;
+
+\echo '== Apagar a pessoa leva os dados reservados consigo'
+set role postgres;
+do $$
+declare v_pessoa uuid;
+begin
+  insert into public.pessoas (nome) values ('Passageiro') returning id into v_pessoa;
+  insert into public.pessoas_reservado (pessoa_id, nif) values (v_pessoa, '999999999');
+
+  delete from public.pessoas where id = v_pessoa;
+  perform pg_temp.afirmar(
+    (select count(*) from public.pessoas_reservado where pessoa_id = v_pessoa) = 0,
+    'não fica um NIF órfão para trás (cascade)');
+end $$;
+reset role;
+
 \echo '== Testes de acesso e perfis: todos passaram'

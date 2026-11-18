@@ -14,20 +14,30 @@ insert into public.contas (id, nome, tipo, iban, saldo_inicial, notas) values
 on conflict (id) do nothing;
 
 -- --- Pessoas ----------------------------------------------------------------
-insert into public.pessoas (id, nome, email, telefone, nif, perfil, notas) values
+insert into public.pessoas (id, nome, email, telefone, perfil) values
   ('22222222-0000-4000-8000-000000000001', 'Maria Figueira',
-   'maria@quintadafigueira.pt', '912000001', '210000001', 'admin',
-   'Gerência do centro'),
+   'maria@quintadafigueira.pt', '912000001', 'admin'),
   ('22222222-0000-4000-8000-000000000002', 'Rui Antunes',
-   'rui@quintadafigueira.pt', '912000002', '210000002', 'instrutor', null),
+   'rui@quintadafigueira.pt', '912000002', 'instrutor'),
   ('22222222-0000-4000-8000-000000000003', 'Sónia Pais',
-   'sonia@exemplo.pt', '912000003', '210000003', 'cliente',
-   'Proprietária de dois cavalos a penso'),
+   'sonia@exemplo.pt', '912000003', 'cliente'),
   ('22222222-0000-4000-8000-000000000004', 'Tiago Lourenço',
-   'tiago@exemplo.pt', '912000004', '210000004', 'cliente', null),
+   'tiago@exemplo.pt', '912000004', 'cliente'),
   ('22222222-0000-4000-8000-000000000005', 'Alberto Nunes',
-   null, '912000005', null, 'tratador', 'Sem email, não usa a aplicação')
+   null, '912000005', 'tratador')
 on conflict (id) do nothing;
+
+-- NIF, morada e notas vivem à parte: só a gestão os lê. Ver a migração
+-- `…_dados_reservados_da_pessoa.sql`.
+insert into public.pessoas_reservado (pessoa_id, nif, notas) values
+  ('22222222-0000-4000-8000-000000000001', '210000001', 'Gerência do centro'),
+  ('22222222-0000-4000-8000-000000000002', '210000002', null),
+  ('22222222-0000-4000-8000-000000000003', '210000003',
+   'Proprietária de dois cavalos a penso'),
+  ('22222222-0000-4000-8000-000000000004', '210000004', null),
+  ('22222222-0000-4000-8000-000000000005', null,
+   'Sem email, não usa a aplicação')
+on conflict (pessoa_id) do nothing;
 
 insert into public.pessoa_papeis (pessoa_id, papel) values
   ('22222222-0000-4000-8000-000000000002', 'instrutor'),

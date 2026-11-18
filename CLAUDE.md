@@ -74,6 +74,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261116120000_cavalo_em_aprovacao.sql` | `cavalos.aprovado_em` + `carimbar_cavalo_proposto` + RLS da proposta |
 | `…20261118090000_acesso_e_perfis.sql` | `ligar_ficha_a_conta_existente` + `travar_perfil_de_administrador` |
 | `…20261118100000_conversa_de_equipa.sql` | os membros escrevem na conversa + `carimbar_autor_do_aviso` |
+| `…20261118140000_dados_reservados_da_pessoa.sql` | `pessoas_reservado` — NIF, morada e notas saem de `pessoas` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -232,6 +233,35 @@ do Supabase. `ligar_ficha_a_conta_existente` é a trigger simétrica, em
   ligar. O caso real é a ficha A apanhar a conta, mudarem-lhe o email, e uma
   ficha B nascer com o endereço antigo.
 - A migração traz o `update` que liga as que já tinham ficado penduradas.
+
+**NIF, morada e notas vivem fora de `pessoas`, e a razão é a de sempre.**
+O centro pediu que o instrutor e o tratador não vissem o NIF nem a morada de
+toda a gente, nem as notas internas que a gestão escreve nas fichas.
+
+**Escondê-las no `select` não chegava.** A RLS decide **linhas, não colunas**:
+`pessoas_ler` deixa a equipa ler a ficha, e a partir daí todas as colunas dela
+vêm no mesmo pedido — deixar de as pedir escondia-as do ecrã e de mais nada.
+Privilégios por coluna no Postgres são por **papel da base**, e no Supabase
+toda a gente autenticada partilha o papel `authenticated`, por isso também não
+servem. O que resta é mudar as colunas de tabela, que é exactamente o que
+`calendarios` já fazia pelo mesmo motivo.
+
+`pessoas_reservado` é 1:1 com `pessoas`, `on delete cascade`. Lê-a a gestão, e
+cada pessoa a sua; escreve-a a gestão.
+
+- **Só há linha para quem tem alguma coisa.** `guardarReservado()` em
+  `lib/accoes/pessoas.ts` apaga a linha quando os três campos ficam vazios —
+  uma linha vazia por ficha não serve nada.
+- **A ficha tem de ir buscá-la.** Enquanto `<CamposPessoa>` as lia de `pessoa`
+  e a página não as carregava, o formulário abria com os campos vazios e
+  **gravar apagava-os**. Se acrescentares um campo reservado, acrescenta-o nos
+  dois sítios.
+- A pesquisa por NIF em `/pessoas` passa pela tabela nova e **só para a
+  gestão** — a quem não é, a RLS devolvia zero de qualquer maneira.
+- O teste do NIF em `01_rls.sql` apontava para `pessoas` e passou a **passar
+  por acidente** depois da mudança: `afirmar_recusa` apanha também o erro de
+  «coluna não existe». Aponta agora para a tabela certa — é o género de coisa
+  a verificar sempre que uma coluna muda de casa.
 
 **O perfil de administrador é só do administrador, e isto era um buraco.**
 `pessoas_gerir` é `e_gestao()` e vale `for all`: um **gestor podia escrever
@@ -592,7 +622,7 @@ Resumo do que cada perfil vê:
 | | pessoas / cavalos / paddocks | contratos | financeiro |
 |---|---|---|---|
 | admin, gestor | tudo | tudo | tudo |
-| instrutor, tratador | tudo | **não** (têm valores) | **não** |
+| instrutor, tratador | tudo **menos** NIF, morada e notas | **não** (têm valores) | **não** |
 | cliente | só o que é dele | só os dele | só os recebimentos dele |
 
 `lib/permissoes.ts` espelha `e_gestao()`/`e_equipa()` em TypeScript, mas serve

@@ -105,7 +105,11 @@ begin
     'recebimento ligado a mensalidade tem de ser do tipo penso');
 
   perform pg_temp.afirmar_recusa(
-    $q$insert into public.pessoas (nome, nif) values ('NIF Curto', '123')$q$,
+    -- O NIF mudou-se para `pessoas_reservado`; se este teste voltar a
+    -- apontar para `pessoas` passa por acidente, porque `afirmar_recusa`
+    -- apanha também o erro de «coluna não existe».
+    $q$insert into public.pessoas_reservado (pessoa_id, nif)
+       values ('22222222-0000-4000-8000-000000000004', '123')$q$,
     'NIF com formato inválido é recusado');
   -- Raças e pelagens: a lista não pode ter a mesma duas vezes só porque uma
   -- veio com outra caixa ou com um espaço a mais.

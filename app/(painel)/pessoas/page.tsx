@@ -53,7 +53,7 @@ export default async function PaginaPessoas({
 
   let consulta = supabase
     .from('pessoas')
-    .select('id, nome, email, telefone, nif, activo, perfil, pessoa_papeis(papel)')
+    .select('id, nome, email, telefone, activo, perfil, pessoa_papeis(papel)')
     .order('nome')
 
   if (inactivos !== '1') consulta = consulta.eq('activo', true)
@@ -61,9 +61,29 @@ export default async function PaginaPessoas({
   if (idsComPapel) consulta = consulta.in('id', idsComPapel)
   if (q) {
     const termo = `%${q}%`
-    consulta = consulta.or(
-      `nome.ilike.${termo},email.ilike.${termo},telefone.ilike.${termo},nif.ilike.${termo}`,
-    )
+    const condicoes = [
+      `nome.ilike.${termo}`,
+      `email.ilike.${termo}`,
+      `telefone.ilike.${termo}`,
+    ]
+
+    /*
+     * O NIF mudou-se para `pessoas_reservado` — procura-se lá e juntam-se os
+     * ids. Só para a gestão: a quem não é, a RLS devolveria zero de qualquer
+     * maneira, e assim poupa-se a ida à base.
+     */
+    if (eGestao(sessao.perfil)) {
+      const { data: porNif } = await supabase
+        .from('pessoas_reservado')
+        .select('pessoa_id')
+        .ilike('nif', termo)
+
+      const ids = (porNif ?? []).map((linha) => linha.pessoa_id)
+      // `in.()` com a lista vazia é sintaxe inválida no PostgREST.
+      if (ids.length > 0) condicoes.push(`id.in.(${ids.join(',')})`)
+    }
+
+    consulta = consulta.or(condicoes.join(','))
   }
 
   const { data: pessoas, error } = await consulta

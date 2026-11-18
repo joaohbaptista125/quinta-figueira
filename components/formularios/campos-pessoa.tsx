@@ -2,14 +2,20 @@ import { Campo, Caixa, Entrada, AreaTexto, Selector, Etiqueta } from '@/componen
 import { GrelhaCampos, SeccaoCampos } from '@/components/formulario-entidade'
 import { ImportarContacto } from '@/components/formularios/importar-contacto'
 import { ROTULOS_PAPEL, ROTULOS_PERFIL, paraOpcoes } from '@/lib/rotulos'
-import type { PapelPessoa, Pessoa } from '@/lib/tipos-bd'
+import type { PapelPessoa, Pessoa, PessoaReservado } from '@/lib/tipos-bd'
 
 export function CamposPessoa({
   pessoa,
+  reservado,
   papeis = [],
   temLogin = false,
 }: {
   pessoa?: Pessoa | null
+  /**
+   * NIF, morada e notas vivem noutra tabela, que só a gestão lê — e por isso
+   * chegam separados. Ver a migração `…_dados_reservados_da_pessoa.sql`.
+   */
+  reservado?: Pick<PessoaReservado, 'nif' | 'morada' | 'notas'> | null
   papeis?: PapelPessoa[]
   temLogin?: boolean
 }) {
@@ -75,7 +81,7 @@ export function CamposPessoa({
               inputMode="numeric"
               pattern="[0-9]{9}"
               maxLength={9}
-              defaultValue={pessoa?.nif ?? ''}
+              defaultValue={reservado?.nif ?? ''}
               autoComplete="off"
             />
           </Campo>
@@ -84,7 +90,7 @@ export function CamposPessoa({
             <Entrada
               id="morada"
               name="morada"
-              defaultValue={pessoa?.morada ?? ''}
+              defaultValue={reservado?.morada ?? ''}
               autoComplete="off"
             />
           </Campo>
@@ -153,7 +159,7 @@ export function CamposPessoa({
 
         <div className="space-y-1.5">
           <Etiqueta htmlFor="notas">Notas</Etiqueta>
-          <AreaTexto id="notas" name="notas" defaultValue={pessoa?.notas ?? ''} />
+          <AreaTexto id="notas" name="notas" defaultValue={reservado?.notas ?? ''} />
         </div>
       </SeccaoCampos>
     </div>
