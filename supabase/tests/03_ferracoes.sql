@@ -47,7 +47,7 @@ begin
 end $$;
 
 -- --- tratador: é quem recebe o ferrador na cavalariça ------------------------
-\echo '== O tratador regista a ferração'
+\echo '== Quem planeia o dia regista a ferração'
 set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000b';
 set role authenticated;
 do $$

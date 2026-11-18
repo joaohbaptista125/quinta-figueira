@@ -76,6 +76,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261118100000_conversa_de_equipa.sql` | os membros escrevem na conversa + `carimbar_autor_do_aviso` |
 | `…20261118140000_dados_reservados_da_pessoa.sql` | `pessoas_reservado` — NIF, morada e notas saem de `pessoas` |
 | `…20261118160000_reaccoes_no_chat.sql` | `aviso_reaccoes` + `carimbar_autor_da_reaccao` |
+| `…20261118170000_tratador_so_consulta.sql` | paddocks e ferrações passam a `e_instrutor_ou_gestao()` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -158,9 +159,11 @@ contrário da box, em que `boxes.cavalo_id` era único porque só cabia um.
 `paddock_ocupacao` (paddock × cavalo × dia) é o que sustenta o quadro.
 
 - **A ocupação vive à parte de `cavalos`.** `cavalos` só se edita com
-  `e_gestao()`, e quem larga os cavalos é o tratador. Uma coluna em `cavalos`
-  obrigava a abrir a tabela inteira à equipa, ou a mais uma trigger a travar
-  colunas. **Escrever é de `e_equipa()`**, como a ferração e pela mesma razão.
+  `e_gestao()`, e quem larga os cavalos está na cavalariça. Uma coluna em
+  `cavalos` obrigava a abrir a tabela inteira, ou a mais uma trigger a travar
+  colunas. **Escrever é de `e_instrutor_ou_gestao()`** — era de `e_equipa()`,
+  e mudou; ver «O tratador consulta» na secção da segurança, que diz o que
+  isso contraria.
 - **Só interessa hoje, e a `data` existe para isso.** Foi o que o centro
   pediu, e não há ecrã nenhum de histórico. A data serve para o quadro **se
   esvaziar sozinho à meia-noite**: sem ela, a largada de ontem ficava no ecrã
@@ -421,9 +424,10 @@ listagem não fazer sessenta consultas, e é um `left join`, porque o cavalo que
 nunca foi ferrado é precisamente o que interessa ver. **`proxima_em` é escrito
 à mão e não calculado**: o intervalo não é igual para todos (um cavalo de
 competição gasta mais depressa) e quem ferra sabe, ao sair, quando quer voltar;
-o formulário sugere seis semanas e deixa mudar. **Escrever é de `e_equipa()` e
-não só da gestão** — quem recebe o ferrador na cavalariça é o tratador, e
-obrigá-lo a pedir à gestão era a maneira certa de o registo não existir. O
+o formulário sugere seis semanas e deixa mudar. **Escrever era de `e_equipa()` e
+hoje é de `e_instrutor_ou_gestao()`** — o motivo de então (quem recebe o
+ferrador na cavalariça é o tratador) está em «O tratador consulta», na secção
+da segurança, com o que se perdeu ao mudar. O
 custo que lá fica é nota do que foi combinado; a despesa lança-se no
 financeiro, imputada ao cavalo.
 
@@ -655,11 +659,37 @@ ignoram a RLS de `pessoas`, o que evita recursão dentro das próprias política
 
 Resumo do que cada perfil vê:
 
-| | pessoas / cavalos / paddocks | contratos | financeiro |
-|---|---|---|---|
-| admin, gestor | tudo | tudo | tudo |
-| instrutor, tratador | tudo **menos** NIF, morada e notas | **não** (têm valores) | **não** |
-| cliente | só o que é dele | só os dele | só os recebimentos dele |
+| | pessoas | cavalos / paddocks / agenda | contratos | financeiro |
+|---|---|---|---|---|
+| admin, gestor | tudo | tudo | tudo | tudo |
+| instrutor | lê nome e contacto | lê e escreve | **não** (têm valores) | **não** |
+| tratador | lê nome e contacto | **só lê** — ver abaixo | **não** | **não** |
+| cliente | só a sua | só o que é dele | só os dele | só os recebimentos dele |
+
+**O tratador consulta, e isso contraria duas decisões registadas.** Pedido
+explícito do centro: o perfil de tratador deixou de escrever nos **paddocks** e
+nas **ferrações**, que passaram de `e_equipa()` para `e_instrutor_ou_gestao()`.
+O que estava escrito era que «quem larga os cavalos é o tratador» e que
+«obrigá-lo a pedir à gestão era a maneira certa de o registo não existir» — e
+**esse risco não desapareceu por a regra ter mudado**: se o quadro dos paddocks
+deixar de ser preenchido de manhã, ou as ferrações deixarem de ser lançadas, é
+aqui que se vem ver porquê. Ler não mudou: vê o quadro, a agenda e o histórico
+de ferração de cada cavalo, que é para isso que entra na aplicação. O resto da
+agenda — eventos, convocatórias, presenças e avisos — já era de
+`e_instrutor_ou_gestao()`.
+
+**O que fica de fora, de propósito:** `notas_cavalo` e o chat de equipa. A nota
+não é registo do centro, é a conversa de um cavalo — o dono pergunta e a
+cavalariça responde, e fechá-la ao tratador tirava a resposta a quem muitas
+vezes é o único que sabe dar. O chat depende de ser membro da equipa, não do
+perfil. `supabase/tests/17_tratador_so_consulta.sql` prova os quatro lados.
+
+**O instrutor não toca em dinheiro nem em fichas, e já não tocava.** Todas as
+páginas de `/financeiro` chamam `exigirGestao()` e a RLS por baixo é
+`e_gestao()`; `pessoas_gerir` também é `e_gestao()`, por isso `/pessoas` é para
+ele uma listagem de leitura — nome, contacto e papéis, sem a coluna de pensos e
+sem «Nova pessoa» — e a ficha mostra um cartão «Contactos» em vez do
+formulário. NIF, morada e notas internas já não vivem em `pessoas` de todo.
 
 `lib/permissoes.ts` espelha `e_gestao()`/`e_equipa()` em TypeScript, mas serve
 apenas para decidir o que mostrar. **A protecção é a RLS.** Nunca confies só na
@@ -772,7 +802,8 @@ supabase/
                   07 notas, 08 subscrições, 09 pagamentos declarados,
                   10 confirmação de presença, 11 quem paga o ferrador,
                   12 paddocks, 13 aprovação de cavalos, 14 acesso e perfis,
-                  15 conversa de equipa, 16 reacções no chat)
+                  15 conversa de equipa, 16 reacções no chat,
+                  17 o tratador só consulta)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor

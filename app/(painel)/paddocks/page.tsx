@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirEquipa } from '@/lib/sessao'
-import { eEquipa } from '@/lib/permissoes'
+import { eInstrutorOuGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { Indicador } from '@/components/indicador'
@@ -17,10 +17,15 @@ export const metadata: Metadata = { title: 'Paddocks' }
 /**
  * O quadro dos campos de largada, hoje.
  *
- * Quem o lê é a equipa — é coordenação entre tratadores, e era a pergunta que
- * se fazia de viva voz: «o Fidalgo já saiu?». O dono não vem aqui: vê o que
- * lhe interessa na ficha do cavalo dele, e recebe o aviso quando o cavalo é
- * largado.
+ * Quem o lê é a equipa, tratador incluído — é coordenação de cavalariça, e
+ * era a pergunta que se fazia de viva voz: «o Fidalgo já saiu?». O dono não
+ * vem aqui: vê o que lhe interessa na ficha do cavalo dele, e recebe o aviso
+ * quando o cavalo é largado.
+ *
+ * **Escrever é de quem planeia o dia** (gestão e instrutor), e não de toda a
+ * equipa — decisão do centro, que fez do tratador um perfil de consulta. A
+ * migração `…_tratador_so_consulta.sql` explica o que isso contraria e o que
+ * se perde. Aqui isto só evita mostrar botões que a RLS ia recusar.
  */
 export default async function PaginaPaddocks() {
   const sessao = await exigirEquipa()
@@ -65,11 +70,16 @@ export default async function PaginaPaddocks() {
     (cavalo) => !ocupados.has(cavalo.id),
   )
 
+  const podeEscrever = eInstrutorOuGestao(sessao.perfil)
+
   return (
     <>
       <CabecalhoPagina
         titulo="Paddocks"
-        descricao={`Quem está largado hoje, ${formatarDiaPorExtenso(dia)}. O quadro limpa-se sozinho à meia-noite.`}
+        descricao={
+          `Quem está largado hoje, ${formatarDiaPorExtenso(dia)}. O quadro limpa-se sozinho à meia-noite.` +
+          (podeEscrever ? '' : ' Largar e recolher é da gestão e dos instrutores.')
+        }
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -85,7 +95,7 @@ export default async function PaginaPaddocks() {
         <QuadroPaddocks
           campos={quadro}
           disponiveis={disponiveis}
-          podeEscrever={eEquipa(sessao.perfil)}
+          podeEscrever={podeEscrever}
         />
       ) : (
         <SemRegistos

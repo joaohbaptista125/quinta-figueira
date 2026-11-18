@@ -5,8 +5,11 @@
 --
 -- O que este ficheiro prova, e porquê:
 --
--- * **O tratador escreve.** É ele que larga os cavalos de manhã. Se escrever
---   ficasse para a gestão, o quadro não existia — é a mesma razão da ferração.
+-- * **Quem larga é quem planeia o dia** — gestão e instrutor. Era de toda a
+--   equipa, tratador incluído; o centro pediu que o tratador passasse a
+--   consultar, e é a migração `…_tratador_so_consulta.sql` que o explica.
+-- * **O tratador lê o quadro inteiro e não lhe toca.** Continua a precisar de
+--   saber quem já saiu — é a pergunta que o quadro existe para responder.
 -- * **O dono vê o cavalo dele, e só esse.** É o que torna o aviso de «está no
 --   paddock» verificável do lado dele.
 -- * **O dono não larga nem recolhe.** O quadro é da cavalariça.
@@ -84,8 +87,8 @@ begin
 end $$;
 reset role;
 
-\echo '== O tratador larga os cavalos'
-set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000e';
+\echo '== O instrutor larga os cavalos'
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000b';
 set role authenticated;
 do $$
 declare v_paddock uuid;
@@ -100,7 +103,7 @@ begin
   perform pg_temp.afirmar(
     (select count(*) from public.paddock_ocupacao
       where data = current_date) = 3,
-    'o tratador escreve no quadro, e vê-o inteiro');
+    'quem planeia o dia escreve no quadro, e vê-o inteiro');
 
   -- Vários cavalos no mesmo campo: é o contrário das boxes, e foi pedido.
   insert into public.paddock_ocupacao (paddock_id, cavalo_id)
@@ -116,6 +119,28 @@ begin
               values (%L, '33333333-0000-4000-8000-000000000002')$q$,
            (select id from public.paddocks where numero = 6)),
     'o mesmo cavalo não está em dois campos no mesmo dia');
+end $$;
+reset role;
+
+\echo '== O tratador lê o quadro inteiro, e não lhe toca'
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000e';
+set role authenticated;
+do $$
+begin
+  perform pg_temp.afirmar(
+    (select count(*) from public.paddock_ocupacao
+      where data = current_date) = 4,
+    'o tratador continua a ver quem já saiu — é para isso que o quadro existe');
+
+  perform pg_temp.afirmar_recusa(
+    format($q$insert into public.paddock_ocupacao (paddock_id, cavalo_id)
+              values (%L, '33333333-0000-4000-8000-000000000004')$q$,
+           (select id from public.paddocks where numero = 7)),
+    'mas já não larga nenhum');
+
+  perform pg_temp.afirmar_sem_efeito(
+    $q$delete from public.paddock_ocupacao where data = current_date$q$,
+    'nem recolhe');
 end $$;
 reset role;
 
@@ -147,7 +172,7 @@ end $$;
 reset role;
 
 \echo '== O quadro de hoje não arrasta o de ontem'
-set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000e';
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000b';
 set role authenticated;
 do $$
 declare v_paddock uuid;

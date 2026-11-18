@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
-import { eEquipa, eGestao } from '@/lib/permissoes'
+import { eEquipa, eGestao, eInstrutorOuGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
@@ -226,9 +226,13 @@ export default async function PaginaCavalo({
              * regista a visita: o centro pode nem saber que ela aconteceu.
              * A RLS diz o mesmo — isto só evita mostrar um formulário que ia
              * ser recusado.
+             *
+             * Do lado do centro quem regista é quem planeia o dia, e **não**
+             * toda a equipa: o tratador lê o histórico mas não o escreve, por
+             * decisão do centro. Ver `…_tratador_so_consulta.sql`.
              */
             podeRegistar={
-              eEquipa(sessao.perfil) ||
+              eInstrutorOuGestao(sessao.perfil) ||
               (cavalo.proprietario_id === sessao.id &&
                 cavalo.ferrador_pago_por === 'proprietario')
             }
