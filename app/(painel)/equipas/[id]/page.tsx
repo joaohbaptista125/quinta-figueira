@@ -23,6 +23,7 @@ import { apagarEquipa, guardarEquipa } from '@/lib/accoes/eventos'
 import { pessoasActivas } from '@/lib/consultas'
 import { ROTULOS_TIPO_EVENTO_CURTO } from '@/lib/rotulos'
 import { formatarData, formatarIntervalo, hoje } from '@/lib/formatos'
+import { agruparReaccoes } from '@/lib/reaccoes'
 
 export const metadata: Metadata = { title: 'Equipa' }
 
@@ -40,7 +41,8 @@ export default async function PaginaEquipa({
     .select(
       `*,
        equipa_membros(pessoa_id, pessoas(id, nome)),
-       avisos(id, texto, criado_em, pessoas(nome))`,
+       avisos(id, texto, criado_em, pessoas(nome),
+              aviso_reaccoes(emoji, pessoa_id, pessoas(nome)))`,
     )
     .eq('id', id)
     .maybeSingle()
@@ -125,10 +127,11 @@ export default async function PaginaEquipa({
 
           <Cartao>
             <CabecalhoCartao>
-              <TituloCartao>Conversa da equipa</TituloCartao>
+              <TituloCartao>Chat</TituloCartao>
               <DescricaoCartao>
                 Toda a equipa escreve, e quem está nela é avisado no telemóvel.
-                Não é tempo real: as mensagens aparecem ao abrir a página.
+                Não é tempo real: as mensagens aparecem ao abrir a página. Uma
+                reacção não avisa ninguém.
               </DescricaoCartao>
             </CabecalhoCartao>
             <ConteudoCartao>
@@ -138,10 +141,19 @@ export default async function PaginaEquipa({
                   texto: aviso.texto,
                   criado_em: aviso.criado_em,
                   autor: aviso.pessoas,
+                  reaccoes: agruparReaccoes(
+                    (aviso.aviso_reaccoes ?? []).map((reaccao) => ({
+                      emoji: reaccao.emoji,
+                      pessoa_id: reaccao.pessoa_id,
+                      nome: reaccao.pessoas?.nome ?? 'Alguém',
+                    })),
+                    sessao.id,
+                  ),
                 }))}
                 equipaId={equipa.id}
                 voltar={`/equipas/${equipa.id}`}
                 modo="conversa"
+                meuNome={sessao.nome}
                 podeEscrever={podeEditar || souMembro}
                 podeApagar={podeEditar}
               />

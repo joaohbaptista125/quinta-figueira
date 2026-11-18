@@ -75,6 +75,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261118090000_acesso_e_perfis.sql` | `ligar_ficha_a_conta_existente` + `travar_perfil_de_administrador` |
 | `…20261118100000_conversa_de_equipa.sql` | os membros escrevem na conversa + `carimbar_autor_do_aviso` |
 | `…20261118140000_dados_reservados_da_pessoa.sql` | `pessoas_reservado` — NIF, morada e notas saem de `pessoas` |
+| `…20261118160000_reaccoes_no_chat.sql` | `aviso_reaccoes` + `carimbar_autor_da_reaccao` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -518,7 +519,7 @@ comportam-se de maneira diferente.
 convocado lê — no quadro do dia e na descrição do evento no calendário do
 telemóvel. `e_instrutor_ou_gestao()`, como sempre foi.
 
-**Na equipa é uma conversa, e qualquer membro escreve.** Isto **contraria a
+**Na equipa é o Chat, e qualquer membro escreve.** Isto **contraria a
 decisão anterior** de não haver conversa nenhuma na aplicação, e foi pedido
 explicitamente. O motivo de então continua de pé e é o que molda isto: um
 sítio para escrever sem avisos fiáveis fica deserto, com as conversas a
@@ -539,6 +540,41 @@ não valia a pena abrir nada.
 - `supabase/tests/15_conversa_de_equipa.sql` prova a fronteira: um membro
   escreve na equipa dele e **só** nela, não publica avisos em eventos, não
   apaga nem corrige, e não lê a conversa de uma equipa onde não está.
+
+**Reagir com um emoji é o que impede o chat de se encher de «ok».**
+`aviso_reaccoes` (mensagem × pessoa × emoji, e é essa a chave primária). Numa
+conversa de equipa a resposta mais frequente é «li e concordo», e escrevê-la
+são cinco mensagens a empurrar a conversa para cima — e, pior, **cinco
+notificações** no telemóvel de toda a gente.
+
+- **Uma reacção não avisa ninguém**, de propósito. É a regra do «recolher» nos
+  paddocks e do aviso de mensalidade: o que não é urgente não interrompe. Um
+  polegar a gerar uma notificação era a maneira mais rápida de estes avisos
+  passarem a ser ignorados — e são eles que fazem a conversa funcionar, porque
+  não há tempo real.
+- **A reacção tira-se, ao contrário da mensagem.** «Ninguém reescreve o que já
+  foi dito» vale para o que foi dito; uma reacção é um interruptor. Daí haver
+  `delete`, e **só da própria** — nem a gestão tira a de outra pessoa, que
+  seria falar em nome dela. Uma mensagem imprópria apaga-se inteira, e as
+  reacções vão com ela pelo `on delete cascade`.
+- **A política não repete a de `avisos`.** Um `exists` sobre `avisos` dentro da
+  política corre com a identidade de quem consulta, por isso a RLS de `avisos`
+  aplica-se lá dentro: quem não lê a mensagem não vê nem dá reacções. Repetir
+  as condições era deixar duas regras a divergir.
+- **A lista de emojis é fechada** (`EMOJIS_COMUNS`, em `lib/reaccoes.ts`), ao
+  contrário das raças: um emoji que falte não impede ninguém de dizer o que
+  quer, porque a caixa de texto está logo por baixo. Seis cabem numa linha no
+  telemóvel sem selector nenhum. A lista vive fora da Server Action para o que
+  o ecrã oferece ser exactamente o que a acção aceita — a base só trava o
+  comprimento.
+- **O ecrã muda no toque, não na resposta** (`useOptimistic` sobre
+  `alternarNaLista`, que é pura e testada por ser ela que decide o que se vê
+  nesse instante). Com o arranque a frio, uma reacção que só aparecesse depois
+  da ida ao servidor eram segundos a olhar para um emoji que não reagiu.
+- **São só do chat**, e isso é escolha: a RLS deixa reagir a qualquer mensagem
+  legível, mas num aviso de evento uma fila de emojis não acrescenta nada a
+  quem lê o quadro do dia. Oferecê-las lá é passar `meuNome` também nesse ecrã.
+- `supabase/tests/16_reaccoes_no_chat.sql` prova cada um destes lados.
 
 **Para conversa geral continua a não haver nada**, e não construas sem pedido
 explícito: o raciocínio acima só se aguenta num grupo pequeno que existe para
@@ -688,6 +724,7 @@ components/
   accoes-ficha.tsx     desactivar/terminar e apagar, no topo de uma ficha
   ferracao-cavalo.tsx  quando foi ferrado, e quando volta a ser
   quadro-paddocks.tsx  os oito campos de largada, e quem está em cada um
+  reaccoes.tsx         reagir a uma mensagem do chat, com resposta imediata
   notas-cavalo.tsx     a conversa de um cavalo, na ficha dele
   notas-por-responder.tsx  as perguntas por responder, no painel da equipa
   formularios/importar-contacto.tsx  preencher a ficha a partir dos contactos
@@ -718,6 +755,7 @@ lib/
   vcard.ts        leitura de cartões de contacto .vcf (+ testes)
   filtros.ts      o endereço de um filtro, sem apagar os outros (+ testes)
   mola.ts         molas, projecção de inércia e elástico de bordo (+ testes)
+  reaccoes.ts     os emojis do chat, e o que o toque muda no ecrã (+ testes)
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
@@ -734,7 +772,7 @@ supabase/
                   07 notas, 08 subscrições, 09 pagamentos declarados,
                   10 confirmação de presença, 11 quem paga o ferrador,
                   12 paddocks, 13 aprovação de cavalos, 14 acesso e perfis,
-                  15 conversa de equipa)
+                  15 conversa de equipa, 16 reacções no chat)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor

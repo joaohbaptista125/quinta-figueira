@@ -466,6 +466,20 @@ export type EventoParticipante = Carimbos & {
   periodo: string | null
 }
 
+/**
+ * Uma reacção com emoji a uma mensagem do chat.
+ *
+ * Não tem `id`: a chave é o trio (mensagem, pessoa, emoji), e é isso que faz
+ * com que a mesma pessoa não possa reagir duas vezes com o mesmo emoji — o
+ * que torna o botão um interruptor em vez de um contador.
+ */
+export type AvisoReaccao = {
+  aviso_id: string
+  pessoa_id: string
+  emoji: string
+  criado_em: string
+}
+
 export type Aviso = Carimbos & {
   id: string
   evento_id: string | null
@@ -770,6 +784,13 @@ export type BaseDados = {
           Relacao<'equipa_id', 'equipas'>,
           Relacao<'autor_id', 'pessoas'>,
         ]
+      >
+      aviso_reaccoes: Tabela<
+        AvisoReaccao,
+        // `pessoa_id` é opcional de propósito: quem reagiu é carimbado pela
+        // trigger `carimbar_autor_da_reaccao`, como o autor do aviso.
+        { aviso_id: string; emoji: string; pessoa_id?: string },
+        [Relacao<'aviso_id', 'avisos'>, Relacao<'pessoa_id', 'pessoas'>]
       >
       calendarios: Tabela<
         Calendario,

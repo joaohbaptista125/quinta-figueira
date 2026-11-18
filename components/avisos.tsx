@@ -9,12 +9,16 @@ import { Botao } from '@/components/ui/botao'
 import { AreaTexto } from '@/components/ui/campos'
 import { Aviso as Caixa } from '@/components/ui/superficie'
 import { formatarDataHora } from '@/lib/formatos'
+import { Reaccoes } from '@/components/reaccoes'
+import type { ReaccaoAgrupada } from '@/lib/reaccoes'
 
 export type AvisoPublicado = {
   id: string
   texto: string
   criado_em: string
   autor: { nome: string } | null
+  /** Só no chat — ver `Avisos`. */
+  reaccoes?: ReaccaoAgrupada[]
 }
 
 function Publicar({ conversa }: { conversa: boolean }) {
@@ -48,6 +52,11 @@ function Publicar({ conversa }: { conversa: boolean }) {
  * mensagens aparecem quando a página é carregada. O que as faz chegar a tempo
  * é a notificação que `guardarAviso` manda aos membros — sem ela isto ficava
  * deserto, que foi o motivo de durante muito tempo não existir de todo.
+ *
+ * **As reacções são só do chat**, e isso é uma escolha e não um esquecimento:
+ * a RLS deixa reagir a qualquer mensagem que se possa ler, mas num aviso de
+ * evento uma fila de emojis por baixo não acrescenta nada a quem vai ler o
+ * quadro do dia. Passar a oferecê-las lá é dar `meuNome` também nesse ecrã.
  */
 export function Avisos({
   avisos,
@@ -57,6 +66,7 @@ export function Avisos({
   podeEscrever,
   podeApagar,
   modo = 'avisos',
+  meuNome,
 }: {
   avisos: AvisoPublicado[]
   eventoId?: string
@@ -66,8 +76,11 @@ export function Avisos({
   /** Quem apaga não é quem escreve — ver em cima. Omitido, segue `podeEscrever`. */
   podeApagar?: boolean
   modo?: 'avisos' | 'conversa'
+  /** Dado, as mensagens ganham reacções. É o nome de quem está a ver. */
+  meuNome?: string
 }) {
   const conversa = modo === 'conversa'
+  const reage = conversa && Boolean(meuNome)
   const apaga = podeApagar ?? podeEscrever
   const { resultado, executar, formulario } = useFormularioDeAccao(guardarAviso)
 
@@ -88,6 +101,15 @@ export function Avisos({
                 </span>
                 {apaga ? <Apagar id={aviso.id} voltar={voltar} /> : null}
               </p>
+              {reage ? (
+                <Reaccoes
+                  avisoId={aviso.id}
+                  reaccoes={aviso.reaccoes ?? []}
+                  meuNome={meuNome as string}
+                  caminho={voltar}
+                  podeReagir
+                />
+              ) : null}
             </li>
           ))}
         </ul>

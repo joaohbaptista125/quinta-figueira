@@ -11,6 +11,7 @@ import {
 import { deslocarDias, formatarDiaCurto, formatarHora } from '@/lib/formatos'
 import { avisar, pessoasDaGestao } from '@/lib/notificacoes/enviar'
 import { exigirPessoa, obterPessoaSessao } from '@/lib/sessao'
+import { eEmojiConhecido } from '@/lib/reaccoes'
 import type { EstadoParticipacao, TipoEvento } from '@/lib/tipos-bd'
 import {
   apagar,
@@ -715,6 +716,60 @@ export async function apagarAviso(
     id,
     revalidar: [...CAMINHOS, textoOuNulo(dados, 'voltar') ?? '/agenda'],
   })
+}
+
+/**
+ * Reagir a uma mensagem do chat, ou tirar a reacção.
+ *
+ * **É um interruptor e não dois botões**, porque é assim que se lê no ecrã:
+ * carregar no mesmo emoji outra vez desfaz. A chave primária da tabela é o
+ * trio (mensagem, pessoa, emoji), por isso o estado é inequívoco — ou lá está,
+ * ou não está.
+ *
+ * Tira-se primeiro e só se insere se não havia nada para tirar: é uma ida à
+ * base no caso comum (desfazer) e duas no outro, contra duas sempre se
+ * fôssemos perguntar antes.
+ *
+ * **Não avisa ninguém, de propósito** — ver a migração. E não recebe o nome de
+ * quem reagiu: isso é carimbado pela trigger.
+ */
+export async function alternarReaccao(
+  avisoId: string,
+  emoji: string,
+  caminho: string,
+): Promise<ResultadoAccao> {
+  const sessao = await exigirPessoa()
+
+  if (!avisoId || !eEmojiConhecido(emoji)) {
+    return { ok: false, mensagem: 'Reacção inválida.' }
+  }
+
+  const supabase = await criarClienteServidor()
+
+  const { data: retiradas, error: erroRetirar } = await supabase
+    .from('aviso_reaccoes')
+    .delete()
+    .eq('aviso_id', avisoId)
+    .eq('emoji', emoji)
+    .eq('pessoa_id', sessao.id)
+    .select('emoji')
+
+  if (erroRetirar) return { ok: false, mensagem: traduzirErro(erroRetirar) }
+
+  if ((retiradas ?? []).length === 0) {
+    const { error } = await supabase
+      .from('aviso_reaccoes')
+      .insert({ aviso_id: avisoId, emoji })
+
+    // 23505 é a mesma pessoa a reagir duas vezes ao mesmo tempo — em dois
+    // separadores, ou com dois toques seguidos. O que se queria já lá está.
+    if (error && error.code !== '23505') {
+      return { ok: false, mensagem: traduzirErro(error) }
+    }
+  }
+
+  revalidatePath(caminho)
+  return { ok: true }
 }
 
 // --- Equipas ----------------------------------------------------------------
