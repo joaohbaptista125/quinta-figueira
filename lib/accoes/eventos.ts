@@ -788,7 +788,6 @@ export async function guardarEquipa(
     valores: {
       nome,
       escalao: textoOuNulo(dados, 'escalao'),
-      notas: textoOuNulo(dados, 'notas'),
       activa: booleano(dados, 'activa'),
     },
     revalidar: ['/equipas'],

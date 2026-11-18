@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect, useRef } from 'react'
 import { useFormularioDeAccao } from '@/components/usar-formulario'
 import { useFormStatus } from 'react-dom'
 import { apagarAviso, guardarAviso } from '@/lib/accoes/eventos'
@@ -9,6 +9,7 @@ import { Botao } from '@/components/ui/botao'
 import { AreaTexto } from '@/components/ui/campos'
 import { Aviso as Caixa } from '@/components/ui/superficie'
 import { formatarDataHora } from '@/lib/formatos'
+import { cn } from '@/lib/utils'
 import { Reaccoes } from '@/components/reaccoes'
 import type { ReaccaoAgrupada } from '@/lib/reaccoes'
 
@@ -83,11 +84,44 @@ export function Avisos({
   const reage = conversa && Boolean(meuNome)
   const apaga = podeApagar ?? podeEscrever
   const { resultado, executar, formulario } = useFormularioDeAccao(guardarAviso)
+  const lista = useRef<HTMLUListElement>(null)
+
+  /*
+   * **A conversa abre no fim, e a lista tem um tecto.**
+   *
+   * Uma conversa cresce para sempre, e sem tecto empurrava o campo de
+   * escrever e os próximos treinos para fora do ecrã — ao fim de cinquenta
+   * mensagens a página era uma tira interminável e o que interessa, que é o
+   * fim, ficava mais longe a cada dia. Com tecto, a lista desliza dentro do
+   * cartão e o resto da página fica onde está.
+   *
+   * O salto para o fim é directo (`scrollTop`), e não `smooth`: a abertura de
+   * uma página não é sítio para uma animação, e quem tem «menos movimento»
+   * ligado não a quer de todo. Depende do **número** de mensagens, por isso
+   * corre ao abrir e depois de enviar — e não a cada repintura, que roubaria
+   * o deslize a quem está a ler para trás.
+   *
+   * `overscroll-contain` evita que chegar ao fim da lista continue a arrastar
+   * a página por baixo, que no telemóvel é o que faz perder o sítio.
+   */
+  const quantas = avisos.length
+  useEffect(() => {
+    if (!conversa) return
+    const elemento = lista.current
+    if (elemento) elemento.scrollTop = elemento.scrollHeight
+  }, [conversa, quantas])
 
   return (
     <div className="space-y-3">
       {avisos.length > 0 ? (
-        <ul className="space-y-2">
+        <ul
+          ref={lista}
+          className={cn(
+            'space-y-2',
+            conversa &&
+              'max-h-80 overflow-y-auto overscroll-contain pr-1 sm:max-h-[28rem]',
+          )}
+        >
           {avisos.map((aviso) => (
             <li
               key={aviso.id}

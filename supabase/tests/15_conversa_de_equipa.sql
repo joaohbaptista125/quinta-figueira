@@ -130,3 +130,99 @@ end $$;
 reset role;
 
 \echo '== Testes da conversa de equipa: todos passaram'
+
+-- =============================================================================
+-- Os nomes: quem está na equipa vê quem lá está com ele
+-- =============================================================================
+-- `pessoas_ler` é `e_equipa() or id = pessoa_actual_id()`, e um jogador de
+-- Horseball é um `cliente`. Sem `nomes_da_equipa()`, do lado dele a lista de
+-- jogadores vinha em branco e as mensagens dos outros sem autor — o chat
+-- estava partido exactamente para quem o ia usar, e isso não se via a testar
+-- como gestão. Isto segura os dois lados: vê os nomes de quem tem que ver com
+-- a equipa dele, e **mais nenhum**.
+
+\echo '== Preparar: a Maria escreve na Sub-16 e o Rui reage, sem serem membros'
+-- **Sem isto o autor sai errado**, e foi o teste que o apanhou: a sessão
+-- anterior deixa `request.jwt.claim.sub` posto, e as triggers de carimbo só
+-- se eximem quando `pessoa_actual_id()` é nulo. Com o claim de outra pessoa
+-- ainda activo, a mensagem nascia com o autor dela.
+reset request.jwt.claim.sub;
+set role postgres;
+do $$
+declare v_aviso uuid;
+begin
+  insert into public.avisos (equipa_id, texto, autor_id)
+  values ('66666666-0000-4000-8000-000000000001',
+          'Jogo no sábado às 10h.',
+          '22222222-0000-4000-8000-000000000001')
+  returning id into v_aviso;
+
+  insert into public.aviso_reaccoes (aviso_id, pessoa_id, emoji)
+  values (v_aviso, '22222222-0000-4000-8000-000000000002', '👍');
+end $$;
+reset role;
+
+\echo '== O jogador não lê fichas, mas vê os nomes da equipa dele'
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000d';
+set role authenticated;
+do $$
+declare v_nomes text[];
+begin
+  perform pg_temp.afirmar(
+    (select count(*) from public.pessoas) = 1,
+    'o jogador continua a só poder ler a própria ficha — a RLS não foi aberta');
+
+  select array_agg(nome order by nome)
+    into v_nomes
+    from public.nomes_da_equipa('66666666-0000-4000-8000-000000000001');
+
+  perform pg_temp.afirmar(
+    v_nomes @> array['Tiago Lourenço'],
+    'vê-se a si próprio, que é membro');
+
+  perform pg_temp.afirmar(
+    v_nomes @> array['Maria Figueira'],
+    'vê quem escreveu no chat, mesmo não sendo membro da equipa');
+
+  perform pg_temp.afirmar(
+    v_nomes @> array['Rui Antunes'],
+    'e vê quem reagiu a uma mensagem — senão a reacção dizia «Alguém»');
+
+  perform pg_temp.afirmar(
+    not (v_nomes @> array['Sónia Pais']),
+    'mas não vê quem não tem nada que ver com esta equipa');
+end $$;
+reset role;
+
+\echo '== E a equipa dos outros continua fechada'
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000c';
+set role authenticated;
+do $$
+begin
+  -- A Sónia é da Sénior. A Sub-16 não é com ela.
+  perform pg_temp.afirmar(
+    (select count(*)
+       from public.nomes_da_equipa(
+              '66666666-0000-4000-8000-000000000001')) = 0,
+    'de fora da equipa a função não devolve nome nenhum');
+
+  perform pg_temp.afirmar(
+    (select count(*)
+       from public.nomes_da_equipa(
+              '66666666-0000-4000-8000-000000000002')) >= 1,
+    'e na dela devolve');
+end $$;
+reset role;
+
+\echo '== As notas da equipa saíram, e o Chat ficou no lugar delas'
+do $$
+begin
+  perform pg_temp.afirmar(
+    not exists (
+      select 1 from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'equipas'
+         and column_name = 'notas'
+    ),
+    'equipas.notas já não existe');
+end $$;

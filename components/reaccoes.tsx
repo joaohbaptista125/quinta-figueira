@@ -63,7 +63,8 @@ export function Reaccoes({
   if (!podeReagir && optimistas.length === 0) return null
 
   return (
-    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+    <div className="mt-1.5 space-y-1">
+      <div className="flex flex-wrap items-center gap-1">
       {optimistas.map((reaccao) => (
         <button
           key={reaccao.emoji}
@@ -85,8 +86,8 @@ export function Reaccoes({
           <span aria-hidden>{reaccao.emoji}</span>
           <span className="tabular-nums">{reaccao.nomes.length}</span>
           <span className="sr-only">
-            {reaccao.nomes.length === 1 ? 'pessoa' : 'pessoas'} reagiram com
-            este emoji
+            {reaccao.nomes.length === 1 ? 'pessoa reagiu' : 'pessoas reagiram'}{' '}
+            com este emoji
             {reaccao.minha ? ', eu incluído' : ''}
           </span>
         </button>
@@ -132,6 +133,30 @@ export function Reaccoes({
               ))
             : null}
         </>
+      ) : null}
+      </div>
+
+      {/*
+        * **Os nomes de quem reagiu ficam à vista, e não só no `title`.**
+        * O `title` é uma dica de rato, e esta aplicação usa-se de telemóvel
+        * dentro da cavalariça — num ecrã de toque não há lá maneira nenhuma
+        * de a ler. E tocar na pastilha não serve para ver: tocar **dá e tira**
+        * a reacção, por isso quem fosse ver quem reagiu acabava a reagir
+        * também.
+        *
+        * Fica tudo, sem cortes: numa equipa de uma dúzia de pessoas a lista é
+        * curta, e «e mais 3» obrigava a um segundo toque para responder à
+        * única pergunta que a linha existe para responder.
+        */}
+      {optimistas.length > 0 ? (
+        <p className="text-xs leading-snug text-muted-foreground">
+          {optimistas.map((reaccao, indice) => (
+            <span key={reaccao.emoji}>
+              {indice > 0 ? ' · ' : ''}
+              {reaccao.emoji} {reaccao.nomes.join(', ')}
+            </span>
+          ))}
+        </p>
       ) : null}
     </div>
   )

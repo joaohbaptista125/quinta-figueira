@@ -412,7 +412,6 @@ export type Equipa = Carimbos & {
   id: string
   nome: string
   escalao: string | null
-  notas: string | null
   activa: boolean
 }
 
@@ -854,6 +853,10 @@ export type BaseDados = {
       sou_membro_da_equipa: { Args: { p_equipa: string }; Returns: boolean }
       obter_token_calendario: { Args: { p_renovar?: boolean }; Returns: string }
       agenda_por_token: { Args: { p_token: string }; Returns: LinhaAgenda[] }
+      nomes_da_equipa: {
+        Args: { p_equipa: string }
+        Returns: { id: string; nome: string }[]
+      }
       confirmar_pagamento_declarado: {
         Args: {
           p_declaracao: string

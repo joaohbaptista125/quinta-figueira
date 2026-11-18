@@ -1,4 +1,4 @@
-import { AreaTexto, Caixa, Campo, Entrada, Etiqueta } from '@/components/ui/campos'
+import { Caixa, Campo, Entrada } from '@/components/ui/campos'
 import { GrelhaCampos } from '@/components/formulario-entidade'
 import type { Equipa } from '@/lib/tipos-bd'
 
@@ -63,11 +63,6 @@ export function CamposEquipa({
           ))}
         </div>
       </fieldset>
-
-      <div className="space-y-1.5">
-        <Etiqueta htmlFor="notas">Notas</Etiqueta>
-        <AreaTexto id="notas" name="notas" defaultValue={equipa?.notas ?? ''} />
-      </div>
     </>
   )
 }

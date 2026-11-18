@@ -44,6 +44,7 @@ export default async function PaginaEvento({
        evento_participantes(id, estado, pessoa_id, confirmacao, confirmado_em, motivo_ausencia, pessoas(id, nome), cavalos(id, nome)),
        avisos(id, texto, criado_em, pessoas!avisos_autor_id_fkey(nome))`,
     )
+    .order('criado_em', { referencedTable: 'avisos', ascending: true })
     .eq('id', id)
     .maybeSingle()
 

@@ -77,6 +77,8 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261118140000_dados_reservados_da_pessoa.sql` | `pessoas_reservado` — NIF, morada e notas saem de `pessoas` |
 | `…20261118160000_reaccoes_no_chat.sql` | `aviso_reaccoes` + `carimbar_autor_da_reaccao` |
 | `…20261118170000_tratador_so_consulta.sql` | paddocks e ferrações passam a `e_instrutor_ou_gestao()` |
+| `…20261118180000_equipas_sem_notas.sql` | `drop column equipas.notas` — o Chat ocupou o lugar |
+| `…20261118190000_nomes_na_equipa.sql` | `nomes_da_equipa()` — o jogador vê os nomes dos colegas |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -545,6 +547,47 @@ não valia a pena abrir nada.
   escreve na equipa dele e **só** nela, não publica avisos em eventos, não
   apaga nem corrige, e não lê a conversa de uma equipa onde não está.
 
+**O jogador não lê fichas, mas tem de ver os nomes dos colegas — e isto
+esteve partido sem se ver.** `pessoas_ler` é `e_equipa() or id =
+pessoa_actual_id()`, e um jogador de Horseball é um `cliente`. Do lado dele a
+lista de jogadores vinha **em branco**, as mensagens dos outros apareciam como
+«Quinta da Figueira» e os nomes de quem reagiu seriam «Alguém». A testar como
+gestão não se nota nada, porque `e_equipa()` dá tudo.
+
+**Abrir `pessoas` à equipa não servia**: dava ao cliente a ficha inteira dos
+colegas — email, telefone, perfil — e a RLS decide linhas, não colunas. É a
+armadilha de sempre, a mesma que levou o NIF e a morada para
+`pessoas_reservado`.
+
+`nomes_da_equipa(uuid)` é SECURITY DEFINER e devolve **só id e nome**, como
+`agenda_por_token()` faz para a agenda. Devolve as três categorias que
+aparecem no ecrã de uma equipa — membros, quem escreveu no chat (um instrutor
+escreve sem ser membro) e quem reagiu — e **só a quem é da equipa ou da
+gestão**; sem essa guarda, SECURITY DEFINER era um buraco. A ficha da equipa
+não embebe `pessoas` em lado nenhum: os nomes saem todos daqui.
+
+**A mesma armadilha existe na ficha do evento** (`evento_participantes(…,
+pessoas(nome))`): um cliente convocado não vê os nomes dos outros convocados.
+Fica por resolver, e resolve-se da mesma maneira.
+
+**As notas da equipa saíram, e isso apagou dados de propósito.** `equipas.notas`
+era uma caixa de texto única no formulário, que se reescrevia por cima e não
+dizia quem tinha escrito nem quando. O Chat faz o mesmo melhor. Como no
+`drop table boxes`, fica registado que foi decisão e não descuido. Não
+confundir com `notas_cavalo`, que fica.
+
+**A conversa tem tecto e abre no fim.** Sem tecto, cinquenta mensagens
+empurravam o campo de escrever e os próximos treinos para fora do ecrã. A
+lista é `max-h-80 … sm:max-h-[28rem] overflow-y-auto overscroll-contain`, e um
+`useEffect` põe o `scrollTop` no fim — **directo, não `smooth`**: a abertura de
+uma página não é sítio para animação. Depende do **número** de mensagens, para
+correr ao abrir e depois de enviar, e não a cada repintura — senão roubava o
+deslize a quem está a ler para trás.
+
+**A ordem das mensagens é pedida ao Postgres.** Sem `order`, o PostgREST
+devolve as linhas embebidas pela ordem que lhe convier, e numa conversa a
+ordem *é* o conteúdo. Vale para a equipa e para o evento.
+
 **Reagir com um emoji é o que impede o chat de se encher de «ok».**
 `aviso_reaccoes` (mensagem × pessoa × emoji, e é essa a chave primária). Numa
 conversa de equipa a resposta mais frequente é «li e concordo», e escrevê-la
@@ -575,6 +618,13 @@ notificações** no telemóvel de toda a gente.
   `alternarNaLista`, que é pura e testada por ser ela que decide o que se vê
   nesse instante). Com o arranque a frio, uma reacção que só aparecesse depois
   da ida ao servidor eram segundos a olhar para um emoji que não reagiu.
+- **Os nomes de quem reagiu ficam à vista, e não só no `title`.** O `title` é
+  uma dica de rato, e isto usa-se de telemóvel dentro da cavalariça — num ecrã
+  de toque não há maneira de a ler. E **tocar na pastilha não serve para ver**:
+  tocar dá e tira a reacção, por isso quem fosse ver quem reagiu acabava a
+  reagir também. A linha por baixo mostra tudo, sem cortes: numa equipa de uma
+  dúzia de pessoas é curta, e um «e mais 3» obrigava a um segundo toque para
+  responder à única pergunta que a linha existe para responder.
 - **São só do chat**, e isso é escolha: a RLS deixa reagir a qualquer mensagem
   legível, mas num aviso de evento uma fila de emojis não acrescenta nada a
   quem lê o quadro do dia. Oferecê-las lá é passar `meuNome` também nesse ecrã.

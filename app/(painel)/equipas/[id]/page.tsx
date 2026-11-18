@@ -39,10 +39,24 @@ export default async function PaginaEquipa({
   const { data: equipa, error } = await supabase
     .from('equipas')
     .select(
+      /*
+       * **Nenhum `pessoas(...)` embebido aqui, e é de propósito.** A RLS de
+       * `pessoas` só deixa a equipa do centro ler fichas; um jogador é um
+       * `cliente`, e para ele estes embeds vinham todos vazios — lista de
+       * jogadores em branco e mensagens sem autor. Os nomes vêm de
+       * `nomes_da_equipa()`, que devolve só id e nome.
+       *
+       * De passagem isto também tira daqui o embed ambíguo entre `avisos` e
+       * `pessoas` que partiu esta página.
+       */
       `*,
-       equipa_membros(pessoa_id, pessoas(id, nome)),
-       avisos(id, texto, criado_em, pessoas!avisos_autor_id_fkey(nome))`,
+       equipa_membros(pessoa_id),
+       avisos(id, texto, criado_em, autor_id)`,
     )
+    // **A ordem das mensagens tem de ser pedida.** Sem isto o PostgREST
+    // devolve as linhas embebidas pela ordem que lhe convier — numa conversa,
+    // a ordem *é* o conteúdo. Mais antiga em cima, como se lê.
+    .order('criado_em', { referencedTable: 'avisos', ascending: true })
     .eq('id', id)
     .maybeSingle()
 
@@ -52,6 +66,12 @@ export default async function PaginaEquipa({
   const podeEditar = eInstrutorOuGestao(sessao.perfil)
 
   const mensagens = equipa.avisos ?? []
+
+  const idsDosMembros = (equipa.equipa_membros ?? []).map((m) => m.pessoa_id)
+
+  // Na conversa da equipa escreve quem lá está dentro — ver a migração
+  // `…_conversa_de_equipa.sql`. Apagar continua a ser de quem planeia.
+  const souMembro = idsDosMembros.includes(sessao.id)
 
   /*
    * **As reacções vêm numa consulta à parte, e isso é de propósito.**
@@ -66,7 +86,7 @@ export default async function PaginaEquipa({
    * regra de `avisar()`, que nunca trava o que o originou. Sem reacções a
    * conversa continua a ler-se e a escrever-se, que é o que lá importa.
    */
-  const [pessoas, proximos, reaccoes] = await Promise.all([
+  const [pessoas, proximos, reaccoes, nomes] = await Promise.all([
     podeEditar ? pessoasActivas(supabase) : Promise.resolve([]),
     supabase
       .from('eventos')
@@ -78,21 +98,23 @@ export default async function PaginaEquipa({
     mensagens.length > 0
       ? supabase
           .from('aviso_reaccoes')
-          .select('aviso_id, emoji, pessoa_id, pessoas(nome)')
+          .select('aviso_id, emoji, pessoa_id')
           .in(
             'aviso_id',
             mensagens.map((mensagem) => mensagem.id),
           )
       : Promise.resolve({ data: [], error: null }),
+    supabase.rpc('nomes_da_equipa', { p_equipa: id }),
   ])
 
-  const membros = (equipa.equipa_membros ?? []).map((m) => m.pessoas)
-
-  // Na conversa da equipa escreve quem lá está dentro — ver a migração
-  // `…_conversa_de_equipa.sql`. Apagar continua a ser de quem planeia.
-  const souMembro = (equipa.equipa_membros ?? []).some(
-    (m) => m.pessoa_id === sessao.id,
+  const nomeDe = new Map(
+    (nomes.data ?? []).map((pessoa) => [pessoa.id, pessoa.nome]),
   )
+  const membros = idsDosMembros.map((pessoaId) => ({
+    id: pessoaId,
+    nome: nomeDe.get(pessoaId) ?? 'Sem nome',
+  }))
+
 
   return (
     <>
@@ -128,7 +150,7 @@ export default async function PaginaEquipa({
                   <CamposEquipa
                     equipa={equipa}
                     pessoas={pessoas}
-                    membros={membros.map((m) => m?.id ?? '')}
+                    membros={idsDosMembros}
                   />
                 </FormularioEntidade>
               </ConteudoCartao>
@@ -141,7 +163,7 @@ export default async function PaginaEquipa({
               <ConteudoCartao>
                 <ul className="space-y-1 text-sm">
                   {membros.map((membro) => (
-                    <li key={membro?.id}>{membro?.nome}</li>
+                    <li key={membro.id}>{membro.nome}</li>
                   ))}
                 </ul>
               </ConteudoCartao>
@@ -163,14 +185,16 @@ export default async function PaginaEquipa({
                   id: aviso.id,
                   texto: aviso.texto,
                   criado_em: aviso.criado_em,
-                  autor: aviso.pessoas,
+                  autor: aviso.autor_id
+                    ? { nome: nomeDe.get(aviso.autor_id) ?? 'Alguém' }
+                    : null,
                   reaccoes: agruparReaccoes(
                     (reaccoes.data ?? [])
                       .filter((reaccao) => reaccao.aviso_id === aviso.id)
                       .map((reaccao) => ({
                         emoji: reaccao.emoji,
                         pessoa_id: reaccao.pessoa_id,
-                        nome: reaccao.pessoas?.nome ?? 'Alguém',
+                        nome: nomeDe.get(reaccao.pessoa_id) ?? 'Alguém',
                       })),
                     sessao.id,
                   ),
