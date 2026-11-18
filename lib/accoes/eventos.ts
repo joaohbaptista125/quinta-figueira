@@ -10,7 +10,7 @@ import {
 } from '@/lib/rotulos'
 import { deslocarDias, formatarDiaCurto, formatarHora } from '@/lib/formatos'
 import { avisar, pessoasDaGestao } from '@/lib/notificacoes/enviar'
-import { exigirPessoa } from '@/lib/sessao'
+import { exigirPessoa, obterPessoaSessao } from '@/lib/sessao'
 import type { EstadoParticipacao, TipoEvento } from '@/lib/tipos-bd'
 import {
   apagar,
@@ -645,17 +645,14 @@ export async function guardarAviso(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  const { data: autor } = await supabase
-    .from('pessoas')
-    .select('id')
-    .eq('auth_user_id', user?.id ?? '')
-    .maybeSingle()
 
+  // `autor_id` **não** vai daqui: é carimbado pela trigger
+  // `carimbar_autor_do_aviso`. Desde que os membros da equipa escrevem, a
+  // aplicação dizer quem escreveu era deixá-la escrever em nome de outro.
   const { error } = await supabase.from('avisos').insert({
     evento_id: eventoId,
     equipa_id: equipaId,
     texto: conteudo,
-    autor_id: autor?.id ?? null,
     criado_por: user?.id ?? null,
   })
 
@@ -663,7 +660,48 @@ export async function guardarAviso(
 
   revalidatePath(eventoId ? `/agenda/${eventoId}` : `/equipas/${equipaId}`)
   revalidatePath('/agenda')
-  return { ok: true, mensagem: 'Aviso publicado.' }
+
+  if (equipaId) await avisarAEquipa(equipaId, conteudo)
+
+  return {
+    ok: true,
+    mensagem: equipaId ? 'Mensagem enviada.' : 'Aviso publicado.',
+  }
+}
+
+/**
+ * O aviso no telemóvel de quem está na equipa.
+ *
+ * **É isto que faz a conversa existir.** Durante muito tempo não houve sítio
+ * nenhum para conversar nesta aplicação, e a razão era esta: sem avisos
+ * fiáveis, um sítio para escrever fica deserto e as conversas voltam para o
+ * WhatsApp. Abrir a escrita sem isto não valia a pena.
+ *
+ * **Quem escreveu não é avisado de si próprio**, e o `agrupar` leva a equipa:
+ * cinco mensagens seguidas substituem-se no telemóvel em vez de empilharem
+ * cinco notificações — que é a maneira mais rápida de alguém as desligar.
+ */
+async function avisarAEquipa(equipaId: string, texto: string) {
+  const supabase = await criarClienteServidor()
+  const sessao = await obterPessoaSessao()
+
+  const [equipa, membros] = await Promise.all([
+    supabase.from('equipas').select('nome').eq('id', equipaId).maybeSingle(),
+    supabase.from('equipa_membros').select('pessoa_id').eq('equipa_id', equipaId),
+  ])
+
+  const destinos = (membros.data ?? [])
+    .map((linha) => linha.pessoa_id)
+    .filter((id) => id !== sessao?.id)
+
+  if (destinos.length === 0) return
+
+  await avisar(destinos, {
+    titulo: equipa.data?.nome ?? 'Equipa',
+    texto: `${sessao?.nome ?? 'Alguém'}: ${texto}`,
+    caminho: `/equipas/${equipaId}`,
+    agrupar: `equipa-${equipaId}`,
+  })
 }
 
 export async function apagarAviso(

@@ -53,8 +53,30 @@ export function traduzirErro(erro: {
   if (codigo === '23503')
     return 'Não é possível: o registo está a ser usado noutro sítio.'
 
-  if (codigo === '42501' || codigo === 'PGRST301')
+  if (codigo === '42501' || codigo === 'PGRST301') {
+    /*
+     * As nossas próprias recusas chegam aqui, e não podem ser engolidas.
+     *
+     * O 42501 vem de dois sítios muito diferentes: do Postgres, quando a RLS
+     * ou as permissões de tabela barram alguma coisa — e aí a mensagem crua
+     * é inglês técnico que não diz nada a ninguém —, e das nossas triggers e
+     * funções, que o usam **de propósito** para explicar o motivo em
+     * português: «este é o único administrador activo do centro», «só a
+     * gestão confirma pagamentos declarados». Trocar essas por uma frase
+     * genérica era deitar fora a única coisa útil que a base tinha para
+     * dizer.
+     *
+     * O que as separa é a origem: as do Postgres são conhecidas e começam
+     * sempre pelas mesmas palavras.
+     */
+    const doPostgres =
+      /^(permission denied|new row violates row-level security|must be owner)/i
+
+    const cru = (erro.message ?? '').trim()
+    if (cru && !doPostgres.test(cru)) return cru
+
     return 'Não tem permissão para esta operação.'
+  }
 
   /*
    * Coluna ou tabela que o código conhece e a base ainda não.

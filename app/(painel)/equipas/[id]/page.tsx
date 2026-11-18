@@ -63,6 +63,12 @@ export default async function PaginaEquipa({
 
   const membros = (equipa.equipa_membros ?? []).map((m) => m.pessoas)
 
+  // Na conversa da equipa escreve quem lá está dentro — ver a migração
+  // `…_conversa_de_equipa.sql`. Apagar continua a ser de quem planeia.
+  const souMembro = (equipa.equipa_membros ?? []).some(
+    (m) => m.pessoa_id === sessao.id,
+  )
+
   return (
     <>
       <CabecalhoPagina
@@ -119,9 +125,10 @@ export default async function PaginaEquipa({
 
           <Cartao>
             <CabecalhoCartao>
-              <TituloCartao>Avisos da equipa</TituloCartao>
+              <TituloCartao>Conversa da equipa</TituloCartao>
               <DescricaoCartao>
-                Para o que vale para todos os treinos, não só para um.
+                Toda a equipa escreve, e quem está nela é avisado no telemóvel.
+                Não é tempo real: as mensagens aparecem ao abrir a página.
               </DescricaoCartao>
             </CabecalhoCartao>
             <ConteudoCartao>
@@ -134,7 +141,9 @@ export default async function PaginaEquipa({
                 }))}
                 equipaId={equipa.id}
                 voltar={`/equipas/${equipa.id}`}
-                podeEscrever={podeEditar}
+                modo="conversa"
+                podeEscrever={podeEditar || souMembro}
+                podeApagar={podeEditar}
               />
             </ConteudoCartao>
           </Cartao>

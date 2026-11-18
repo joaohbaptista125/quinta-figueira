@@ -72,6 +72,8 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261115110000_quem_paga_o_ferrador.sql` | `cavalos.ferrador_pago_por` + `ferracoes.pago_em` |
 | `…20261116090000_paddocks.sql` | `paddocks`, `paddock_ocupacao`, e `drop table boxes` |
 | `…20261116120000_cavalo_em_aprovacao.sql` | `cavalos.aprovado_em` + `carimbar_cavalo_proposto` + RLS da proposta |
+| `…20261118090000_acesso_e_perfis.sql` | `ligar_ficha_a_conta_existente` + `travar_perfil_de_administrador` |
+| `…20261118100000_conversa_de_equipa.sql` | os membros escrevem na conversa + `carimbar_autor_do_aviso` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -210,6 +212,54 @@ escreve a ficha e ela fica **por aprovar** até a gestão lhe tocar.
 - O que substitui a notificação é `<CavalosPorAprovar>` no painel; o aviso a
   `pessoasDaGestao()` é só o atalho.
 - `supabase/tests/13_cavalo_em_aprovacao.sql` prova cada um destes lados.
+
+**A ficha e a conta ligam-se nos dois sentidos, e durante muito tempo só num.**
+`ligar_pessoa_ao_criar_utilizador` corre em `auth.users`, por isso só liga a
+ficha **no instante em que a conta nasce**. Isso cobre o caminho previsto —
+ficha, convite, link — e falha em todos os outros: quem criou conta antes de
+alguém lhe escrever a ficha, e quem teve a ficha escrita com o email trocado.
+Nesses casos a ficha ficava para sempre com `auth_user_id` a null e a pessoa
+via «a sua conta está criada mas ainda não está associada a nenhuma ficha»,
+mesmo com ficha de gestor à frente dela — e não havia saída sem ir ao painel
+do Supabase. `ligar_ficha_a_conta_existente` é a trigger simétrica, em
+`pessoas`. **Se mexeres numa, mexe na outra.**
+
+- `lower(btrim(...))` dos dois lados: em `pessoas` a restrição do email já
+  recusa espaços à volta, mas `auth.users` é do Supabase e não dá essa
+  garantia.
+- **Uma conta já presa a outra ficha não se rouba** (`auth_user_id` é único):
+  sem essa condição a gravação rebentava com 23505 em vez de simplesmente não
+  ligar. O caso real é a ficha A apanhar a conta, mudarem-lhe o email, e uma
+  ficha B nascer com o endereço antigo.
+- A migração traz o `update` que liga as que já tinham ficado penduradas.
+
+**O perfil de administrador é só do administrador, e isto era um buraco.**
+`pessoas_gerir` é `e_gestao()` e vale `for all`: um **gestor podia escrever
+qualquer coluna de qualquer ficha**, `perfil` incluído. Punha-se a si próprio
+a `admin`, ou punha o admin a `cliente`. O segundo é o que faz mais estrago e
+não é óbvio: `reclamar_primeiro_admin()` só se recusa **enquanto houver um
+admin activo**, por isso tirar o último não deixa o centro sem dono — deixa-o
+à mercê do primeiro utilizador autenticado que a chamar.
+
+A RLS decide linhas e o que era preciso travar era uma coluna, por isso quem o
+faz é `travar_perfil_de_administrador`, como nas outras.
+
+- Dar ou tirar `admin` (em INSERT ou UPDATE) exige `e_admin()`.
+- **O último administrador activo não se tira** — nem mudando-lhe o perfil,
+  nem desactivando-o, nem apagando a ficha, e nem pelo próprio.
+- **Um gestor continua a tratar dos outros perfis** (cliente, instrutor,
+  tratador). Só o de administrador é que lhe sai das mãos.
+- Sem nenhum admin activo a trigger deixa passar: aí quem manda é
+  `reclamar_primeiro_admin()`, que tem as suas próprias guardas.
+- `supabase/tests/14_acesso_e_perfis.sql` prova os dois lados.
+
+**As nossas recusas têm de chegar ao ecrã.** O 42501 vem de dois sítios: do
+Postgres, quando a RLS barra (inglês técnico que não diz nada a ninguém), e
+das nossas triggers e funções, que o usam de propósito para explicar o motivo
+em português. `traduzirErro` trocava ambos por «não tem permissão para esta
+operação» — e deitava fora a única coisa útil. Agora distingue-os pelo início
+da mensagem. Isto também desbloqueou a mensagem de
+`confirmar_pagamento_declarado`, que estava a ser engolida desde que existe.
 
 **A aplicação não liga a nenhum banco, e não deve ligar.** `contas` é um
 livro de registo: saldo inicial mais os movimentos que forem lançados à mão. O
@@ -430,13 +480,39 @@ uma vez — e quem sabe isso é quem pagou.
   convencido de que tinha avisado o centro — o que é pior do que não ter
   avisado.
 
-**Avisos, não chat.** `avisos` pertence a um evento OU a uma equipa, nunca aos
-dois. É comunicação de um para muitos: aparece no quadro do dia e vai na
-descrição do evento no calendário do telemóvel. Foi uma decisão deliberada e
-não um passo intermédio — um chat sem notificações fiáveis (no iPhone só
-funcionam com a app instalada no ecrã principal) ficaria deserto, com as
-conversas a continuarem no WhatsApp. **Isto continua a valer para conversa
-geral**: não construas uma sem pedido explícito.
+**Avisos num evento; conversa numa equipa.** `avisos` pertence a um evento OU
+a uma equipa, nunca aos dois — e desde o pedido do centro as duas coisas
+comportam-se de maneira diferente.
+
+**No evento é um aviso**, de um para muitos: quem planeia escreve, quem está
+convocado lê — no quadro do dia e na descrição do evento no calendário do
+telemóvel. `e_instrutor_ou_gestao()`, como sempre foi.
+
+**Na equipa é uma conversa, e qualquer membro escreve.** Isto **contraria a
+decisão anterior** de não haver conversa nenhuma na aplicação, e foi pedido
+explicitamente. O motivo de então continua de pé e é o que molda isto: um
+sítio para escrever sem avisos fiáveis fica deserto, com as conversas a
+voltarem para o WhatsApp. Por isso a abertura da escrita e a notificação
+**entraram juntas** — `avisarAEquipa()` em `lib/accoes/eventos.ts`. Sem ela
+não valia a pena abrir nada.
+
+- **Escrever sim, apagar não.** É a regra de `notas_cavalo`: ninguém reescreve
+  o que já foi dito, nem o próprio autor. Só a gestão e os instrutores apagam,
+  para o caso de alguém escrever o que não devia.
+- **O autor é carimbado pela base** (`carimbar_autor_do_aviso`), e já não vem
+  da aplicação. Enquanto só a gestão escrevia era pouco interessante; com os
+  membros a escrever, era deixar a aplicação falar em nome de outro.
+- **Não há tempo real**, e a página di-lo. As mensagens aparecem ao carregar.
+  O que as faz chegar a tempo é a notificação — quem escreveu não é avisado de
+  si próprio, e o `agrupar` leva a equipa, para cinco mensagens seguidas se
+  substituírem em vez de empilharem cinco notificações.
+- `supabase/tests/15_conversa_de_equipa.sql` prova a fronteira: um membro
+  escreve na equipa dele e **só** nela, não publica avisos em eventos, não
+  apaga nem corrige, e não lê a conversa de uma equipa onde não está.
+
+**Para conversa geral continua a não haver nada**, e não construas sem pedido
+explícito: o raciocínio acima só se aguenta num grupo pequeno que existe para
+falar entre si.
 
 **`notas_cavalo` é a excepção, e é excepção por ser presa a um cavalo.** Não é
 chat, é o caderno do cavalo: o dono pergunta, a cavalariça responde, e daqui a
@@ -627,7 +703,8 @@ supabase/
                   03 ferração, 04 contratos, 05 cavalos, 06 encargos,
                   07 notas, 08 subscrições, 09 pagamentos declarados,
                   10 confirmação de presença, 11 quem paga o ferrador,
-                  12 paddocks, 13 aprovação de cavalos)
+                  12 paddocks, 13 aprovação de cavalos, 14 acesso e perfis,
+                  15 conversa de equipa)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor

@@ -17,21 +17,37 @@ export type AvisoPublicado = {
   autor: { nome: string } | null
 }
 
-function Publicar() {
+function Publicar({ conversa }: { conversa: boolean }) {
   const { pending } = useFormStatus()
   return (
     <Botao type="submit" variante="contorno" tamanho="pequeno" disabled={pending}>
-      {pending ? 'A publicar…' : 'Publicar aviso'}
+      {pending
+        ? conversa
+          ? 'A enviar…'
+          : 'A publicar…'
+        : conversa
+          ? 'Enviar'
+          : 'Publicar aviso'}
     </Botao>
   )
 }
 
 /**
- * Avisos de um evento ou de uma equipa: comunicação de um para muitos.
+ * A mesma lista serve duas coisas que não são iguais.
  *
- * Não é um chat de propósito. Um aviso fica agarrado ao evento, aparece no
- * quadro do dia a quem está convocado, e vai na descrição do evento no
- * calendário do telemóvel — que é onde as pessoas realmente olham.
+ * **Num evento é um aviso**: comunicação de um para muitos. Quem planeia
+ * escreve, quem está convocado lê — no quadro do dia e na descrição do evento
+ * no calendário do telemóvel, que é onde as pessoas realmente olham.
+ *
+ * **Numa equipa é uma conversa**, e isso foi pedido. O grupo existe para
+ * falar entre si, por isso qualquer membro escreve. O que **não** muda é quem
+ * apaga: ninguém reescreve o que já foi dito, nem o próprio autor — é a regra
+ * de `notas_cavalo`, e aqui vale pelo mesmo motivo.
+ *
+ * Vale a pena ser claro sobre o que isto não é: **não há tempo real.** As
+ * mensagens aparecem quando a página é carregada. O que as faz chegar a tempo
+ * é a notificação que `guardarAviso` manda aos membros — sem ela isto ficava
+ * deserto, que foi o motivo de durante muito tempo não existir de todo.
  */
 export function Avisos({
   avisos,
@@ -39,13 +55,20 @@ export function Avisos({
   equipaId,
   voltar,
   podeEscrever,
+  podeApagar,
+  modo = 'avisos',
 }: {
   avisos: AvisoPublicado[]
   eventoId?: string
   equipaId?: string
   voltar: string
   podeEscrever: boolean
+  /** Quem apaga não é quem escreve — ver em cima. Omitido, segue `podeEscrever`. */
+  podeApagar?: boolean
+  modo?: 'avisos' | 'conversa'
 }) {
+  const conversa = modo === 'conversa'
+  const apaga = podeApagar ?? podeEscrever
   const { resultado, executar, formulario } = useFormularioDeAccao(guardarAviso)
 
   return (
@@ -63,18 +86,18 @@ export function Avisos({
                   {aviso.autor?.nome ?? 'Quinta da Figueira'} ·{' '}
                   {formatarDataHora(aviso.criado_em)}
                 </span>
-                {podeEscrever ? (
-                  <Apagar id={aviso.id} voltar={voltar} />
-                ) : null}
+                {apaga ? <Apagar id={aviso.id} voltar={voltar} /> : null}
               </p>
             </li>
           ))}
         </ul>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Sem avisos.
+          {conversa ? 'Ainda ninguém escreveu nada.' : 'Sem avisos.'}
           {podeEscrever
-            ? ' Escreva um para quem está convocado o ler aqui e no calendário.'
+            ? conversa
+              ? ' Quem está na equipa recebe um aviso no telemóvel.'
+              : ' Escreva um para quem está convocado o ler aqui e no calendário.'
             : ''}
         </p>
       )}
@@ -92,11 +115,15 @@ export function Avisos({
             name="texto"
             required
             rows={2}
-            placeholder="Ex.: Trazer as camisolas azuis. Encontro 20 minutos antes."
-            aria-label="Novo aviso"
+            placeholder={
+              conversa
+                ? 'Escreva para a equipa…'
+                : 'Ex.: Trazer as camisolas azuis. Encontro 20 minutos antes.'
+            }
+            aria-label={conversa ? 'Nova mensagem' : 'Novo aviso'}
           />
 
-          <Publicar />
+          <Publicar conversa={conversa} />
 
           {resultado.mensagem ? (
             <Caixa tom={resultado.ok ? 'sucesso' : 'erro'}>
