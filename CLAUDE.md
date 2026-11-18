@@ -578,6 +578,13 @@ notificações** no telemóvel de toda a gente.
 - **São só do chat**, e isso é escolha: a RLS deixa reagir a qualquer mensagem
   legível, mas num aviso de evento uma fila de emojis não acrescenta nada a
   quem lê o quadro do dia. Oferecê-las lá é passar `meuNome` também nesse ecrã.
+- **Vêm numa consulta à parte, e nunca aninhadas nos avisos.** Estiveram
+  aninhadas, e o preço só se viu quando correu mal: um erro nas reacções não
+  dava «as reacções falharam», dava a **ficha da equipa inteira em erro** —
+  sem membros, sem chat e sem treinos. O erro da consulta separada é engolido
+  de propósito, como em `avisar()`: sem reacções a conversa continua a ler-se
+  e a escrever-se, que é o que lá importa. **Não voltes a metê-las no `select`
+  da equipa.**
 - `supabase/tests/16_reaccoes_no_chat.sql` prova cada um destes lados.
 
 **Para conversa geral continua a não haver nada**, e não construas sem pedido

@@ -41,8 +41,7 @@ export default async function PaginaEquipa({
     .select(
       `*,
        equipa_membros(pessoa_id, pessoas(id, nome)),
-       avisos(id, texto, criado_em, pessoas(nome),
-              aviso_reaccoes(emoji, pessoa_id, pessoas(nome)))`,
+       avisos(id, texto, criado_em, pessoas(nome))`,
     )
     .eq('id', id)
     .maybeSingle()
@@ -52,7 +51,22 @@ export default async function PaginaEquipa({
 
   const podeEditar = eInstrutorOuGestao(sessao.perfil)
 
-  const [pessoas, proximos] = await Promise.all([
+  const mensagens = equipa.avisos ?? []
+
+  /*
+   * **As reacções vêm numa consulta à parte, e isso é de propósito.**
+   * Estiveram dentro do `select` de cima, aninhadas nos avisos, e o preço
+   * disso só se vê quando corre mal: um erro nelas — a tabela ainda fora da
+   * cache do PostgREST a seguir a uma migração, por exemplo — não devolvia
+   * «as reacções falharam», devolvia a **ficha da equipa inteira em erro**,
+   * sem membros, sem chat e sem treinos. Um enfeite do chat não pode levar a
+   * página com ele.
+   *
+   * Por isso: consulta separada, e o erro é engolido de propósito — é a mesma
+   * regra de `avisar()`, que nunca trava o que o originou. Sem reacções a
+   * conversa continua a ler-se e a escrever-se, que é o que lá importa.
+   */
+  const [pessoas, proximos, reaccoes] = await Promise.all([
     podeEditar ? pessoasActivas(supabase) : Promise.resolve([]),
     supabase
       .from('eventos')
@@ -61,6 +75,15 @@ export default async function PaginaEquipa({
       .gte('data', hoje())
       .order('data')
       .limit(10),
+    mensagens.length > 0
+      ? supabase
+          .from('aviso_reaccoes')
+          .select('aviso_id, emoji, pessoa_id, pessoas(nome)')
+          .in(
+            'aviso_id',
+            mensagens.map((mensagem) => mensagem.id),
+          )
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   const membros = (equipa.equipa_membros ?? []).map((m) => m.pessoas)
@@ -136,17 +159,19 @@ export default async function PaginaEquipa({
             </CabecalhoCartao>
             <ConteudoCartao>
               <Avisos
-                avisos={(equipa.avisos ?? []).map((aviso) => ({
+                avisos={mensagens.map((aviso) => ({
                   id: aviso.id,
                   texto: aviso.texto,
                   criado_em: aviso.criado_em,
                   autor: aviso.pessoas,
                   reaccoes: agruparReaccoes(
-                    (aviso.aviso_reaccoes ?? []).map((reaccao) => ({
-                      emoji: reaccao.emoji,
-                      pessoa_id: reaccao.pessoa_id,
-                      nome: reaccao.pessoas?.nome ?? 'Alguém',
-                    })),
+                    (reaccoes.data ?? [])
+                      .filter((reaccao) => reaccao.aviso_id === aviso.id)
+                      .map((reaccao) => ({
+                        emoji: reaccao.emoji,
+                        pessoa_id: reaccao.pessoa_id,
+                        nome: reaccao.pessoas?.nome ?? 'Alguém',
+                      })),
                     sessao.id,
                   ),
                 }))}
