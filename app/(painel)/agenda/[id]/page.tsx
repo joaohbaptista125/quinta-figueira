@@ -40,9 +40,17 @@ export default async function PaginaEvento({
   const { data: evento, error } = await supabase
     .from('eventos')
     .select(
+      /*
+       * **Nenhum `pessoas(...)` nem `cavalos(...)` embebido, e é de
+       * propósito.** `pessoas_ler` só deixa a equipa do centro ler fichas e
+       * `cavalos_ler` só a equipa e o dono — por isso, para um cliente
+       * convocado, estes embeds vinham vazios e a convocatória era uma lista
+       * de linhas em branco. Os nomes vêm de `nomes_do_evento()`, que devolve
+       * só id e nome. É a mesma decisão da ficha da equipa.
+       */
       `*,
-       evento_participantes(id, estado, pessoa_id, confirmacao, confirmado_em, motivo_ausencia, pessoas(id, nome), cavalos(id, nome)),
-       avisos(id, texto, criado_em, pessoas!avisos_autor_id_fkey(nome))`,
+       evento_participantes(id, estado, pessoa_id, cavalo_id, confirmacao, confirmado_em, motivo_ausencia),
+       avisos(id, texto, criado_em, autor_id)`,
     )
     .order('criado_em', { referencedTable: 'avisos', ascending: true })
     .eq('id', id)
@@ -53,13 +61,25 @@ export default async function PaginaEvento({
 
   const podeEditar = eInstrutorOuGestao(sessao.perfil)
 
-  const [pessoas, cavalos, equipas] = await Promise.all([
+  const [pessoas, cavalos, equipas, nomes] = await Promise.all([
     podeEditar ? pessoasActivas(supabase) : Promise.resolve([]),
     podeEditar ? cavalosActivos(supabase) : Promise.resolve([]),
     podeEditar
       ? supabase.from('equipas').select('id, nome').eq('activa', true).order('nome')
       : Promise.resolve({ data: [] }),
+    supabase.rpc('nomes_do_evento', { p_evento: id }),
   ])
+
+  const nomeDaPessoa = new Map(
+    (nomes.data ?? [])
+      .filter((linha) => linha.tipo === 'pessoa')
+      .map((linha) => [linha.id, linha.nome]),
+  )
+  const nomeDoCavalo = new Map(
+    (nomes.data ?? [])
+      .filter((linha) => linha.tipo === 'cavalo')
+      .map((linha) => [linha.id, linha.nome]),
+  )
 
   // A série é uma etiqueta, não um dono: só se vai buscá-la quando existe, e
   // só para dizer em que ponto da repetição esta marcação está.
@@ -76,8 +96,12 @@ export default async function PaginaEvento({
     estado: linha.estado,
     confirmacao: linha.confirmacao,
     motivo_ausencia: linha.motivo_ausencia,
-    pessoa: linha.pessoas,
-    cavalo: linha.cavalos,
+    pessoa: linha.pessoa_id
+      ? { id: linha.pessoa_id, nome: nomeDaPessoa.get(linha.pessoa_id) ?? 'Alguém' }
+      : null,
+    cavalo: linha.cavalo_id
+      ? { id: linha.cavalo_id, nome: nomeDoCavalo.get(linha.cavalo_id) ?? 'Cavalo' }
+      : null,
   }))
 
   // A linha de quem está a ver, se tiver sido convocado. É o que lhe dá o
@@ -95,7 +119,9 @@ export default async function PaginaEvento({
     id: aviso.id,
     texto: aviso.texto,
     criado_em: aviso.criado_em,
-    autor: aviso.pessoas,
+    autor: aviso.autor_id
+      ? { nome: nomeDaPessoa.get(aviso.autor_id) ?? 'Alguém' }
+      : null,
   }))
 
   return (

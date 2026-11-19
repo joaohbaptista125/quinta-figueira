@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
-import { eInstrutorOuGestao } from '@/lib/permissoes'
+import { eGestao, eInstrutorOuGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { ErroConsulta } from '@/components/erro-consulta'
 import { FormularioEntidade } from '@/components/formulario-entidade'
@@ -63,7 +63,19 @@ export default async function PaginaEquipa({
   if (error) return <ErroConsulta erro={error} contexto="a equipa" />
   if (!equipa) notFound()
 
-  const podeEditar = eInstrutorOuGestao(sessao.perfil)
+  /*
+   * **Duas permissões, e não uma.** Quem **compõe** a equipa é só a gestão —
+   * pedido do centro: o instrutor vê quem lá está, mas as caixas de visto não
+   * lhe aparecem. Quem **modera o chat** continua a ser quem planeia o dia,
+   * instrutores incluídos.
+   *
+   * O formulário inteiro é de `podeGerir` e não só as caixas, e isso é
+   * deliberado: `sincronizarMembros` apaga quem não vier no formulário, por
+   * isso meio formulário — com as caixas escondidas e o botão de gravar à
+   * vista — esvaziava a equipa a quem só queria corrigir o escalão.
+   */
+  const podeGerir = eGestao(sessao.perfil)
+  const podeModerar = eInstrutorOuGestao(sessao.perfil)
 
   const mensagens = equipa.avisos ?? []
 
@@ -87,7 +99,7 @@ export default async function PaginaEquipa({
    * conversa continua a ler-se e a escrever-se, que é o que lá importa.
    */
   const [pessoas, proximos, reaccoes, nomes] = await Promise.all([
-    podeEditar ? pessoasActivas(supabase) : Promise.resolve([]),
+    podeGerir ? pessoasActivas(supabase) : Promise.resolve([]),
     supabase
       .from('eventos')
       .select('id, tipo, titulo, data, hora_inicio, hora_fim, cancelado')
@@ -132,7 +144,7 @@ export default async function PaginaEquipa({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="space-y-4">
-          {podeEditar ? (
+          {podeGerir ? (
             <Cartao>
               <ConteudoCartao className="pt-4 sm:pt-5">
                 <FormularioEntidade
@@ -203,8 +215,8 @@ export default async function PaginaEquipa({
                 voltar={`/equipas/${equipa.id}`}
                 modo="conversa"
                 meuNome={sessao.nome}
-                podeEscrever={podeEditar || souMembro}
-                podeApagar={podeEditar}
+                podeEscrever={podeModerar || souMembro}
+                podeApagar={podeModerar}
               />
             </ConteudoCartao>
           </Cartao>

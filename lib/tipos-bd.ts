@@ -857,6 +857,10 @@ export type BaseDados = {
         Args: { p_equipa: string }
         Returns: { id: string; nome: string }[]
       }
+      nomes_do_evento: {
+        Args: { p_evento: string }
+        Returns: { tipo: string; id: string; nome: string }[]
+      }
       confirmar_pagamento_declarado: {
         Args: {
           p_declaracao: string

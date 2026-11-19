@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { exigirPessoa } from '@/lib/sessao'
-import { eInstrutorOuGestao } from '@/lib/permissoes'
+import { eGestao } from '@/lib/permissoes'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { FormularioEntidade } from '@/components/formulario-entidade'
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Nova equipa' }
 
 export default async function PaginaNovaEquipa() {
   const sessao = await exigirPessoa()
-  if (!eInstrutorOuGestao(sessao.perfil)) redirect('/sem-permissao')
+  if (!eGestao(sessao.perfil)) redirect('/sem-permissao')
 
   const supabase = await criarClienteServidor()
   const pessoas = await pessoasActivas(supabase)

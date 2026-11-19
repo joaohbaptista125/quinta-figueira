@@ -79,6 +79,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261118170000_tratador_so_consulta.sql` | paddocks e ferrações passam a `e_instrutor_ou_gestao()` |
 | `…20261118180000_equipas_sem_notas.sql` | `drop column equipas.notas` — o Chat ocupou o lugar |
 | `…20261118190000_nomes_na_equipa.sql` | `nomes_da_equipa()` — o jogador vê os nomes dos colegas |
+| `…20261119090000_nomes_no_evento_e_membros.sql` | `nomes_do_evento()` + compor equipas passa a `e_gestao()` |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -566,9 +567,21 @@ escreve sem ser membro) e quem reagiu — e **só a quem é da equipa ou da
 gestão**; sem essa guarda, SECURITY DEFINER era um buraco. A ficha da equipa
 não embebe `pessoas` em lado nenhum: os nomes saem todos daqui.
 
-**A mesma armadilha existe na ficha do evento** (`evento_participantes(…,
-pessoas(nome))`): um cliente convocado não vê os nomes dos outros convocados.
-Fica por resolver, e resolve-se da mesma maneira.
+**A ficha do evento tinha a mesma armadilha, e tem a mesma saída.**
+`nomes_do_evento(uuid)` devolve **pessoas e cavalos** numa chamada, com uma
+coluna a dizer qual é qual — são as duas listas que o ecrã precisa, e duas
+funções eram duas idas à rede por evento aberto. Cobre convocados, responsável
+e quem escreveu um aviso; os cavalos entram porque `cavalos_ler` é `e_equipa()`
+ou ser dono, e a Bolota (cavalo de escola, sem dono) não era legível por
+ninguém de fora da equipa. Guarda: `e_equipa() or participo_no_evento()`.
+`supabase/tests/18_nomes_no_evento_e_membros.sql` prova os dois lados.
+
+**O que ainda falta é o quadro do dia** (`/agenda?vista=dia`, o
+`CAMPOS_COMPLETOS` em `app/(painel)/agenda/page.tsx`): carrega os nomes de
+**vários** eventos de uma vez, e uma função por evento seriam N idas à rede.
+A saída provavelmente não é uma terceira função destas mas uma só — os nomes
+de toda a gente com quem partilho uma equipa ou um evento — a substituir as
+duas. Não construir sem decidir isso primeiro.
 
 **As notas da equipa saíram, e isso apagou dados de propósito.** `equipas.notas`
 era uma caixa de texto única no formulário, que se reescrevia por cima e não
@@ -653,6 +666,24 @@ notificações** no telemóvel de toda a gente.
   da equipa.**
 - `supabase/tests/16_reaccoes_no_chat.sql` prova cada um destes lados.
 
+**Compor uma equipa é da gestão; usá-la é de quem planeia.** Pedido do
+centro: só o administrador e o gestor acrescentam ou tiram membros, e as
+caixas de visto não aparecem a mais ninguém. `equipas_gerir` e
+`equipa_membros_gerir` passaram de `e_instrutor_ou_gestao()` para
+`e_gestao()`.
+
+**Foi o formulário inteiro e não só as caixas, e isso é deliberado:**
+`sincronizarMembros` apaga quem não vier no formulário, por isso meio
+formulário — caixas escondidas, botão de gravar à vista — esvaziava a equipa a
+quem só queria corrigir o escalão. O instrutor passa a ver o cartão «Jogadores»
+em leitura.
+
+**O que não mudou:** o instrutor marca treinos, convoca a equipa inteira para
+um evento (`evento_participantes` é `e_instrutor_ou_gestao()`) e modera o chat
+(`avisos_gerir`, idem). Na ficha da equipa isso são **duas permissões
+separadas** — `podeGerir` (gestão) e `podeModerar` (quem planeia o dia) —, e
+confundi-las outra vez numa só tira ao instrutor o chat ou dá-lhe os membros.
+
 **Para conversa geral continua a não haver nada**, e não construas sem pedido
 explícito: o raciocínio acima só se aguenta num grupo pequeno que existe para
 falar entre si.
@@ -736,6 +767,7 @@ Resumo do que cada perfil vê:
 |---|---|---|---|---|
 | admin, gestor | tudo | tudo | tudo | tudo |
 | instrutor | lê nome e contacto | lê e escreve | **não** (têm valores) | **não** |
+| | *equipas: usa, não compõe — ver abaixo* | | | |
 | tratador | lê nome e contacto | **só lê** — ver abaixo | **não** | **não** |
 | cliente | só a sua | só o que é dele | só os dele | só os recebimentos dele |
 
@@ -876,7 +908,7 @@ supabase/
                   10 confirmação de presença, 11 quem paga o ferrador,
                   12 paddocks, 13 aprovação de cavalos, 14 acesso e perfis,
                   15 conversa de equipa, 16 reacções no chat,
-                  17 o tratador só consulta)
+                  17 o tratador só consulta, 18 nomes no evento e membros)
 scripts/
   validar-esquema.sh      aplica migrações e corre os testes
   gerar-esquema-unico.sh  junta migrações num ficheiro para o SQL Editor

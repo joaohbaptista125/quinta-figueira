@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
 import { exigirPessoa } from '@/lib/sessao'
-import { eInstrutorOuGestao } from '@/lib/permissoes'
+import { eGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
 import { classesBotao } from '@/components/ui/botao'
 import { Cartao, Distintivo, SemRegistos } from '@/components/ui/superficie'
@@ -20,7 +20,9 @@ export const metadata: Metadata = { title: 'Equipas' }
 
 export default async function PaginaEquipas() {
   const sessao = await exigirPessoa()
-  const podeEditar = eInstrutorOuGestao(sessao.perfil)
+  // Criar e compor equipas é da gestão. O instrutor vê-as e usa-as —
+  // convoca a equipa inteira para um treino —, mas não decide quem lá está.
+  const podeEditar = eGestao(sessao.perfil)
   const supabase = await criarClienteServidor()
 
   const { data: equipas, error } = await supabase
