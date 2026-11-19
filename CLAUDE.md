@@ -80,6 +80,7 @@ Migrações versionadas em `supabase/migrations/`, por ordem:
 | `…20261118180000_equipas_sem_notas.sql` | `drop column equipas.notas` — o Chat ocupou o lugar |
 | `…20261118190000_nomes_na_equipa.sql` | `nomes_da_equipa()` — o jogador vê os nomes dos colegas |
 | `…20261119090000_nomes_no_evento_e_membros.sql` | `nomes_do_evento()` + compor equipas passa a `e_gestao()` |
+| `…20261119110000_nomes_visiveis.sql` | `nomes_visiveis()` substitui as duas funções de nomes |
 
 **Nunca alteres o esquema pelo painel do Supabase.** Cria uma migração nova e
 actualiza `lib/tipos-bd.ts` na mesma alteração.
@@ -560,28 +561,44 @@ colegas — email, telefone, perfil — e a RLS decide linhas, não colunas. É 
 armadilha de sempre, a mesma que levou o NIF e a morada para
 `pessoas_reservado`.
 
-`nomes_da_equipa(uuid)` é SECURITY DEFINER e devolve **só id e nome**, como
-`agenda_por_token()` faz para a agenda. Devolve as três categorias que
-aparecem no ecrã de uma equipa — membros, quem escreveu no chat (um instrutor
-escreve sem ser membro) e quem reagiu — e **só a quem é da equipa ou da
-gestão**; sem essa guarda, SECURITY DEFINER era um buraco. A ficha da equipa
-não embebe `pessoas` em lado nenhum: os nomes saem todos daqui.
+**`nomes_visiveis()` é a saída, e é uma só função para toda a aplicação.**
+SECURITY DEFINER, devolve **só id e nome** — pessoas e cavalos, com uma coluna
+a dizer qual é qual. Em TypeScript entra por `nomesVisiveis()` em
+`lib/consultas.ts`, que devolve os dois mapas já prontos.
 
-**A ficha do evento tinha a mesma armadilha, e tem a mesma saída.**
-`nomes_do_evento(uuid)` devolve **pessoas e cavalos** numa chamada, com uma
-coluna a dizer qual é qual — são as duas listas que o ecrã precisa, e duas
-funções eram duas idas à rede por evento aberto. Cobre convocados, responsável
-e quem escreveu um aviso; os cavalos entram porque `cavalos_ler` é `e_equipa()`
-ou ser dono, e a Bolota (cavalo de escola, sem dono) não era legível por
-ninguém de fora da equipa. Guarda: `e_equipa() or participo_no_evento()`.
-`supabase/tests/18_nomes_no_evento_e_membros.sql` prova os dois lados.
+**Não recebe argumentos, e isso é a decisão que interessa.** Houve duas
+funções antes desta — `nomes_da_equipa(uuid)` e `nomes_do_evento(uuid)` — e
+elas funcionavam enquanto o ecrã mostrasse **um** deles. O quadro do dia
+mostra os eventos todos de um dia: uma função por evento eram N idas à rede
+para abrir uma página. A pergunta certa não é «quem está neste evento» mas
+**«de quem é que eu posso ver o nome»**, e essa responde-se uma vez por
+página seja o que for que lá esteja.
 
-**O que ainda falta é o quadro do dia** (`/agenda?vista=dia`, o
-`CAMPOS_COMPLETOS` em `app/(painel)/agenda/page.tsx`): carrega os nomes de
-**vários** eventos de uma vez, e uma função por evento seriam N idas à rede.
-A saída provavelmente não é uma terceira função destas mas uma só — os nomes
-de toda a gente com quem partilho uma equipa ou um evento — a substituir as
-duas. Não construir sem decidir isso primeiro.
+O preço é devolver mais linhas do que o ecrã usa. Com ~80 pessoas e ~60
+cavalos são uns kilobytes, e a alternativa era passar listas de ids da
+aplicação para a base — mais código em três sítios para poupar o que não
+custa. **Se isto crescer uma ordem de grandeza, é aqui que se volta a
+pensar**, e aí parametriza-se por dia.
+
+**A fronteira é partilhar alguma coisa comigo**: uma equipa (membros, quem
+escreveu no chat, quem reagiu) ou um evento (convocados, responsável, quem
+publicou um aviso, e os cavalos atribuídos). Quem é da casa (`e_equipa()`) já
+lê tudo pela RLS, e para esses devolve tudo sem fazer contas — **e isso é
+testado**, porque uma função mais restritiva do que a RLS enchia as listagens
+da gestão de «Sem nome». Sem sessão não devolve nada; é essa guarda que
+impede SECURITY DEFINER de ser um buraco.
+
+**Nenhuma página embebe `pessoas(...)` nem `cavalos(...)` onde mostra nomes de
+outras pessoas** — ficha da equipa, ficha do evento e quadro do dia tiram-nos
+todos daqui. Voltar a embebê-los deixa o ecrã certo para a gestão e em branco
+para quem o usa. Os cavalos entram pela mesma razão que as pessoas: a Bolota é
+de escola, não tem dono, e `cavalos_ler` não a mostrava a ninguém de fora da
+casa — nem a quem a montava.
+
+`supabase/tests/15_conversa_de_equipa.sql` e
+`supabase/tests/18_nomes_no_evento_e_membros.sql` provam os dois sentidos:
+vê-se quem partilha, não se vê quem não partilha, e a RLS de `pessoas`
+continua fechada.
 
 **As notas da equipa saíram, e isso apagou dados de propósito.** `equipas.notas`
 era uma caixa de texto única no formulário, que se reescrevia por cima e não
@@ -893,6 +910,8 @@ lib/
   reaccoes.ts     os emojis do chat, e o que o toque muda no ecrã (+ testes)
   ical.ts         geração do ficheiro de calendário (+ testes)
   rotulos.ts      rótulos PT-PT dos enumerados
+  consultas.ts    consultas partilhadas, e `nomesVisiveis()` — ver «O jogador
+                  não lê fichas»
   opcoes-cavalo.ts  o que o selector de raças partilha com a Server Action
   origem.ts       o endereço público que vai nos links de email (+ testes)
   diagnostico.ts  região, distância aos dados e à autenticação, arranque a frio

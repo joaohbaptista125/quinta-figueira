@@ -6,7 +6,7 @@
 -- **A armadilha é a mesma da equipa**: `pessoas_ler` é `e_equipa() or id =
 -- pessoa_actual_id()` e `cavalos_ler` é `e_equipa()` ou ser dono. Para um
 -- cliente convocado, a convocatória vinha com os outros convocados em branco
--- e sem os cavalos deles. `nomes_do_evento()` resolve-o sem abrir ficha
+-- e sem os cavalos deles. `nomes_visiveis()` resolve-o sem abrir ficha
 -- nenhuma — e estes testes seguram que não abre mesmo.
 --
 -- A segunda metade é o pedido do centro: **só a gestão compõe uma equipa**.
@@ -86,12 +86,10 @@ declare
   v_cavalos text[];
 begin
   select array_agg(nome order by nome) into v_pessoas
-    from public.nomes_do_evento('77777777-0000-4000-8000-000000000001')
-   where tipo = 'pessoa';
+    from public.nomes_visiveis() where tipo = 'pessoa';
 
   select array_agg(nome order by nome) into v_cavalos
-    from public.nomes_do_evento('77777777-0000-4000-8000-000000000001')
-   where tipo = 'cavalo';
+    from public.nomes_visiveis() where tipo = 'cavalo';
 
   perform pg_temp.afirmar(
     v_pessoas @> array['Tiago Lourenço'],
@@ -111,17 +109,42 @@ begin
 end $$;
 reset role;
 
-\echo '== E a aula dos outros continua fechada'
+\echo '== E o que não é dela continua fechado'
 set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000c';
 set role authenticated;
 do $$
 begin
-  -- A aula «Obstáculos» é só do Tiago.
   perform pg_temp.afirmar(
-    (select count(*)
-       from public.nomes_do_evento(
-              '77777777-0000-4000-8000-000000000002')) = 0,
-    'de fora do evento a função não devolve nome nenhum');
+    (select count(*) from public.nomes_visiveis()
+      where tipo = 'pessoa' and nome = 'Alberto Nunes') = 0,
+    'não vê o tratador, com quem não partilha equipa nem evento');
+
+  -- O Trovão é do Tiago e anda no treino de Horseball, onde ela não está.
+  perform pg_temp.afirmar(
+    (select count(*) from public.nomes_visiveis()
+      where tipo = 'cavalo' and nome = 'Trovão') = 0,
+    'nem um cavalo que só aparece num evento onde ela não está');
+end $$;
+reset role;
+
+\echo '== E para quem é da casa devolve tudo, senão as páginas dela ficavam vazias'
+set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000a';
+set role authenticated;
+do $$
+begin
+  -- Isto não abre nada: `pessoas_ler` e `cavalos_ler` já lhe dão tudo. O que
+  -- importa é que a função não seja mais restritiva do que a RLS — senão as
+  -- listagens da gestão, que agora tiram os nomes daqui, apareciam com
+  -- «Sem nome» em cada linha.
+  perform pg_temp.afirmar(
+    (select count(*) from public.nomes_visiveis() where tipo = 'pessoa')
+      = (select count(*) from public.pessoas),
+    'a gestão vê o nome de toda a gente');
+
+  perform pg_temp.afirmar(
+    (select count(*) from public.nomes_visiveis() where tipo = 'cavalo')
+      = (select count(*) from public.cavalos),
+    'e o de todos os cavalos');
 end $$;
 reset role;
 

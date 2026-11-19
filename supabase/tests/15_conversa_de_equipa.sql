@@ -135,7 +135,7 @@ reset role;
 -- Os nomes: quem está na equipa vê quem lá está com ele
 -- =============================================================================
 -- `pessoas_ler` é `e_equipa() or id = pessoa_actual_id()`, e um jogador de
--- Horseball é um `cliente`. Sem `nomes_da_equipa()`, do lado dele a lista de
+-- Horseball é um `cliente`. Sem `nomes_visiveis()`, do lado dele a lista de
 -- jogadores vinha em branco e as mensagens dos outros sem autor — o chat
 -- estava partido exactamente para quem o ia usar, e isso não se via a testar
 -- como gestão. Isto segura os dois lados: vê os nomes de quem tem que ver com
@@ -174,7 +174,8 @@ begin
 
   select array_agg(nome order by nome)
     into v_nomes
-    from public.nomes_da_equipa('66666666-0000-4000-8000-000000000001');
+    from public.nomes_visiveis()
+   where tipo = 'pessoa';
 
   perform pg_temp.afirmar(
     v_nomes @> array['Tiago Lourenço'],
@@ -189,28 +190,28 @@ begin
     'e vê quem reagiu a uma mensagem — senão a reacção dizia «Alguém»');
 
   perform pg_temp.afirmar(
-    not (v_nomes @> array['Sónia Pais']),
-    'mas não vê quem não tem nada que ver com esta equipa');
+    not (v_nomes @> array['Alberto Nunes']),
+    'mas não vê quem não partilha equipa nem evento com ele');
 end $$;
 reset role;
 
-\echo '== E a equipa dos outros continua fechada'
+\echo '== E o que é dos outros continua fechado'
 set request.jwt.claim.sub = '99999999-0000-4000-8000-00000000000c';
 set role authenticated;
 do $$
+declare v_nomes text[];
 begin
-  -- A Sónia é da Sénior. A Sub-16 não é com ela.
-  perform pg_temp.afirmar(
-    (select count(*)
-       from public.nomes_da_equipa(
-              '66666666-0000-4000-8000-000000000001')) = 0,
-    'de fora da equipa a função não devolve nome nenhum');
+  -- A Sónia é da Sénior, sozinha. A conversa da Sub-16 não é com ela.
+  select array_agg(nome order by nome) into v_nomes
+    from public.nomes_visiveis() where tipo = 'pessoa';
 
   perform pg_temp.afirmar(
-    (select count(*)
-       from public.nomes_da_equipa(
-              '66666666-0000-4000-8000-000000000002')) >= 1,
-    'e na dela devolve');
+    v_nomes @> array['Sónia Pais'],
+    'vê-se sempre a si própria');
+
+  perform pg_temp.afirmar(
+    not (v_nomes @> array['Maria Figueira']),
+    'mas não vê quem só escreveu na conversa de uma equipa onde ela não está');
 end $$;
 reset role;
 

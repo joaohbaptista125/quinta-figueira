@@ -853,12 +853,8 @@ export type BaseDados = {
       sou_membro_da_equipa: { Args: { p_equipa: string }; Returns: boolean }
       obter_token_calendario: { Args: { p_renovar?: boolean }; Returns: string }
       agenda_por_token: { Args: { p_token: string }; Returns: LinhaAgenda[] }
-      nomes_da_equipa: {
-        Args: { p_equipa: string }
-        Returns: { id: string; nome: string }[]
-      }
-      nomes_do_evento: {
-        Args: { p_evento: string }
+      nomes_visiveis: {
+        Args: Record<string, never>
         Returns: { tipo: string; id: string; nome: string }[]
       }
       confirmar_pagamento_declarado: {

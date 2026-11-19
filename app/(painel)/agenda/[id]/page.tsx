@@ -21,7 +21,7 @@ import {
   TituloCartao,
 } from '@/components/ui/superficie'
 import { apagarEvento, guardarEvento } from '@/lib/accoes/eventos'
-import { cavalosActivos, pessoasActivas } from '@/lib/consultas'
+import { cavalosActivos, nomesVisiveis, pessoasActivas } from '@/lib/consultas'
 import { ROTULOS_TIPO_EVENTO } from '@/lib/rotulos'
 import { agoraLocal, formatarDiaPorExtenso, formatarIntervalo } from '@/lib/formatos'
 import { ResponderConvocatoria } from '@/components/responder-convocatoria'
@@ -45,7 +45,7 @@ export default async function PaginaEvento({
        * propósito.** `pessoas_ler` só deixa a equipa do centro ler fichas e
        * `cavalos_ler` só a equipa e o dono — por isso, para um cliente
        * convocado, estes embeds vinham vazios e a convocatória era uma lista
-       * de linhas em branco. Os nomes vêm de `nomes_do_evento()`, que devolve
+       * de linhas em branco. Os nomes vêm de `nomesVisiveis()`, que devolve
        * só id e nome. É a mesma decisão da ficha da equipa.
        */
       `*,
@@ -67,19 +67,11 @@ export default async function PaginaEvento({
     podeEditar
       ? supabase.from('equipas').select('id, nome').eq('activa', true).order('nome')
       : Promise.resolve({ data: [] }),
-    supabase.rpc('nomes_do_evento', { p_evento: id }),
+    nomesVisiveis(supabase),
   ])
 
-  const nomeDaPessoa = new Map(
-    (nomes.data ?? [])
-      .filter((linha) => linha.tipo === 'pessoa')
-      .map((linha) => [linha.id, linha.nome]),
-  )
-  const nomeDoCavalo = new Map(
-    (nomes.data ?? [])
-      .filter((linha) => linha.tipo === 'cavalo')
-      .map((linha) => [linha.id, linha.nome]),
-  )
+  const nomeDaPessoa = nomes.pessoas
+  const nomeDoCavalo = nomes.cavalos
 
   // A série é uma etiqueta, não um dono: só se vai buscá-la quando existe, e
   // só para dizer em que ponto da repetição esta marcação está.

@@ -20,7 +20,7 @@ import {
   TituloCartao,
 } from '@/components/ui/superficie'
 import { apagarEquipa, guardarEquipa } from '@/lib/accoes/eventos'
-import { pessoasActivas } from '@/lib/consultas'
+import { nomesVisiveis, pessoasActivas } from '@/lib/consultas'
 import { ROTULOS_TIPO_EVENTO_CURTO } from '@/lib/rotulos'
 import { formatarData, formatarIntervalo, hoje } from '@/lib/formatos'
 import { agruparReaccoes } from '@/lib/reaccoes'
@@ -44,7 +44,7 @@ export default async function PaginaEquipa({
        * `pessoas` só deixa a equipa do centro ler fichas; um jogador é um
        * `cliente`, e para ele estes embeds vinham todos vazios — lista de
        * jogadores em branco e mensagens sem autor. Os nomes vêm de
-       * `nomes_da_equipa()`, que devolve só id e nome.
+       * `nomesVisiveis()`, que devolve só id e nome.
        *
        * De passagem isto também tira daqui o embed ambíguo entre `avisos` e
        * `pessoas` que partiu esta página.
@@ -116,12 +116,10 @@ export default async function PaginaEquipa({
             mensagens.map((mensagem) => mensagem.id),
           )
       : Promise.resolve({ data: [], error: null }),
-    supabase.rpc('nomes_da_equipa', { p_equipa: id }),
+    nomesVisiveis(supabase),
   ])
 
-  const nomeDe = new Map(
-    (nomes.data ?? []).map((pessoa) => [pessoa.id, pessoa.nome]),
-  )
+  const nomeDe = nomes.pessoas
   const membros = idsDosMembros.map((pessoaId) => ({
     id: pessoaId,
     nome: nomeDe.get(pessoaId) ?? 'Sem nome',

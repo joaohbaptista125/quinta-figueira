@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { criarClienteServidor } from '@/lib/supabase/servidor'
+import { nomesVisiveis } from '@/lib/consultas'
 import { exigirPessoa } from '@/lib/sessao'
 import { eInstrutorOuGestao } from '@/lib/permissoes'
 import { CabecalhoPagina } from '@/components/cabecalho-pagina'
@@ -27,11 +28,24 @@ export const metadata: Metadata = { title: 'Agenda' }
 
 const VISTAS_VALIDAS: VistaAgenda[] = ['mes', 'semana', 'dia']
 
-/** Os campos a mais que só o quadro do dia precisa. */
+/**
+ * Os campos a mais que só o quadro do dia precisa.
+ *
+ * **Sem `pessoas(...)` nem `cavalos(...)` embebidos**, pela razão de sempre:
+ * `pessoas_ler` e `cavalos_ler` só servem quem é da casa, por isso para um
+ * cliente estes embeds vinham vazios e o quadro aparecia-lhe sem nomes e sem
+ * os pares aluno↔cavalo. Os nomes vêm de `nomesVisiveis()`, numa chamada só
+ * para o dia inteiro — é precisamente por o quadro mostrar **vários** eventos
+ * que essa função não recebe nenhum.
+ *
+ * `equipas(id, nome)` fica: `equipas_ler` já deixa um membro ler a dele, e
+ * quem não puder lê-la fica só sem a pastilha do nome da equipa — não com um
+ * espaço em branco onde devia estar uma pessoa.
+ */
 const CAMPOS_COMPLETOS = `id, tipo, titulo, data, hora_inicio, hora_fim, local,
-   cancelado, motivo_cancelamento, notas,
-   pessoas(id, nome), equipas(id, nome),
-   evento_participantes(id, estado, pessoas(id, nome), cavalos(id, nome)),
+   cancelado, motivo_cancelamento, notas, responsavel_id,
+   equipas(id, nome),
+   evento_participantes(id, estado, pessoa_id, cavalo_id),
    avisos(id, texto)`
 
 /**
@@ -82,7 +96,33 @@ export default async function PaginaAgenda({
       .lte('data', ate)
       .order('hora_inicio')
     erro = error?.message ?? null
-    eventosCompletos = (data ?? []) as unknown as EventoCompleto[]
+
+    const nomes = await nomesVisiveis(supabase)
+    eventosCompletos = (data ?? []).map((evento) => ({
+      ...evento,
+      pessoas: evento.responsavel_id
+        ? {
+            id: evento.responsavel_id,
+            nome: nomes.pessoas.get(evento.responsavel_id) ?? 'Alguém',
+          }
+        : null,
+      evento_participantes: (evento.evento_participantes ?? []).map((linha) => ({
+        id: linha.id,
+        estado: linha.estado,
+        pessoas: linha.pessoa_id
+          ? {
+              id: linha.pessoa_id,
+              nome: nomes.pessoas.get(linha.pessoa_id) ?? 'Alguém',
+            }
+          : null,
+        cavalos: linha.cavalo_id
+          ? {
+              id: linha.cavalo_id,
+              nome: nomes.cavalos.get(linha.cavalo_id) ?? 'Cavalo',
+            }
+          : null,
+      })),
+    })) as unknown as EventoCompleto[]
   } else {
     const { data, error } = await supabase
       .from('eventos')
